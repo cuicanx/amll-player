@@ -74,7 +74,12 @@ export const MetadataTabContent: FC = () => {
 			songName: newInfo.name,
 			songAlbum: newInfo.album,
 			songArtists: newInfo.artist,
-			...(newInfo.lyric ? { lyricFormat: "lrc", lyric: newInfo.lyric } : {}),
+			...(newInfo.lyric
+				? {
+						lyricFormat: newInfo.lyricFormat || "lrc",
+						lyric: newInfo.lyric,
+					}
+				: {}),
 			...(newInfo.coverPath ? { coverPath: newInfo.coverPath } : {}),
 		});
 	}, [song]);

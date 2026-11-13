@@ -25,10 +25,13 @@ impl MusicInfo {
             name: v.name,
             artist: v.artist,
             album: v.album,
+            // Embedded lyrics are not necessarily LRC: TTML/QRC/YRC/ESLRC
+            // are common. The old code hard-coded "lrc", which made the
+            // frontend call parseLrc() on XML and produce zero lines.
             lyric_format: if v.lyric.is_empty() {
                 "".into()
             } else {
-                "lrc".into()
+                amll_player_core::lyric_meta::detect_lyric_format(&v.lyric).into()
             },
             lyric: v.lyric,
             cover_path,
@@ -161,11 +164,15 @@ pub async fn read_local_music_metadata(
     if let Some(file_path_ref) = file_path.as_path()
         && music_info.lyric.is_empty()
     {
-        const LYRIC_FILE_EXTENSIONS: &[&str] = &["ttml", "lys", "yrc", "qrc", "eslrc", "lrc"];
-        for ext in LYRIC_FILE_EXTENSIONS {
+        let lyric_file_extensions: &[&str] =
+            amll_player_core::lyric_meta::LYRIC_FILE_EXTENSIONS;
+        for ext in lyric_file_extensions {
             let lyric_file_path = file_path_ref.with_extension(ext);
             if lyric_file_path.exists() {
                 if let Ok(lyric) = fs.read_to_string(&lyric_file_path) {
+                    if lyric.trim().is_empty() {
+                        continue;
+                    }
                     music_info.lyric_format = ext.to_string();
                     music_info.lyric = lyric;
                     break;

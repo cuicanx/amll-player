@@ -1,23 +1,27 @@
 use crate::AudioInfo;
+use crate::lyric_meta::{extract_embedded_lyric, get_meta_ci};
 use ffmpeg_audio::AudioReader;
 
 pub fn build_audio_info(reader: &AudioReader) -> AudioInfo {
     let mut info = AudioInfo::default();
 
+    // ffmpeg_audio returns raw AVDictionary keys without normalization, so key
+    // casing/spelling differs between ID3v2, Vorbis Comment, MP4 and APEv2.
+    // Use the shared case-insensitive helpers instead of one hard-coded key.
     let metadata = reader.metadata();
 
-    let get_meta = |search_key: &str| -> String {
-        metadata
-            .iter()
-            .find(|(k, _)| k.eq_ignore_ascii_case(search_key))
-            .map(|(_, v)| v.clone())
-            .unwrap_or_default()
-    };
-
-    info.name = get_meta("title");
-    info.artist = get_meta("artist");
-    info.album = get_meta("album");
-    info.lyric = get_meta("lyrics");
+    info.name = get_meta_ci(&metadata, &["title"])
+        .unwrap_or_default()
+        .to_string();
+    info.artist = get_meta_ci(&metadata, &["artist"])
+        .unwrap_or_default()
+        .to_string();
+    info.album = get_meta_ci(&metadata, &["album"])
+        .unwrap_or_default()
+        .to_string();
+    info.lyric = extract_embedded_lyric(&metadata)
+        .map(|(_, content)| content)
+        .unwrap_or_default();
 
     if let Some(cover) = reader.cover() {
         info.cover = Some(cover.data);

@@ -8,6 +8,9 @@ use std::{
     },
 };
 
+use amll_player_core::lyric_meta::{
+    LYRIC_FILE_EXTENSIONS, get_meta_ci, resolve_lyric,
+};
 use jwalk::WalkDir;
 use rayon::prelude::*;
 
@@ -19,8 +22,6 @@ const AUDIO_EXTENSIONS: &[&str] = &[
     "dts", "dtshd", "thd", "mlp", "mka", "amr", "rm", "ra", "au", "snd", "caf", "w64", "iff",
     "8svx",
 ];
-
-const LYRIC_EXTENSIONS: &[&str] = &["ttml", "lys", "yrc", "qrc", "eslrc", "lrc"];
 
 fn run_parallel_scan<P, T, F>(
     folder: P,
@@ -111,18 +112,30 @@ fn process_file(path: &std::path::Path) -> Result<ScannedSong, String> {
     let metadata = reader.metadata();
     let duration_secs = reader.duration().map(|d| d.as_secs_f64()).unwrap_or(0.0);
 
-    let song_name = metadata.get("title").cloned().unwrap_or_else(|| {
-        path.file_stem()
-            .map(|s| s.to_string_lossy().to_string())
-            .unwrap_or_else(|| "未知歌曲".to_string())
-    });
+    let song_name = get_meta_ci(&metadata, &["title"])
+        .map(str::to_owned)
+        .unwrap_or_else(|| {
+            path.file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "未知歌曲".to_string())
+        });
 
-    let song_artists = metadata.get("artist").cloned().unwrap_or_default();
-    let song_album = metadata.get("album").cloned().unwrap_or_default();
+    let song_artists = get_meta_ci(&metadata, &["artist"])
+        .unwrap_or_default()
+        .to_string();
+    let song_album = get_meta_ci(&metadata, &["album"])
+        .unwrap_or_default()
+        .to_string();
 
     let cover_bytes = reader.cover().map(|c| c.data.to_vec());
 
-    let (lyric_format, lyric) = find_lyric_file(path);
+    // BUGFIX (v1): the embedded lyric in `metadata` used to be discarded here.
+    // Only sidecar files were considered, so every song imported through a
+    // folder scan ended up with lyric="" and lyric_format="" in the database
+    // until the user manually triggered "重新从文件中读取元数据".
+    // resolve_lyric() keeps sidecar files as the higher-priority source and
+    // falls back to embedded lyrics, using the same helper as the manual path.
+    let (lyric_format, lyric) = resolve_lyric(find_lyric_file(path), &metadata);
 
     let model = song::Model {
         id: song_id,
@@ -142,14 +155,16 @@ fn process_file(path: &std::path::Path) -> Result<ScannedSong, String> {
     Ok(ScannedSong { model, cover_bytes })
 }
 
-fn find_lyric_file(audio_path: &Path) -> (String, String) {
-    for ext in LYRIC_EXTENSIONS {
+fn find_lyric_file(audio_path: &Path) -> Option<(&'static str, String)> {
+    for ext in LYRIC_FILE_EXTENSIONS {
         let lyric_path = audio_path.with_extension(ext);
-        if let Ok(content) = std::fs::read_to_string(&lyric_path) {
-            return (ext.to_string(), content);
+        if let Ok(content) = std::fs::read_to_string(&lyric_path)
+            && !content.trim().is_empty()
+        {
+            return Some((*ext, content));
         }
     }
-    (String::new(), String::new())
+    None
 }
 
 pub struct QuickFileEntry {

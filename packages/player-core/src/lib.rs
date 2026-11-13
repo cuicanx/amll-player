@@ -6,6 +6,7 @@ use serde::*;
 mod audio_quality;
 mod ffmpeg_decoder;
 mod fft_player;
+pub mod lyric_meta;
 mod media_controls;
 mod player;
 pub mod utils;

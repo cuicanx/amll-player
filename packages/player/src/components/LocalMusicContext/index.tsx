@@ -46,6 +46,10 @@ import {
 	queueManagerAtom,
 } from "../../states/appAtoms.ts";
 import { db } from "../../utils/db-client.ts";
+import {
+	lyricUpdateFromMetadata,
+	shouldRecoverEmbeddedLyric,
+} from "../../utils/lyric-recovery.ts";
 import { SyncStatus, syncLyrics } from "../../utils/lyric-db-api.ts";
 import { PlayQueueManager } from "../../utils/play-queue-manager.ts";
 import {
@@ -54,6 +58,7 @@ import {
 	emitAudioThread,
 	initAudioThread,
 	listenAudioThreadEvent,
+	readLocalMusicMetadata,
 } from "../../utils/player.ts";
 import { useDbQuery } from "../../utils/use-db-query.ts";
 
@@ -215,6 +220,45 @@ const LyricContext: FC = () => {
 			}
 		});
 	}, []);
+
+	// v1 BUGFIX: songs imported before this fix (or by the scanner that only
+	// looked at sidecar files) have an empty `lyric` DB row. Recover embedded
+	// lyrics lazily on first play, so the user never has to open Settings and
+	// click "重新从文件中读取元数据" for every single song.
+	const recoveredSongIds = useRef(new Set<string>());
+
+	useEffect(() => {
+		if (!shouldRecoverEmbeddedLyric(song, recoveredSongIds.current)) return;
+		const songId = song?.id;
+		const filePath = song?.filePath;
+		if (!songId || !filePath) return;
+
+		recoveredSongIds.current.add(songId);
+		let cancelled = false;
+
+		(async () => {
+			try {
+				const info = await readLocalMusicMetadata(filePath);
+				const update = lyricUpdateFromMetadata(info);
+				if (cancelled || !update) return;
+				// `update_song` emits db-row-changed -> useDbQuery refetches ->
+				// useLyricParser renders the lyric within the same play session.
+				await db.songs.update(songId, update);
+				console.log(
+					LYRIC_LOG_TAG,
+					"已自动恢复内嵌歌词",
+					songId,
+					update.lyricFormat,
+				);
+			} catch (err) {
+				console.warn(LYRIC_LOG_TAG, "自动恢复内嵌歌词失败", songId, err);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [song?.id, song?.filePath, song?.lyric]);
 
 	const { lyricLines, hasLyrics, metadata } = useLyricParser(
 		song?.lyric,
