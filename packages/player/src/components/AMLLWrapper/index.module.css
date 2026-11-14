@@ -10,8 +10,14 @@
 	background-color: #222;
 	transition:
 		border-radius 0.25s ease,
-		transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+		transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+		/* PERF: skip painting/compositing the 100vw x 100vh lyric subtree
+		   (WebGL background + full lyric DOM) while it is off-screen.
+		   Delay the visibility flip until the slide-out has finished so the
+		   closing animation stays visually identical. */
+		visibility 0s linear 0.5s;
 	transform: translateY(100%);
+	visibility: hidden;
 	border-radius: 1em 1em 0 0;
 	overflow: hidden;
 	color: white;
@@ -20,8 +26,10 @@
 		pointer-events: auto;
 		transition:
 			border-radius 0.25s 0.25s ease,
-			transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+			transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+			visibility 0s linear 0s;
 		transform: translateY(0%);
+		visibility: visible;
 		border-radius: 0 0 0 0;
 	}
 }

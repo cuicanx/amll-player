@@ -137,6 +137,7 @@ export const WSProtocolMusicContext: FC<WSProtocolMusicContextProps> = ({
 
 	useEffect(() => {
 		let canceled = false;
+		let rafId = 0;
 		const fft = new FFTPlayer();
 		fft.setFreqRange(fftDataRange[0], fftDataRange[1]);
 		fftPlayer.current = fft;
@@ -146,13 +147,16 @@ export const WSProtocolMusicContext: FC<WSProtocolMusicContextProps> = ({
 			if (canceled) return;
 			fftPlayer.current?.read(result);
 			store.set(fftDataAtom, [...result]);
-			requestAnimationFrame(onFFTFrame);
+			rafId = requestAnimationFrame(onFFTFrame);
 		};
 
-		requestAnimationFrame(onFFTFrame);
+		rafId = requestAnimationFrame(onFFTFrame);
 
 		return () => {
 			canceled = true;
+			// PERF: the flag alone left the already-queued frame running and
+			// did not release the rAF handle on re-runs / unmount.
+			cancelAnimationFrame(rafId);
 			fftPlayer.current?.free();
 			fftPlayer.current = undefined;
 		};

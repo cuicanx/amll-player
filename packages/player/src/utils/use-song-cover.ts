@@ -1,6 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { LRUCache } from "lru-cache";
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { Song } from "./db-client.ts";
 import { getVideoThumbnail } from "./video-thumbnail.ts";
 
@@ -13,9 +13,15 @@ const thumbnailCache = new LRUCache<string, string>({
 
 export const useSongCover = (song?: Song) => {
 	const [songImgUrl, setSongImgUrl] = useState<string>("");
+	// PERF: depending on the whole Song object re-ran this layout effect for
+	// every visible row on any refetch, even when the cover was unchanged.
+	// The cover path is the only input that actually matters.
+	const coverPath = song?.coverPath;
+	const requestIdRef = useRef(0);
 
 	useLayoutEffect(() => {
-		if (!song?.coverPath) {
+		const requestId = ++requestIdRef.current;
+		if (!coverPath) {
 			setSongImgUrl("");
 			return;
 		}
@@ -26,37 +32,44 @@ export const useSongCover = (song?: Song) => {
 		//    包括歌曲封面和歌单封面
 		// 3. 从 dexie 迁移导入时，使用前端的 mime type
 		// 所以可以确保封面路径总是 jpg 或 mp4 文件，方便判断封面是图片或者视频
-		if (!song.coverPath.endsWith(".mp4")) {
-			if (song.coverPath.startsWith("http://") || song.coverPath.startsWith("https://")) {
-				setSongImgUrl(song.coverPath);
+		if (!coverPath.endsWith(".mp4")) {
+			if (coverPath.startsWith("http://") || coverPath.startsWith("https://")) {
+				setSongImgUrl(coverPath);
 			} else {
-				setSongImgUrl(convertFileSrc(song.coverPath));
+				setSongImgUrl(convertFileSrc(coverPath));
 			}
 			return;
 		}
 
-		const cached = thumbnailCache.get(song.coverPath);
+		const cached = thumbnailCache.get(coverPath);
 		if (cached) {
 			setSongImgUrl(cached);
 			return;
 		}
 
 		setSongImgUrl("");
-		const coverPath = song.coverPath;
 		const videoSrc = coverPath.startsWith("http://") || coverPath.startsWith("https://")
 			? coverPath
 			: convertFileSrc(coverPath);
 		getVideoThumbnail(videoSrc)
 			.then((blob) => {
 				const url = URL.createObjectURL(blob);
+				// PERF/correctness: a virtualised row can be recycled before the
+				// async decode finishes. Drop stale results instead of painting
+				// another song's cover (and leaking a blob URL).
+				if (requestIdRef.current !== requestId) {
+					URL.revokeObjectURL(url);
+					return;
+				}
 				thumbnailCache.set(coverPath, url);
 				setSongImgUrl(url);
 			})
 			.catch((err) => {
+				if (requestIdRef.current !== requestId) return;
 				console.warn("提取视频略缩图失败:", err);
 				setSongImgUrl("");
 			});
-	}, [song]);
+	}, [coverPath]);
 
 	return songImgUrl;
 };

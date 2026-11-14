@@ -52,18 +52,32 @@ export const NowPlayingBar: FC = () => {
 	useLayoutEffect(() => {
 		const playbarEl = playbarRef.current;
 		if (!playbarEl) return;
+		let lastValue = "";
+		let rafId = 0;
 		const updateSafeBound = () => {
-			const { top } = playbarEl.getBoundingClientRect();
-			document.body.style.setProperty(
-				"--amll-player-playbar-bottom",
-				`${window.innerHeight - top}px`,
-			);
+			if (rafId) return;
+			rafId = requestAnimationFrame(() => {
+				rafId = 0;
+				const { top } = playbarEl.getBoundingClientRect();
+				const next = `${window.innerHeight - top}px`;
+				// PERF: setting a body-level CSS variable invalidates styles for
+				// the whole document. ResizeObserver and window resize fire for
+				// the same layout change, so batch to one frame and skip the
+				// write entirely when the measured value has not changed.
+				if (next === lastValue) return;
+				lastValue = next;
+				document.body.style.setProperty(
+					"--amll-player-playbar-bottom",
+					next,
+				);
+			});
 		};
 		const observer = new ResizeObserver(updateSafeBound);
-		window.addEventListener("resize", updateSafeBound);
+		window.addEventListener("resize", updateSafeBound, { passive: true });
 		observer.observe(playbarEl);
 		updateSafeBound();
 		return () => {
+			cancelAnimationFrame(rafId);
 			window.removeEventListener("resize", updateSafeBound);
 			observer.disconnect();
 		};
@@ -83,6 +97,7 @@ export const NowPlayingBar: FC = () => {
 		 > */}
 			{playlistOpened && (
 				<Flex
+					className={styles.playlistCardPopover}
 					direction="row-reverse"
 					mx="3"
 					position="absolute"

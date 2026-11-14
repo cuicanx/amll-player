@@ -393,36 +393,66 @@ export const LocalMusicContext: FC = () => {
 		}
 	}, [musicPlaying, store]);
 
+	// PERF: this is the only per-frame atom writer in the app and drives the
+	// lyric clock. The original loop kept running at 60 fps even while paused,
+	// waking every subscriber for no reason. Start/stop it from a store
+	// subscription; the per-frame write cadence while playing is unchanged, so
+	// word-by-word lyric animation is bit-for-bit the same.
 	useEffect(() => {
-		let rafId: number;
+		let rafId = 0;
+		let running = false;
 
 		const updateLoop = () => {
-			const isPlaying = store.get(musicPlayingAtom);
+			if (!store.get(musicPlayingAtom)) {
+				running = false;
+				return;
+			}
 			const now = performance.now();
+			const dt = (now - lastSyncRef.current.timestamp) / 1000;
+			const newPos = lastSyncRef.current.position + dt;
+			const duration = store.get(musicDurationAtom) / 1000;
+			const clampedPos = Math.min(newPos, duration || 0);
 
-			if (isPlaying) {
-				const dt = (now - lastSyncRef.current.timestamp) / 1000;
-				const newPos = lastSyncRef.current.position + dt;
-
-				const duration = store.get(musicDurationAtom) / 1000;
-				const clampedPos = Math.min(newPos, duration || 0);
-
-				lastSyncRef.current.position = clampedPos;
-				lastSyncRef.current.timestamp = now;
-				const nextPosition = (clampedPos * 1000) | 0;
-				if (nextPosition !== store.get(musicPlayingPositionAtom)) {
-					store.set(musicPlayingPositionAtom, nextPosition);
-				}
-			} else {
-				const currentUIPosition = store.get(musicPlayingPositionAtom) / 1000;
-				lastSyncRef.current.position = currentUIPosition;
-				lastSyncRef.current.timestamp = now;
+			lastSyncRef.current.position = clampedPos;
+			lastSyncRef.current.timestamp = now;
+			const nextPosition = (clampedPos * 1000) | 0;
+			if (nextPosition !== store.get(musicPlayingPositionAtom)) {
+				store.set(musicPlayingPositionAtom, nextPosition);
 			}
 			rafId = requestAnimationFrame(updateLoop);
 		};
 
-		rafId = requestAnimationFrame(updateLoop);
-		return () => cancelAnimationFrame(rafId);
+		const start = () => {
+			if (running) return;
+			running = true;
+			// Resume from the authoritative atom so the paused interval is not
+			// counted as playback time (seek handlers also update this ref).
+			lastSyncRef.current.position =
+				store.get(musicPlayingPositionAtom) / 1000;
+			lastSyncRef.current.timestamp = performance.now();
+			rafId = requestAnimationFrame(updateLoop);
+		};
+
+		const stop = () => {
+			running = false;
+			cancelAnimationFrame(rafId);
+			lastSyncRef.current.position =
+				store.get(musicPlayingPositionAtom) / 1000;
+			lastSyncRef.current.timestamp = performance.now();
+		};
+
+		const unsub = store.sub(musicPlayingAtom, () => {
+			if (store.get(musicPlayingAtom)) start();
+			else stop();
+		});
+
+		if (store.get(musicPlayingAtom)) start();
+		else stop();
+
+		return () => {
+			unsub();
+			cancelAnimationFrame(rafId);
+		};
 	}, [store]);
 
 	useEffect(() => {

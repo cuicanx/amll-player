@@ -17,6 +17,25 @@
 	width: 100%;
 }
 
+/* PERF/UX: the queue popover previously appeared with no transition at all.
+   Animate only transform + opacity (compositor properties) so the entrance
+   is smooth without reflowing the playbar. The resting state is unchanged. */
+.playlistCardPopover {
+	transform-origin: bottom right;
+	animation: playlistCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes playlistCardIn {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
 .playBar {
 	padding: var(--space-3);
 	padding-left: calc(var(--space-3) + env(safe-area-inset-left));
@@ -99,8 +118,7 @@
 		height: var(--cover-button-size);
 		margin-top: calc(var(--cover-button-size) / -2);
 		transition:
-			background-color 0.2s ease,
-			backdrop-filter 0.2s ease;
+			background-color 0.2s ease;
 		background: rgba(100, 100, 100, 0.1);
 	}
 }

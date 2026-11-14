@@ -14,7 +14,7 @@ import {
 } from "@applemusic-like-lyrics/react-full";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useStore } from "jotai";
 import { type FC, useEffect, useRef } from "react";
 import {
 	taskbarLyricAlignSettingAtom,
@@ -41,13 +41,13 @@ import {
 } from "./types";
 
 export const TaskbarLyricBridge: FC = () => {
+	const store = useStore();
 	const musicName = useAtomValue(musicNameAtom);
 	const musicArtists = useAtomValue(musicArtistsAtom);
 	const musicAlbumName = useAtomValue(musicAlbumNameAtom);
 	const musicDuration = useAtomValue(musicDurationAtom);
 	const musicLyricLines = useAtomValue(musicLyricLinesAtom);
 	const musicPlaying = useAtomValue(musicPlayingAtom);
-	const musicPlayingPosition = useAtomValue(musicPlayingPositionAtom);
 	const musicCover = useAtomValue(musicCoverAtom);
 	const musicCoverIsVideo = useAtomValue(musicCoverIsVideoAtom);
 	const lastEmitTime = useRef(0);
@@ -103,17 +103,24 @@ export const TaskbarLyricBridge: FC = () => {
 		emit(PLAY_STATUS_EVENT, payload).catch(console.error);
 	}, [musicPlaying]);
 
+	// PERF: musicPlayingPositionAtom is the lyric clock and is written on every
+	// animation frame. Reading it with useAtomValue re-rendered this bridge ~60
+	// times per second and scheduled an effect each time, even though the emit
+	// is throttled to 200 ms. Subscribe directly to the store instead so the
+	// React tree is not involved in the per-frame path at all.
 	useEffect(() => {
-		const now = performance.now();
-		if (now - lastEmitTime.current < 200) return;
-		lastEmitTime.current = now;
+		return store.sub(musicPlayingPositionAtom, () => {
+			const now = performance.now();
+			if (now - lastEmitTime.current < 200) return;
+			lastEmitTime.current = now;
 
-		const payload: TaskbarLyricPositionPayload = {
-			position: musicPlayingPosition,
-		};
-		stateCache.current.position = payload;
-		emit(POSITION_EVENT, payload).catch(console.error);
-	}, [musicPlayingPosition]);
+			const payload: TaskbarLyricPositionPayload = {
+				position: store.get(musicPlayingPositionAtom),
+			};
+			stateCache.current.position = payload;
+			emit(POSITION_EVENT, payload).catch(console.error);
+		});
+	}, [store]);
 
 	useEffect(() => {
 		stateCache.current.theme = { theme: taskbarLyricTheme };

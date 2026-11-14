@@ -11,7 +11,7 @@ import {
 	Text,
 } from "@radix-ui/themes";
 import type { Loadable } from "jotai/vanilla/utils/loadable";
-import { type CSSProperties, forwardRef, useMemo } from "react";
+import { type CSSProperties, forwardRef, memo, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { router } from "../../router.tsx";
@@ -19,7 +19,7 @@ import { db, type Song } from "../../utils/db-client.ts";
 import { useDbQuery } from "../../utils/use-db-query.ts";
 import { useSongCover } from "../../utils/use-song-cover.ts";
 
-export const PlaylistSongCard = forwardRef<
+export const PlaylistSongCard = memo(forwardRef<
 	HTMLDivElement,
 	{
 		songId: string;
@@ -119,4 +119,4 @@ export const PlaylistSongCard = forwardRef<
 			</Box>
 		</Skeleton>
 	);
-});
+}));

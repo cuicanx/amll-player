@@ -6,6 +6,15 @@
 	visibility: visible;
 }
 
+/* PERF: keep scroll chaining off this container and isolate its layout work
+   from the header above it. The header animates `width`/`gap` while the list
+   measures rows; `contain` stops that reflow from invalidating the rest of
+   the page. Visual output is unchanged. */
+.songList {
+	overscroll-behavior: contain;
+	contain: layout paint;
+}
+
 .playlist {
 	max-height: 100vh;
 	padding: 0 var(--space-2);

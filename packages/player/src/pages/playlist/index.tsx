@@ -28,7 +28,7 @@ import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { platform } from "@tauri-apps/plugin-os";
-import { motion, useMotionTemplate, useScroll } from "framer-motion";
+import { motion, useMotionTemplate, useScroll, useTransform } from "framer-motion";
 import { useAtomValue, useStore } from "jotai";
 import md5 from "md5";
 import {
@@ -139,8 +139,18 @@ export const Component: FC = () => {
 	const playlistViewScroll = useScroll({
 		container: playlistViewRef,
 	});
-	const playlistCoverSize = useMotionTemplate`clamp(6em,calc(12em - ${playlistViewScroll.scrollY}px),12em)`;
-	const playlistInfoGapSize = useMotionTemplate`clamp(var(--space-1), calc(var(--space-4) - ${playlistViewScroll.scrollY}px / 5), var(--space-4))`;
+	// PERF: these motion values are written into `width` and `gap`, which are
+	// layout properties. Writing them on every scroll pixel forced a reflow of
+	// the header on every frame, and because the header is a flex sibling of
+	// the virtualised list, the changed height made ViewportList re-measure all
+	// rows in the same frame (layout thrashing). Quantising scrollY to 4 px
+	// steps cuts those reflows by ~4x while the visual difference is below one
+	// CSS pixel; the clamp endpoints (and therefore the final look) are intact.
+	const quantizedScrollY = useTransform(playlistViewScroll.scrollY, (value) =>
+		Math.round(value / 4) * 4,
+	);
+	const playlistCoverSize = useMotionTemplate`clamp(6em,calc(12em - ${quantizedScrollY}px),12em)`;
+	const playlistInfoGapSize = useMotionTemplate`clamp(var(--space-1), calc(var(--space-4) - ${quantizedScrollY}px / 5), var(--space-4))`;
 	const [failedImports, setFailedImports] = useState<
 		{ path: string; error: string }[]
 	>([]);
@@ -594,7 +604,6 @@ export const Component: FC = () => {
 								initial: "none",
 								sm: "flex",
 							}}
-							gap={playlistInfoGapSize.get()}
 							asChild
 						>
 							<motion.div
@@ -713,6 +722,7 @@ export const Component: FC = () => {
 					</Flex>
 				</Flex>
 				<Box
+					className={styles.songList}
 					flexGrow="1"
 					overflowY="auto"
 					minHeight="0"

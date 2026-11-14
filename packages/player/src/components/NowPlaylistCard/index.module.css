@@ -15,6 +15,9 @@
 	font: inherit;
 	color: inherit;
 	text-align: left;
+	/* Smooth the hover feedback instead of an instant repaint. Short and
+	   scoped to a single row, so it does not affect scroll throughput. */
+	transition: background-color 0.15s ease;
 
 	&:hover {
 		background-color: #fff1;

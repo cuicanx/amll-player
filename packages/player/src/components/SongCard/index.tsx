@@ -1,14 +1,14 @@
 import { toDuration } from "@applemusic-like-lyrics/react-full";
 import { Avatar, Box, Card, ContextMenu, Flex, Text } from "@radix-ui/themes";
 import { useAtomValue } from "jotai";
-import { type CSSProperties, forwardRef, type PropsWithChildren } from "react";
+import { type CSSProperties, forwardRef, memo, type PropsWithChildren } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { router } from "../../router.tsx";
 import { queueManagerAtom } from "../../states/appAtoms.ts";
 import type { Song } from "../../utils/db-client.ts";
 import { useSongCover } from "../../utils/use-song-cover.ts";
 
-export const SongCard = forwardRef<
+export const SongCard = memo(forwardRef<
 	HTMLDivElement,
 	PropsWithChildren<{
 		song: Song;
@@ -75,4 +75,4 @@ export const SongCard = forwardRef<
 			</ContextMenu.Root>
 		</Box>
 	);
-});
+}));

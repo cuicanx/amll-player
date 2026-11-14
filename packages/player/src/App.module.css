@@ -31,7 +31,10 @@
 }
 
 .body::after {
-	transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+	/* PERF: offset the full-screen scrim fade slightly from the lyric page's
+	   transform so the two large composited layers are not activated on the
+	   exact same frame. Final opacity (0.75) and duration are unchanged. */
+	transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1) 0.06s;
 	content: "";
 	display: block;
 	position: fixed;
