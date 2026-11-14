@@ -9,23 +9,33 @@
 		>
 		<title>AMLL Player</title>
 		<style>
-		/* First-paint background. This block is parsed before any module or CSS
-		   bundle, so the very first frame of the webview is already opaque and
-		   matches the final acrylic theme. Previously :root fell back to
-		   `transparent`, which combined with a transparent Tauri window made
-		   only the custom titlebar outline visible for ~2 seconds. */
+		/* First-paint frosted-glass background, with BOTH light and dark
+		   variants. The tiny script below picks the right one before the first
+		   paint by reading the app's existing `amll-player.darkMode` setting,
+		   so switching theme never causes a colour jump. The window is NOT
+		   transparent - the frosted look is drawn in CSS - so no desktop can
+		   show through during startup or resizing. */
 		html, body {
 			margin: 0;
 			padding: 0;
 			height: 100%;
-			background-color: #1a1f2c;
+			background-color: #f4f6fb;
 			background-image:
-				radial-gradient(circle at 14% 12%, rgba(74, 108, 170, 0.34), transparent 58%),
-				radial-gradient(circle at 86% 88%, rgba(112, 82, 158, 0.28), transparent 58%),
-				linear-gradient(135deg, #202637 0%, #171b28 100%);
+				radial-gradient(circle at 12% 8%, rgba(120, 150, 220, 0.18), transparent 58%),
+				radial-gradient(circle at 88% 92%, rgba(180, 150, 220, 0.14), transparent 58%),
+				linear-gradient(160deg, #fbfcff 0%, #eef1f8 100%);
 			background-attachment: fixed;
-			color: #e8ecf5;
+			color: #1c2024;
 			font-family: "Segoe UI", system-ui, sans-serif;
+		}
+		html[data-amll-theme="dark"],
+		html[data-amll-theme="dark"] body {
+			background-color: #171b26;
+			background-image:
+				radial-gradient(circle at 12% 8%, rgba(70, 100, 170, 0.30), transparent 58%),
+				radial-gradient(circle at 88% 92%, rgba(105, 75, 155, 0.26), transparent 58%),
+				linear-gradient(160deg, #1e2432 0%, #141821 100%);
+			color: #eef1f8;
 		}
 		#boot-splash {
 			position: fixed;
@@ -43,6 +53,34 @@
 		}
 		html[data-app-ready="1"] #boot-splash { opacity: 0; }
 		</style>
+		<script>
+		"use strict";
+		(function () {
+			// Reuse the application's own theme setting (jotai atomWithStorage
+			// stores JSON, e.g. `"dark"`), falling back to the OS preference.
+			function readMode() {
+				try {
+					const raw = localStorage.getItem("amll-player.darkMode");
+					if (!raw) return "auto";
+					const parsed = JSON.parse(raw);
+					return typeof parsed === "string" ? parsed : "auto";
+				} catch (e) {
+					return "auto";
+				}
+			}
+			const media = window.matchMedia("(prefers-color-scheme: dark)");
+			function applyTheme() {
+				const mode = readMode();
+				const dark = mode === "dark" || (mode === "auto" && media.matches);
+				document.documentElement.dataset.amllTheme = dark ? "dark" : "light";
+			}
+			applyTheme();
+			if (media.addEventListener) media.addEventListener("change", applyTheme);
+			window.addEventListener("storage", function (e) {
+				if (e.key === "amll-player.darkMode") applyTheme();
+			});
+		})();
+		</script>
 	</head>
 
 	<body>

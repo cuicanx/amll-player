@@ -5,11 +5,23 @@ import {
 	autoDarkModeAtom,
 	DarkMode,
 	darkModeAtom,
+	isDarkThemeAtom,
 } from "../../states/appAtoms";
 
 export const ThemeManager: FC = () => {
 	const setAutoDarkMode = useSetAtom(autoDarkModeAtom);
 	const darkMode = useAtomValue(darkModeAtom);
+	const isDarkTheme = useAtomValue(isDarkThemeAtom);
+
+	// Keep the frosted-glass CSS palette in sync with the very same light/dark
+	// state that drives the Radix Theme appearance. The first frame is already
+	// correct thanks to the inline script in index.html; this handles runtime
+	// switches from the settings page and OS theme changes.
+	useEffect(() => {
+		document.documentElement.dataset.amllTheme = isDarkTheme
+			? "dark"
+			: "light";
+	}, [isDarkTheme]);
 
 	useEffect(() => {
 		const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");

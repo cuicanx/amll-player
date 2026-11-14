@@ -3,9 +3,9 @@
 	overflow: hidden;
 }
 
-/* Radix paints a flat solid background when hasBackground is true (which is
-   forced on Windows 10). Let the CSS acrylic surface on <body> show through
-   instead, on every page including the playlist detail page. */
+/* Let the frosted-glass surface on <body> show through the Radix theme
+   layer on every page (main / playlist detail), in both light and dark
+   appearances. The window itself stays fully opaque. */
 .radixTheme {
 	background-color: transparent !important;
 }

@@ -38,8 +38,7 @@
 
 	/* No per-tile entrance animation on purpose: virtualised rows are
 	   remounted while scrolling, so a fade here would replay on every scroll
-	   and read as flicker. The single, gentle page-level entrance animation
-	   lives in PageContainer/index.module.css instead. */
+	   and read as flicker. Page navigation also has no entrance animation. */
 	.coverCell {
 		opacity: 1;
 	}
