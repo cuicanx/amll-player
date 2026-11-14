@@ -34,11 +34,16 @@ jobs:
   build-tauri-desktop:
     name: 构建 Tauri 桌面版本
     needs: clean-pre-release
+    # Temporarily build ONLY Windows x64. Set the desired matrix row's
+    # `enabled` back to true (or remove this `if`) to restore other platforms;
+    # no platform definition is deleted.
+    if: ${{ matrix.enabled == true }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: ubuntu-latest
+            enabled: false
             args: ""
             name: linux
             arch: x86_64
@@ -46,6 +51,7 @@ jobs:
             package_extension: tar.gz
             os_runner: ubuntu-latest
           - platform: windows-latest
+            enabled: true
             args: ""
             name: windows
             arch: x86_64
@@ -53,6 +59,7 @@ jobs:
             package_extension: zip
             os_runner: windows-latest
           - platform: windows-latest
+            enabled: false
             args: "--target aarch64-pc-windows-msvc"
             name: windows
             arch: aarch64
@@ -60,6 +67,7 @@ jobs:
             package_extension: zip
             os_runner: windows-latest
           - platform: macos-latest # arm64 二进制包
+            enabled: false
             args: "--target aarch64-apple-darwin"
             name: macOS
             arch: aarch64
@@ -67,6 +75,7 @@ jobs:
             package_extension: tar.gz
             os_runner: macos-15
           - platform: macos-latest # x86 二进制包
+            enabled: false
             args: "--target x86_64-apple-darwin"
             name: macOS
             arch: x86_64
@@ -192,6 +201,8 @@ jobs:
   build-tauri-android:
     name: 构建 Tauri 安卓版本
     needs: clean-pre-release
+    # Temporarily disabled: only Windows x64 is built. Remove this line to restore.
+    if: false
     runs-on: ubuntu-latest
 
     steps:
@@ -302,6 +313,8 @@ jobs:
   build-tauri-ios:
     name: 构建 Tauri iOS 版本
     needs: clean-pre-release
+    # Temporarily disabled: only Windows x64 is built. Remove this line to restore.
+    if: false
     runs-on: macos-15
 
     steps:

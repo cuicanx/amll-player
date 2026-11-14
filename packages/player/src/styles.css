@@ -55,6 +55,35 @@
 		transition: none !important;
 	}
 
+	/* Radix surfaces (tooltip, three-dot menus, context menus, popovers,
+	   selects and dialogs) used to be flat near-black rectangles. Give them
+	   the same Windows 10 acrylic treatment as the window itself: a tinted
+	   translucent fill, a real background blur, a hairline border and a soft
+	   top highlight. Class names plus roles cover both Radix Themes and any
+	   bare Radix primitives used by the lyric player. */
+	.rt-TooltipContent,
+	.rt-DropdownMenuContent,
+	.rt-ContextMenuContent,
+	.rt-PopoverContent,
+	.rt-HoverCardContent,
+	.rt-SelectContent,
+	.rt-DialogContent,
+	[role="tooltip"],
+	[role="menu"],
+	[role="listbox"] {
+		background-color: rgba(26, 31, 44, 0.72) !important;
+		background-image: linear-gradient(
+			180deg,
+			rgba(255, 255, 255, 0.06),
+			rgba(255, 255, 255, 0)
+		) !important;
+		backdrop-filter: blur(24px) saturate(1.35) !important;
+		-webkit-backdrop-filter: blur(24px) saturate(1.35) !important;
+		border: 1px solid rgba(255, 255, 255, 0.12) !important;
+		box-shadow: 0 10px 34px rgba(0, 0, 0, 0.42) !important;
+		color: #eef1f8 !important;
+	}
+
 	::-webkit-scrollbar-track {
 		background: transparent;
 
