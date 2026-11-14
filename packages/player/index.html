@@ -9,10 +9,44 @@
 		>
 		<title>AMLL Player</title>
 		<style>
+		/* First-paint background. This block is parsed before any module or CSS
+		   bundle, so the very first frame of the webview is already opaque and
+		   matches the final acrylic theme. Previously :root fell back to
+		   `transparent`, which combined with a transparent Tauri window made
+		   only the custom titlebar outline visible for ~2 seconds. */
+		html, body {
+			margin: 0;
+			padding: 0;
+			height: 100%;
+			background-color: #1a1f2c;
+			background-image:
+				radial-gradient(circle at 14% 12%, rgba(74, 108, 170, 0.34), transparent 58%),
+				radial-gradient(circle at 86% 88%, rgba(112, 82, 158, 0.28), transparent 58%),
+				linear-gradient(135deg, #202637 0%, #171b28 100%);
+			background-attachment: fixed;
+			color: #e8ecf5;
+			font-family: "Segoe UI", system-ui, sans-serif;
+		}
+		#boot-splash {
+			position: fixed;
+			inset: 0;
+			display: grid;
+			place-items: center;
+			pointer-events: none;
+			z-index: 99999;
+			transition: opacity 0.18s ease;
+		}
+		#boot-splash span {
+			font-size: 13px;
+			letter-spacing: 0.18em;
+			opacity: 0.5;
+		}
+		html[data-app-ready="1"] #boot-splash { opacity: 0; }
 		</style>
 	</head>
 
 	<body>
+		<div id="boot-splash"><span>AMLL PLAYER</span></div>
 		<!-- 为了避免加载主脚本时无法控制窗口，故独立编写标题栏的脚本 -->
 		<div data-tauri-drag-region id="system-titlebar">
 			<div id="system-titlebar-buttons">
@@ -250,7 +284,15 @@
 					"system-titlebar-appearance",
 				);
 
+				let lastTitlebarSignature = "";
 				const updateTitlebarVariable = () => {
+					// PERF: the ResizeObserver fires on every window resize. The
+					// titlebar dimensions do not change while resizing, so skip the
+					// body-level CSS variable writes (which invalidate the whole
+					// document) unless a measured value actually changed.
+					const signature = `${currentAppearance}|${titlebar.clientHeight}|${buttons.clientHeight}`;
+					if (signature === lastTitlebarSignature) return;
+					lastTitlebarSignature = signature;
 					if (currentAppearance === SystemTitlebarAppearance.Windows) {
 						titlebar.classList.add("windows");
 						document.body.style.setProperty(

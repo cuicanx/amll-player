@@ -1,6 +1,4 @@
 use tauri::{AppHandle, Manager, WebviewWindowBuilder};
-#[cfg(desktop)]
-use tauri::{PhysicalSize, Size, utils::config::WindowEffectsConfig, window::Effect};
 use tracing::*;
 
 pub async fn create_common_win<'a>(
@@ -9,8 +7,14 @@ pub async fn create_common_win<'a>(
     label: &str,
 ) -> WebviewWindowBuilder<'a, tauri::Wry, AppHandle> {
     let win = WebviewWindowBuilder::new(app, label, url);
-    #[cfg(target_os = "windows")]
-    let win = win.transparent(true);
+
+    // PERF/UX: Windows used to request a transparent window together with two
+    // competing DWM backdrop effects (Tabbed + Mica). Before the webview drew
+    // its first frame, the transparent window showed only the custom titlebar
+    // outline with the desktop visible through the middle; while resizing,
+    // DWM re-composited the backdrop on every size change, causing low frame
+    // rates, flicker and intermittent see-through. The acrylic look is now
+    // drawn entirely in CSS on an opaque window, stable on Win10 and Win11.
     #[cfg(not(desktop))]
     let win = win;
 
@@ -18,10 +22,6 @@ pub async fn create_common_win<'a>(
     let win = win
         .center()
         .inner_size(800.0, 600.0)
-        .effects(WindowEffectsConfig {
-            effects: vec![Effect::Tabbed, Effect::Mica],
-            ..Default::default()
-        })
         .theme(None)
         .title({
             #[cfg(target_os = "macos")]
@@ -90,13 +90,13 @@ pub async fn recreate_window(app: &AppHandle, label: &str, path: Option<&str>) {
 
     let win = win.build().expect("can't show original window");
 
+    // PERF: the old code forced a 0x0 -> original size round trip here to work
+    // around a first-paint bug of the transparent window. With an opaque window
+    // and an inline first-paint background this is unnecessary, and it used to
+    // trigger a full relayout/resize on every startup.
     #[cfg(desktop)]
     {
         let _ = win.set_focus();
-        if let Ok(orig_size) = win.inner_size() {
-            let _ = win.set_size(Size::Physical(PhysicalSize::new(0, 0)));
-            let _ = win.set_size(orig_size);
-        }
     }
     #[cfg(not(desktop))]
     let _ = win;

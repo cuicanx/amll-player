@@ -7,6 +7,10 @@ import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import "./i18n";
 import { toError } from "./utils/error.ts";
 import "./utils/player";
+import {
+	initWindowResizeHandling,
+	markWindowResizing,
+} from "./utils/window-resize.ts";
 import App from "./App.tsx";
 
 const ErrorRender = (props: FallbackProps) => {
@@ -56,7 +60,16 @@ async function checkWindow() {
 	}
 }
 checkWindow();
-win.onResized(checkWindow);
+initWindowResizeHandling();
+// PERF: onResized fires at drag frequency. Mark the document so CSS can drop
+// layout transitions while dragging, and coalesce the async isMaximized()
+// check to one run after the drag settles.
+let resizeSettleTimer: ReturnType<typeof setTimeout>;
+win.onResized(() => {
+	markWindowResizing();
+	clearTimeout(resizeSettleTimer);
+	resizeSettleTimer = setTimeout(checkWindow, 120);
+});
 
 addEventListener("on-system-titlebar-click-minimize", async () => {
 	const win = getCurrentWindow();

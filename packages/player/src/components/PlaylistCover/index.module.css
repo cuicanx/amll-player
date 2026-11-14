@@ -24,6 +24,23 @@
 		background-position: center;
 		image-rendering: optimizeQuality;
 		background-size: cover;
-		transition: background-image 0.5s;
+		/* PERF/UX: background-image is not interpolable, so this transition
+		   produced a discrete black->image swap (the "flash"). Fade the whole
+		   tile in with opacity instead, which is compositor-friendly. */
+		background-color: #1a1f2c;
+	}
+
+	.coverPlaceholder {
+		grid-column: 1 / -1;
+		grid-row: 1 / -1;
+		background-image: linear-gradient(135deg, #2a3145, #1c2130);
+	}
+
+	/* No per-tile entrance animation on purpose: virtualised rows are
+	   remounted while scrolling, so a fade here would replay on every scroll
+	   and read as flicker. The single, gentle page-level entrance animation
+	   lives in PageContainer/index.module.css instead. */
+	.coverCell {
+		opacity: 1;
 	}
 }

@@ -5,6 +5,10 @@
 	min-height: 0;
 	height: 100%;
 
+	/* Play once when a page mounts (main / playlist detail), never on
+	   virtualised row mounts, so scrolling does not re-trigger a fade. */
+	animation: pageEnter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+
 	transition:
 		padding-left 0.25s,
 		padding-right 0.25s;
@@ -15,5 +19,16 @@
 	@media screen and (min-width: 810px) {
 		padding-left: var(--space-9);
 		padding-right: var(--space-9);
+	}
+}
+
+@keyframes pageEnter {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }

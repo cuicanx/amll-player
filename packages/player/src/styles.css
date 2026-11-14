@@ -17,7 +17,9 @@
 		-moz-osx-font-smoothing: grayscale;
 		-webkit-text-size-adjust: 100%;
 
-		background-color: var(--color-background, transparent);
+		/* Never fall back to a transparent root: the window is opaque now and
+		   the acrylic surface is drawn by CSS, not by DWM. */
+		background-color: var(--color-background, #1a1f2c);
 	}
 
 	body {
@@ -28,6 +30,29 @@
 		cursor: default;
 		overflow: hidden;
 		padding-bottom: 5em;
+
+		/* Windows 10 Start-menu style acrylic, rendered entirely in CSS:
+		   opaque base + two soft light blooms + fine noise. No transparency
+		   to the desktop, so resizing can never show through. */
+		background-color: #1a1f2c;
+		background-image:
+			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E"),
+			radial-gradient(circle at 14% 12%, rgba(74, 108, 170, 0.34), transparent 58%),
+			radial-gradient(circle at 86% 88%, rgba(112, 82, 158, 0.28), transparent 58%),
+			linear-gradient(135deg, #202637 0%, #171b28 100%);
+		background-size: 140px 140px, cover, cover, cover;
+		background-attachment: fixed;
+		background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+	}
+
+	/* While the window is being dragged, transitions on layout properties
+	   (padding / width / gap) make content lag behind the window edge. Turning
+	   them off for the duration of the drag keeps every element in sync. This
+	   does not change any resting value, so nothing pops when the drag ends. */
+	html[data-resizing="1"] *,
+	html[data-resizing="1"] *::before,
+	html[data-resizing="1"] *::after {
+		transition: none !important;
 	}
 
 	::-webkit-scrollbar-track {
