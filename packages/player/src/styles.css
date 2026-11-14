@@ -17,33 +17,33 @@
 		-moz-osx-font-smoothing: grayscale;
 		-webkit-text-size-adjust: 100%;
 
-		/* Frosted-glass palette. The `data-amll-theme` attribute is set before
-		   the first paint by the inline script in index.html and kept in sync
-		   with the app's existing light/dark setting by ThemeManager. */
-		--amll-glass-base: #f4f6fb;
-		--amll-glass-glow-a: rgba(120, 150, 220, 0.18);
-		--amll-glass-glow-b: rgba(180, 150, 220, 0.14);
-		--amll-glass-grad-a: #fbfcff;
-		--amll-glass-grad-b: #eef1f8;
-		--amll-glass-panel: rgba(255, 255, 255, 0.62);
+		/* Windows Acrylic, rebuilt from the documented four-layer recipe:
+		   (1) a soft out-of-focus base, (2) ~30px backdrop blur,
+		   (3) a translucent tint, (4) ONE full-screen noise film at ~0.03
+		   opacity. The noise must never be tiled - repeating a 140px SVG
+		   was exactly what produced the visible checkerboard squares. */
+		--amll-acrylic-base: #eef1f7;
+		--amll-acrylic-bloom-a: rgba(120, 150, 220, 0.10);
+		--amll-acrylic-bloom-b: rgba(180, 150, 220, 0.08);
+		--amll-acrylic-tint: rgba(250, 251, 255, 0.72);
+		--amll-glass-panel: rgba(255, 255, 255, 0.68);
 		--amll-glass-popover: rgba(255, 255, 255, 0.72);
 		--amll-glass-popover-text: #1c2024;
 		--amll-glass-popover-border: rgba(24, 34, 60, 0.12);
 		--amll-glass-popover-highlight: rgba(255, 255, 255, 0.55);
 		--amll-glass-popover-shadow: 0 10px 34px rgba(28, 38, 66, 0.18);
 
-		/* Keep an opaque first-paint fallback. The Tauri window itself is no
-		   longer transparent, so no desktop can show through. */
-		background-color: var(--color-background, #f4f6fb);
+		/* Opaque first-paint fallback. The Tauri window is not transparent,
+		   so no desktop can show through during startup or resizing. */
+		background-color: var(--color-background, #eef1f7);
 	}
 
 	html[data-amll-theme="dark"] {
-		--amll-glass-base: #171b26;
-		--amll-glass-glow-a: rgba(70, 100, 170, 0.30);
-		--amll-glass-glow-b: rgba(105, 75, 155, 0.26);
-		--amll-glass-grad-a: #1e2432;
-		--amll-glass-grad-b: #141821;
-		--amll-glass-panel: rgba(30, 36, 50, 0.62);
+		--amll-acrylic-base: #20242e;
+		--amll-acrylic-bloom-a: rgba(70, 100, 170, 0.14);
+		--amll-acrylic-bloom-b: rgba(105, 75, 155, 0.12);
+		--amll-acrylic-tint: rgba(28, 32, 42, 0.78);
+		--amll-glass-panel: rgba(38, 43, 56, 0.68);
 		--amll-glass-popover: rgba(26, 31, 44, 0.72);
 		--amll-glass-popover-text: #eef1f8;
 		--amll-glass-popover-border: rgba(255, 255, 255, 0.12);
@@ -60,23 +60,50 @@
 		overflow: hidden;
 		padding-bottom: 5em;
 
-		background-color: var(--amll-glass-base);
-		background-image:
-			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.10'/%3E%3C/svg%3E"),
-			radial-gradient(circle at 12% 8%, var(--amll-glass-glow-a), transparent 58%),
-			radial-gradient(circle at 88% 92%, var(--amll-glass-glow-b), transparent 58%),
-			linear-gradient(160deg, var(--amll-glass-grad-a) 0%, var(--amll-glass-grad-b) 100%);
-		background-size: 140px 140px, cover, cover, cover;
-		background-attachment: fixed;
-		background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+		background-color: var(--amll-acrylic-base);
+		isolation: isolate;
 	}
 
-	/* Cards are the visible "glass" layer: slightly translucent with a real
-	   background blur over the frosted page surface. */
+	/* Layer 1: stand-in for the blurred wallpaper behind a real Windows
+	   acrylic surface. Two huge, very low-contrast radial gradients are
+	   inherently smooth, so no extra full-screen filter is needed here. */
+	body::before {
+		content: "";
+		position: fixed;
+		inset: -25%;
+		z-index: -2;
+		pointer-events: none;
+		background:
+			radial-gradient(circle at 22% 18%, var(--amll-acrylic-bloom-a), transparent 70%),
+			radial-gradient(circle at 80% 82%, var(--amll-acrylic-bloom-b), transparent 70%);
+	}
+
+	/* Layers 2-4: translucent tint + 30px backdrop blur + a single
+	   full-screen noise film. background-size:cover with no-repeat is the
+	   critical part; a small tiled noise texture is what made the grid.
+	   The source texture is 2000px with 0.02 opacity so that cover-scaling
+	   it onto a 2K/4K window never magnifies the grain into visible
+	   blotches - the noise stays below the threshold of perception. */
+	body::after {
+		content: "";
+		position: fixed;
+		inset: 0;
+		z-index: -1;
+		pointer-events: none;
+		background-color: var(--amll-acrylic-tint);
+		backdrop-filter: blur(30px) saturate(1.25);
+		-webkit-backdrop-filter: blur(30px) saturate(1.25);
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='2000' height='2000' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");
+		background-size: cover;
+		background-repeat: no-repeat;
+	}
+
+	/* Cards are the visible glass layer: translucent with a real backdrop
+	   blur, matching the ~30px radius of the surface underneath. */
 	.rt-Card {
 		background-color: var(--amll-glass-panel) !important;
-		backdrop-filter: blur(18px) saturate(1.15);
-		-webkit-backdrop-filter: blur(18px) saturate(1.15);
+		backdrop-filter: blur(30px) saturate(1.2);
+		-webkit-backdrop-filter: blur(30px) saturate(1.2);
 	}
 
 	/* While the window is being dragged, transitions on layout properties
@@ -89,12 +116,22 @@
 		transition: none !important;
 	}
 
+	/* A full-screen backdrop blur has to be recomputed on every size change.
+	   During a window drag, drop the blur (the underlying surface is already
+	   uniform and low-contrast, so the tint alone looks the same) and restore
+	   it as soon as the drag settles. Keeps resizing smooth. */
+	html[data-resizing="1"] body::after,
+	html[data-resizing="1"] .rt-Card {
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+	}
+
 	/* Radix surfaces (tooltip, three-dot menus, context menus, popovers,
-	   selects and dialogs) used to be flat near-black rectangles. Keep the
-	   frosted-glass treatment even though the page background is white again:
-	   a tinted translucent fill, a real background blur, a hairline border
-	   and a soft top highlight. Class names plus roles cover both Radix
-	   Themes and any bare Radix primitives used by the lyric player. */
+	   selects and dialogs) used to be flat near-black rectangles. They now
+	   use the same acrylic recipe as the page: translucent tint, real
+	   background blur, hairline border and a soft top highlight, with all
+	   colours driven by the light/dark theme variables. Class names plus
+	   roles cover both Radix Themes and bare Radix primitives. */
 	.rt-TooltipContent,
 	.rt-DropdownMenuContent,
 	.rt-ContextMenuContent,
