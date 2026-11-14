@@ -34,54 +34,49 @@ jobs:
   build-tauri-desktop:
     name: 构建 Tauri 桌面版本
     needs: clean-pre-release
-    # Temporarily build ONLY Windows x64. Set the desired matrix row's
-    # `enabled` back to true (or remove this `if`) to restore other platforms;
-    # no platform definition is deleted.
-    if: ${{ matrix.enabled == true }}
+    # Temporarily build ONLY Windows x64. The other four rows are kept below
+    # verbatim as comments (not deleted). Uncomment them to restore those
+    # platforms. Note: a job-level `if` cannot reference `matrix` in GitHub
+    # Actions, so per-row gating has to be done by (un)commenting instead.
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-latest
-            enabled: false
-            args: ""
-            name: linux
-            arch: x86_64
-            artifact_name_suffix: linux-x64
-            package_extension: tar.gz
-            os_runner: ubuntu-latest
           - platform: windows-latest
-            enabled: true
             args: ""
             name: windows
             arch: x86_64
             artifact_name_suffix: windows-x64
             package_extension: zip
             os_runner: windows-latest
-          - platform: windows-latest
-            enabled: false
-            args: "--target aarch64-pc-windows-msvc"
-            name: windows
-            arch: aarch64
-            artifact_name_suffix: windows-arm64
-            package_extension: zip
-            os_runner: windows-latest
-          - platform: macos-latest # arm64 二进制包
-            enabled: false
-            args: "--target aarch64-apple-darwin"
-            name: macOS
-            arch: aarch64
-            artifact_name_suffix: macos-arm64
-            package_extension: tar.gz
-            os_runner: macos-15
-          - platform: macos-latest # x86 二进制包
-            enabled: false
-            args: "--target x86_64-apple-darwin"
-            name: macOS
-            arch: x86_64
-            artifact_name_suffix: macos-x64
-            package_extension: tar.gz
-            os_runner: macos-15 # 与 arm64 行同镜像同 SDK，靠 --target 交叉编译
+          # - platform: ubuntu-latest
+          #   args: ""
+          #   name: linux
+          #   arch: x86_64
+          #   artifact_name_suffix: linux-x64
+          #   package_extension: tar.gz
+          #   os_runner: ubuntu-latest
+          # - platform: windows-latest
+          #   args: "--target aarch64-pc-windows-msvc"
+          #   name: windows
+          #   arch: aarch64
+          #   artifact_name_suffix: windows-arm64
+          #   package_extension: zip
+          #   os_runner: windows-latest
+          # - platform: macos-latest
+          #   args: "--target aarch64-apple-darwin"
+          #   name: macOS
+          #   arch: aarch64
+          #   artifact_name_suffix: macos-arm64
+          #   package_extension: tar.gz
+          #   os_runner: macos-15
+          # - platform: macos-latest
+          #   args: "--target x86_64-apple-darwin"
+          #   name: macOS
+          #   arch: x86_64
+          #   artifact_name_suffix: macos-x64
+          #   package_extension: tar.gz
+          #   os_runner: macos-15
 
     runs-on: ${{ matrix.os_runner }}
 
