@@ -45,9 +45,13 @@
 		   character, hairline border, radius and layering stay identical. */
 		--amll-glass-blur: blur(30px) saturate(1.25);
 		--amll-glass-radius: 12px;
+		/* NOTE: no `transform` here on purpose. Radix positions menus and
+		   popovers with an inline `transform: translate3d(...)`; transitioning
+		   transform made every re-open animate from the previous anchor, so a
+		   right-click at B still looked like it opened at A for ~250ms.
+		   Background/colour/shadow animate; position never does. */
 		--amll-glass-transition:
-			background-color 0.25s, color 0.25s, box-shadow 0.25s,
-			transform 0.25s;
+			background-color 0.25s, color 0.25s, box-shadow 0.25s;
 		--amll-glass-item-highlight: rgba(24, 34, 60, 0.07);
 		/* Callouts are inline notices, not floating panels: a large drop
 		   shadow under them looks detached from the page. */
@@ -205,6 +209,16 @@
 	   shadow, which looked detached and left a grey halo under each bar. */
 	.rt-CalloutRoot {
 		box-shadow: var(--amll-glass-callout-shadow) !important;
+	}
+
+	/* Tooltips are small hints, not panels: tighter padding/radius and a much
+	   lighter shadow so a hint never reads as a floating card. */
+	.rt-TooltipContent {
+		padding: 4px 8px !important;
+		border-radius: 8px !important;
+		box-shadow: 0 4px 12px rgba(20, 30, 55, 0.12) !important;
+		font-size: 12px !important;
+		line-height: 1.4 !important;
 	}
 
 	/* Highlighted menu / select items: a neutral tint plus an explicitly

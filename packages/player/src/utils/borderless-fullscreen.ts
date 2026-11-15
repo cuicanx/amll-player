@@ -128,6 +128,14 @@ export async function toggleBorderlessFullscreen(): Promise<void> {
 		}
 
 		await nextFrame();
+		// Fullscreen is triggered from the keyboard, so the last focused button
+		// keeps focus across the window state change and its tooltip re-opens by
+		// itself (which used to leave a stray glass bubble over the titlebar).
+		// Drop that focus once the switch has settled.
+		const active = document.activeElement;
+		if (active instanceof HTMLElement && active.tagName === "BUTTON") {
+			active.blur();
+		}
 		await fadeMask(0);
 	} catch (err) {
 		console.error("切换无边框全屏失败", err);

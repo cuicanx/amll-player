@@ -309,7 +309,11 @@ export const Component: FC = () => {
 					zIndex: 10,
 				}}
 			>
-				<Tooltip content={t("common.page.back", "返回")}>
+				<Tooltip
+					content={t("common.page.back", "返回")}
+					side="right"
+					sideOffset={8}
+				>
 					<Button variant="soft" onClick={() => history.back()} size="3">
 						<ArrowLeftIcon />
 					</Button>
