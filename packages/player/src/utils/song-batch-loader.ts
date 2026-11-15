@@ -1,4 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
+import { LRUCache } from "lru-cache";
 import { db, type Song } from "./db-client.ts";
 
 /**
@@ -22,8 +23,16 @@ type Listener = () => void;
 type Entry = Song | null;
 
 const BATCH_SIZE = 80;
+/**
+ * Bounded cache. A Song carries its full lyric text, so an unbounded map grows
+ * with every row the user ever scrolled past (a 1000-song list kept all of them
+ * alive). 400 entries comfortably covers the largest realistic playlist plus
+ * the prefetch window; anything evicted is simply re-fetched in one batch if
+ * the user scrolls back, which the prefetch normally hides.
+ */
+const CACHE_LIMIT = 400;
 
-const cache = new Map<string, Entry>();
+const cache = new LRUCache<string, Entry>({ max: CACHE_LIMIT });
 const subscribers = new Map<string, Set<Listener>>();
 const queued = new Set<string>();
 const inflight = new Set<string>();

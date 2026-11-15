@@ -77,6 +77,19 @@ function shuffleArray<T>(arr: readonly T[]): T[] {
 	return result;
 }
 
+/**
+ * Playback only needs the identity and display fields. The lyric text is by far
+ * the largest part of a Song and used to be duplicated into playList,
+ * originalList and the shuffled copy (three full copies per song). Strip it
+ * here; lyrics are read on demand by the player/batch loader when needed.
+ */
+const toQueueSong = (song: Song): Song => ({
+	...song,
+	lyric: "",
+	translatedLrc: null,
+	romanLrc: null,
+});
+
 export class PlayQueueManager {
 	private store: JotaiStore;
 	private originalList: Song[] = [];
@@ -161,13 +174,13 @@ export class PlayQueueManager {
 	 */
 	setQueue(songs: Song[], playlistId?: number): void {
 		if (songs.length === 0) return;
-		this.originalList = [...songs];
+		this.originalList = songs.map(toQueueSong);
 		this.playlistId = playlistId ?? null;
 
 		if (this.shuffleActive) {
-			this.playList = shuffleArray(songs);
+			this.playList = shuffleArray(songs.map(toQueueSong));
 		} else {
-			this.playList = [...songs];
+			this.playList = songs.map(toQueueSong);
 		}
 
 		this.playSongAt(0);
@@ -177,8 +190,8 @@ export class PlayQueueManager {
 	 * 用单首歌替换整个队列并播放
 	 */
 	replaceQueueAndPlay(song: Song): void {
-		this.originalList = [song];
-		this.playList = [song];
+		this.originalList = [toQueueSong(song)];
+		this.playList = [toQueueSong(song)];
 		this.playlistId = null;
 		this.playSongAt(0);
 	}
@@ -189,14 +202,14 @@ export class PlayQueueManager {
 	addToQueue(song: Song): void {
 		if (this.originalList.some((s) => s.id === song.id)) return;
 
-		this.originalList.push(song);
+		this.originalList.push(toQueueSong(song));
 
 		if (this.shuffleActive) {
 			// 随机模式下，插入到当前播放位置的下一位
 			const insertAt = this.currentIndex + 1;
-			this.playList.splice(insertAt, 0, song);
+			this.playList.splice(insertAt, 0, toQueueSong(song));
 		} else {
-			this.playList.push(song);
+			this.playList.push(toQueueSong(song));
 		}
 
 		this.syncToAtoms();
@@ -359,12 +372,14 @@ export class PlayQueueManager {
 			// 恢复 playList
 			this.playList = persisted.songIds
 				.map((id) => songMap.get(id))
-				.filter((s): s is Song => s !== undefined);
+				.filter((s): s is Song => s !== undefined)
+				.map(toQueueSong);
 
 			// 恢复 originalList
 			this.originalList = persisted.originalSongIds
 				.map((id) => songMap.get(id))
-				.filter((s): s is Song => s !== undefined);
+				.filter((s): s is Song => s !== undefined)
+				.map(toQueueSong);
 
 			// 如果 originalList 因为某些歌曲被删除而为空，用 playList 兜底
 			if (this.originalList.length === 0) {

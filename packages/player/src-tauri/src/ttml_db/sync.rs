@@ -89,7 +89,7 @@ impl LyricSyncer {
         let local_files = self
             .reader
             .as_ref()
-            .map(|r| r.get_all_file_paths())
+            .map(|r| r.get_all_file_paths_cached())
             .unwrap_or_default();
 
         info!("Local file count: {}", local_files.len());

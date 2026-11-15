@@ -11,12 +11,17 @@ const BLOCK_MAGIC: [u8; 4] = *b"ttml";
 
 pub struct TtmlDbReader {
     mmap: Mmap,
+    path: std::path::PathBuf,
+    modified: Option<std::time::SystemTime>,
 }
 
 impl TtmlDbReader {
     pub fn new(file_path: &std::path::Path) -> Result<Self> {
         let file = File::open(file_path)?;
         let mmap = unsafe { Mmap::map(&file)? };
+        let modified = std::fs::metadata(file_path)
+            .and_then(|meta| meta.modified())
+            .ok();
 
         info!(
             "Mapped database file: {} ({} bytes)",
@@ -24,7 +29,65 @@ impl TtmlDbReader {
             mmap.len()
         );
 
-        Ok(Self { mmap })
+        Ok(Self {
+            mmap,
+            path: file_path.to_path_buf(),
+            modified,
+        })
+    }
+
+    /// Indexed file paths, memoised next to the index file.
+    ///
+    /// Iterating the index touches the whole mapping (100 MB+ here) and pulls
+    /// it into the process working set. The set only depends on the index
+    /// contents, so it is cached in `index.paths` and reused until `index.bin`
+    /// changes. `mmap` itself is demand-paged, so this cache removes the only
+    /// place where the whole index was read eagerly at sync time.
+    pub fn get_all_file_paths_cached(&self) -> HashSet<String> {
+        let cache_path = self.path.with_extension("paths");
+        if let Some(cached) = Self::read_path_cache(&cache_path, self.modified) {
+            info!("Loaded {} indexed file paths from cache", cached.len());
+            return cached;
+        }
+        let paths = self.get_all_file_paths();
+        if let Err(err) = Self::write_path_cache(&cache_path, &paths) {
+            warn!("Failed to write lyric path cache: {err}");
+        }
+        paths
+    }
+
+    fn read_path_cache(
+        path: &std::path::Path,
+        index_modified: Option<std::time::SystemTime>,
+    ) -> Option<HashSet<String>> {
+        let cache_modified = std::fs::metadata(path)
+            .and_then(|meta| meta.modified())
+            .ok()?;
+        if let Some(index_modified) = index_modified {
+            if cache_modified < index_modified {
+                return None;
+            }
+        }
+        let content = std::fs::read_to_string(path).ok()?;
+        Some(
+            content
+                .lines()
+                .filter(|line| !line.is_empty())
+                .map(|line| line.to_string())
+                .collect(),
+        )
+    }
+
+    fn write_path_cache(
+        path: &std::path::Path,
+        paths: &HashSet<String>,
+    ) -> std::io::Result<()> {
+        let mut body = String::with_capacity(paths.len() * 48);
+        for entry in paths {
+            body.push_str(entry);
+            body.push('\n');
+        }
+        std::fs::write(path, body)
     }
 
     pub fn get_all_file_paths(&self) -> HashSet<String> {

@@ -94,22 +94,18 @@ export const useLyricParser = (
 			switch (format) {
 				case "lrc": {
 					parsedLyricLines = parseLrc(lyricStr);
-					console.log(LYRIC_LOG_TAG, "解析出 LyRiC 歌词", parsedLyricLines);
 					break;
 				}
 				case "eslrc": {
 					parsedLyricLines = parseEslrc(lyricStr);
-					console.log(LYRIC_LOG_TAG, "解析出 ESLyRiC 歌词", parsedLyricLines);
 					break;
 				}
 				case "yrc": {
 					parsedLyricLines = parseYrc(lyricStr);
-					console.log(LYRIC_LOG_TAG, "解析出 YRC 歌词", parsedLyricLines);
 					break;
 				}
 				case "qrc": {
 					parsedLyricLines = parseQrc(lyricStr);
-					console.log(LYRIC_LOG_TAG, "解析出 QRC 歌词", parsedLyricLines);
 					break;
 				}
 				case "lys": {
@@ -125,7 +121,6 @@ export const useLyricParser = (
 					const ttmlResult = handleTTMLParsing(lyricStr, displayLanguage);
 					parsedLyricLines = ttmlResult.lines;
 					parsedMetadata = ttmlResult.metadata;
-					console.log(LYRIC_LOG_TAG, "解析出 TTML 歌词", ttmlResult);
 					break;
 				}
 				default: {

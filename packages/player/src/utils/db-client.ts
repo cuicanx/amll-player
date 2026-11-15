@@ -71,6 +71,14 @@ class PlaylistsClient {
 		return invoke("get_playlist", { id });
 	}
 
+	/**
+	 * Just the cover paths of the first few songs, without loading the songs
+	 * themselves (and therefore without shipping their lyric text over IPC).
+	 */
+	async getCoverPaths(playlistId: number, limit = 4): Promise<string[]> {
+		return invoke("get_playlist_cover_paths", { playlistId, limit });
+	}
+
 	async create(name: string): Promise<number> {
 		return invoke("create_playlist", { name });
 	}

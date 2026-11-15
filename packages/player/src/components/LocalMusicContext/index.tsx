@@ -74,11 +74,16 @@ export const FFTToLowPassContext: FC = () => {
 		});
 	}, [fftDataRange]);
 
+	const isPlaying = useAtomValue(musicPlayingAtom);
+
 	useEffect(() => {
 		// The low-frequency value only drives the full-screen lyric background.
-		// Keep this loop stopped while that view is hidden.
-		if (!isLyricPageOpened) return;
-		let rafId: number;
+		// Stop the loop while that view is hidden, while playback is paused (the
+		// value is static anyway) and while the window is in the background -
+		// none of those states can produce a visible change.
+		if (!isLyricPageOpened || !isPlaying) return;
+		let rafId = 0;
+		let running = true;
 		let curValue = 1;
 		let lt = 0;
 
@@ -109,6 +114,7 @@ export const FFTToLowPassContext: FC = () => {
 		}
 
 		const onFrame = (dt: number) => {
+			if (!running) return;
 			const fftData = store.get(fftDataAtom);
 
 			const delta = dt - lt;
@@ -137,11 +143,31 @@ export const FFTToLowPassContext: FC = () => {
 			lt = dt;
 			rafId = requestAnimationFrame(onFrame);
 		};
-		rafId = requestAnimationFrame(onFrame);
-		return () => {
+		const start = () => {
+			if (running) return;
+			running = true;
+			// Reset the timestamp so the first frame after resuming snaps to the
+			// current amplitude instead of easing in from a huge delta.
+			lt = 0;
+			rafId = requestAnimationFrame(onFrame);
+		};
+		const stop = () => {
+			running = false;
 			cancelAnimationFrame(rafId);
 		};
-	}, [store, isLyricPageOpened]);
+		const onVisibilityChange = () => {
+			if (document.visibilityState === "hidden") stop();
+			else start();
+		};
+
+		document.addEventListener("visibilitychange", onVisibilityChange);
+		rafId = requestAnimationFrame(onFrame);
+		return () => {
+			running = false;
+			cancelAnimationFrame(rafId);
+			document.removeEventListener("visibilitychange", onVisibilityChange);
+		};
+	}, [store, isLyricPageOpened, isPlaying]);
 
 	return null;
 };

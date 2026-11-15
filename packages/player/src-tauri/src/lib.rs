@@ -270,6 +270,7 @@ pub fn run() {
             db::commands::upsert_songs,
             db::commands::get_song,
             db::commands::get_songs_by_ids,
+            db::commands::get_playlist_cover_paths,
             db::commands::update_song,
             db::commands::get_playlist_songs,
             db::commands::save_playlist_cover,

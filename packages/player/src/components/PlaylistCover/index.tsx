@@ -35,29 +35,25 @@ export const PlaylistCover: FC<
 		["playlists", "playlist_songs"],
 	);
 
-	const { data: songs } = useDbQuery(
+	const { data: songCovers } = useDbQuery(
 		async () => {
-			if (playlist && !playlist.songIds?.length) return [];
-			if (!playlist) return [];
-			const allSongs = await db.songs.getByIds(playlist.songIds);
-			return allSongs.filter(
-				(s) => s.coverPath && !s.coverPath.endsWith(".mp4"),
-			);
+			if (!playlist?.songIds?.length) return [] as string[];
+			// Only the paths are needed. The previous version fetched every full
+			// Song of the playlist (lyric text included) just to read four
+			// cover_path values.
+			return await db.playlists.getCoverPaths(playlistId, 4);
 		},
-		[playlist],
-		[],
-		["songs"],
+		[playlistId, playlist?.songIds?.length],
+		[] as string[],
+		["songs", "playlist_songs"],
 	);
 
 	useEffect(() => {
 		let imgs: string[] = [];
 		if (playlist?.coverPath) {
 			imgs = [toDisplayUrl(playlist.coverPath)];
-		} else if (songs && songs.length > 0) {
-			imgs = songs
-				.slice(0, 4)
-				// biome-ignore lint/style/noNonNullAssertion: filter() 检查了 coverPath 的存在
-				.map((s) => toDisplayUrl(s.coverPath!));
+		} else if (songCovers && songCovers.length > 0) {
+			imgs = songCovers.slice(0, 4).map(toDisplayUrl);
 		}
 
 		// No result yet (or a transient refetch): keep what is already on
@@ -70,7 +66,7 @@ export const PlaylistCover: FC<
 				? prev
 				: imgs,
 		);
-	}, [songs, playlist, playlistId]);
+	}, [songCovers, playlist, playlistId]);
 
 	return (
 		<div

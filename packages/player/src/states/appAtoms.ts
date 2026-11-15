@@ -133,6 +133,15 @@ export interface UpstreamRelease {
  */
 export const upstreamUpdateAtom = atom<UpstreamRelease | null>(null);
 
+/**
+ * Set when the JS heap crosses a high-water mark. While it is true and the
+ * full-screen lyric page is closed, that subtree (WebGL context + the whole
+ * lyric DOM) is unmounted so the browser can reclaim it. It is only a pressure
+ * valve: at normal heap sizes it stays false and the page stays warm, so
+ * opening it never costs an initialisation stall.
+ */
+export const lyricPageSuspendedAtom = atom(false);
+
 export const enableTaskbarLyricAtom = atomWithStorage(
 	"amll-player.enableTaskbarLyric",
 	false,

@@ -385,6 +385,44 @@ pub async fn get_songs_by_ids(
         .map_err(|e| format!("Failed to get songs: {e}"))
 }
 
+#[derive(sea_orm::FromQueryResult)]
+struct PlaylistCoverRow {
+    cover_path: Option<String>,
+}
+
+/// Cover paths of a playlist without loading the songs themselves.
+///
+/// The playlist card renders at most four covers. Fetching full Song rows just
+/// to read `cover_path` shipped the entire playlist's lyric text over IPC on
+/// every main-page mount, which showed up as a CPU and memory spike.
+#[tauri::command]
+pub async fn get_playlist_cover_paths(
+    db: State<'_, DbConnection>,
+    playlist_id: i32,
+    limit: Option<u32>,
+) -> Result<Vec<String>, String> {
+    use sea_orm::{DatabaseBackend, FromQueryResult, Statement};
+
+    let limit = limit.unwrap_or(4).min(16) as i64;
+    let rows = PlaylistCoverRow::find_by_statement(Statement::from_sql_and_values(
+        DatabaseBackend::Sqlite,
+        "SELECT s.cover_path AS cover_path \
+         FROM playlist_songs ps \
+         JOIN songs s ON s.id = ps.song_id \
+         WHERE ps.playlist_id = ? \
+           AND s.cover_path IS NOT NULL \
+           AND s.cover_path NOT LIKE '%.mp4' \
+         ORDER BY ps.added_at ASC, ps.id ASC \
+         LIMIT ?",
+        [playlist_id.into(), limit.into()],
+    ))
+    .all(&*db)
+    .await
+    .map_err(|e| format!("Failed to get playlist covers: {e}"))?;
+
+    Ok(rows.into_iter().filter_map(|row| row.cover_path).collect())
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSongPayload {
