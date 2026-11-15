@@ -49,7 +49,10 @@ export const Component: FC = () => {
 							AMLL Player
 							{updateInfo && (
 								<Badge
-									onClick={() => router.navigate("/settings#updater")}
+									onClick={() => // The settings page keeps its active tab in local state, so the hash is
+									// what actually selects "关于"; "#updater" was ignored and landed on
+									// 常规 instead.
+									router.navigate("/settings#about")}
 									radius="full"
 									style={{
 										cursor: "pointer",

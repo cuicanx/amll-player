@@ -9,24 +9,45 @@ import {
 import { ContextMenu } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import type { FC } from "react";
-import { Trans } from "react-i18next";
+import { type FC, useEffect, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { router } from "../../router.tsx";
 import {
 	enableAlwaysOnTopAtom,
+	enableF11FullscreenAtom,
 	recordPanelOpenedAtom,
 } from "../../states/appAtoms.ts";
-import { toggleBorderlessFullscreen } from "../../utils/borderless-fullscreen.ts";
+import {
+	isBorderlessFullscreen,
+	toggleBorderlessFullscreen,
+} from "../../utils/borderless-fullscreen.ts";
 
 export const AMLLContextMenuContent: FC = () => {
+	const { t } = useTranslation();
 	const [hideLyricView, setHideLyricView] = useAtom(hideLyricViewAtom);
 	const [alwaysOnTop, setAlwaysOnTop] = useAtom(enableAlwaysOnTopAtom);
+	const enableF11Fullscreen = useAtomValue(enableF11FullscreenAtom);
 	const setLyricPageOpened = useSetAtom(isLyricPageOpenedAtom);
 	const setRecordPanelOpened = useSetAtom(recordPanelOpenedAtom);
 	const onRequestPrevSong = useAtomValue(onRequestPrevSongAtom).onEmit;
 	const onRequestNextSong = useAtomValue(onRequestNextSongAtom).onEmit;
 	const onPlayOrResume = useAtomValue(onPlayOrResumeAtom).onEmit;
 	const musicId = useAtomValue(musicIdAtom);
+
+	// The menu content only exists while the menu is open, so querying the
+	// window state on mount is enough to label the entry correctly. Reading it
+	// here (instead of keeping a global atom in sync) avoids a stale label if
+	// the window was put into fullscreen by something else.
+	const [isFullscreen, setIsFullscreen] = useState(false);
+	useEffect(() => {
+		let cancelled = false;
+		void isBorderlessFullscreen().then((value) => {
+			if (!cancelled) setIsFullscreen(value);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	return (
 		<ContextMenu.Content>
@@ -40,11 +61,18 @@ export const AMLLContextMenuContent: FC = () => {
 				<Trans i18nKey="amll.contextMenu.forwardSong">下一首</Trans>
 			</ContextMenu.Item>
 			<ContextMenu.Separator />
-			<ContextMenu.Item onClick={() => void toggleBorderlessFullscreen()}>
-				<Trans i18nKey="amll.contextMenu.toggleFullscreen">
-					全屏 / 取消全屏
-				</Trans>
-			</ContextMenu.Item>
+			{/* Only offered when the user opted into F11 borderless fullscreen in
+			   Settings → General. With the feature disabled the entry did
+			   nothing useful for them and only added noise. */}
+			{enableF11Fullscreen && (
+				<ContextMenu.Item
+					onClick={() => void toggleBorderlessFullscreen()}
+				>
+					{isFullscreen
+						? t("amll.contextMenu.exitFullscreen", "退出全屏")
+						: t("amll.contextMenu.enterFullscreen", "进入全屏")}
+				</ContextMenu.Item>
+			)}
 			<ContextMenu.CheckboxItem
 				checked={alwaysOnTop}
 				onCheckedChange={(e) => setAlwaysOnTop(!!e)}

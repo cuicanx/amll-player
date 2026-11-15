@@ -5,7 +5,9 @@
 			"codec": "音频解码器",
 			"sampleFormat": "采样格式",
 			"sampleRate": "采样率",
-			"title": "音频解码信息"
+			"title": "音频解码信息",
+			"subtitle": "Thông số giải mã của bản nhạc hiện tại",
+			"channelUnit": "kênh"
 		},
 		"contextMenu": {
 			"editMusicOverrideMessage": "Chỉnh sửa thông tin bài hát",
@@ -18,7 +20,9 @@
 			"rewindSong": "Bài trước đó",
 			"toggleFullscreen": "Toàn màn hình / Thoát toàn màn hình",
 			"toggleLyrics": "Hiển thị lời bài hát",
-			"windowAlwaysOnTop": "窗口置顶"
+			"windowAlwaysOnTop": "窗口置顶",
+			"enterFullscreen": "Vào toàn màn hình",
+			"exitFullscreen": "Thoát toàn màn hình"
 		},
 		"loadAudioError": "Lỗi tải âm thanh từ tệp {error}",
 		"migrationDialog": {
@@ -135,13 +139,29 @@
 	},
 	"page": {
 		"about": {
-			"credits": "Được phát triển bởi SteveXMH và các cộng tác viên khác trên Github\nhttps://github.com/amll-dev/applemusic-like-lyrics",
+			"updateProgress": "Đang tải bản cập nhật… {percent}%",
+			"updateError": "Cập nhật thất bại: {error}",
+			"updateRetry": "Thử lại",
+			"updateManualHint": "Đã thất bại nhiều lần - hãy tải bộ cài thủ công từ trang phát hành",
+			"updateManualDownload": "Mở trang phát hành",
+			"upstreamAvailable": "Thượng nguồn có bản dựng mới ({version}) - xem bản phát hành thượng nguồn",
+			"description": "Apple Music-like Lyrics Player",
+			"upstream": "Dựa trên dự án thượng nguồn AMLL (Apple Music-like Lyrics)",
+			"maintainerLink": "Người bảo trì chính: cuicanx (GitHub)",
+			"releaseLink": "Bản phát hành: cuicanx/amll-player",
+			"credits": "Phiên bản này được cuicanx bảo trì chính và đóng góp",
 			"downloading": "Đang tải xuống bản cập nhật {progressText}",
 			"installing": "Đang cài đặt cập nhật, sẽ tự động khởi động lại, vui lòng chờ...",
 			"installUpdate": "Cập nhật và cài đặt",
 			"newVersion": " Có bản cập nhật khả dụng từ {currentVersion} lên {nextVersion}",
 			"subtitle": "Về",
-			"updating": "Đang cập nhật, khi hoàn tất sẽ tự động khởi động lại, vui lòng chờ..."
+			"updating": "Đang cập nhật, khi hoàn tất sẽ tự động khởi động lại, vui lòng chờ...",
+			"maintainerRole": "Người bảo trì",
+			"otherContributors": "Cộng sự khác",
+			"noOtherContributors": "Chưa có cộng sự khác",
+			"releaseNotes": "Nội dung cập nhật",
+			"releaseNotesEmpty": "Bản phát hành này không kèm ghi chú.",
+			"updatePreparing": "Đang kết nối nguồn cập nhật…"
 		},
 		"amll-dev": {
 			"title": "Trang phát triển Apple Music Like Lyrics",
@@ -257,6 +277,10 @@
 		},
 		"settings": {
 			"general": {
+				"f11Fullscreen": {
+					"description": "Khi bật, F11 chuyển đổi toàn màn hình không viền. Mặc định tắt.",
+					"label": "Bật F11 toàn màn hình không viền"
+				},
 				"displayLanguage": {
 					"cimode": "ID ngôn ngữ địa phương",
 					"label": "Ngôn ngữ hiển thị"

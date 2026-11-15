@@ -184,13 +184,24 @@ jobs:
           tagName: ${{ github.ref_name }}-player-dev
           uploadUpdaterJson: true
           releaseName: AMLL Player ${{ github.ref_name }} branch development build
+          # Structured markdown: the in-app update panel renders headings,
+          # bullets, bold and inline code, so notes need real hierarchy instead
+          # of one run-on block of text.
           releaseBody: |
-            Latest ${{ github.ref_name }} branch development build.
-            最新 ${{ github.ref_name }} 分支开发调试构建。
-            Development version may be unstable and may not work properly, please only for test purpose.
-            开发版本可能不稳定且可能无法正常工作，请仅用于测试目的。
+            ## 更新内容
 
-            Latest commits (最新提交): ${{ github.event.head_commit.message }}
+            > 本构建来自 `${{ github.ref_name }}` 分支的自动构建，可能不稳定，建议仅用于测试。
+
+            ### 本次变更
+
+            ${{ github.event.head_commit.message }}
+
+            ---
+
+            ## What's new
+
+            Automated build of the `${{ github.ref_name }}` branch. Development builds may be unstable; use them for testing only.
+            Installers are signed; automatic updates from `0.0.1144` onward work without a manual reinstall.
           prerelease: true
           args: ${{ matrix.args }}
         env:

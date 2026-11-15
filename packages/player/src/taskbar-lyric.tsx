@@ -1,4 +1,3 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createRoot } from "react-dom/client";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { TaskbarLyricApp } from "./pages/taskbar-lyric/index.tsx";
@@ -28,14 +27,8 @@ createRoot(document.getElementById("root") as HTMLElement).render(
 	</ErrorBoundary>,
 );
 
-// The native window is created hidden and embedded into the taskbar right
-// after creation. Reveal it only once React has painted, so the control never
-// appears first as an empty transparent frame. `show()` is idempotent, so the
-// timer simply covers the case where the frames were throttled.
-const reveal = () => {
-	getCurrentWindow()
-		.show()
-		.catch((err) => console.warn("显示任务栏歌词窗口失败", err));
-};
-requestAnimationFrame(() => requestAnimationFrame(reveal));
-window.setTimeout(reveal, 300);
+// The native side owns visibility: it creates the window hidden, embeds it
+// into the taskbar and only then shows it (with its own timeout as a safety
+// net). Revealing it from here as well meant the window could become visible
+// before the embed/positioning pass finished, which is what produced the
+// "window pops up, then disappears" flash on startup.

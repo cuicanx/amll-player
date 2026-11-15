@@ -18,7 +18,6 @@ import {
 	Heading,
 	Separator,
 	Text,
-	Tooltip,
 } from "@radix-ui/themes";
 import { platform } from "@tauri-apps/plugin-os";
 import type { Namespace } from "i18next";
@@ -228,6 +227,26 @@ export const Component: FC = () => {
 		};
 	}, []);
 
+	// Deep links such as `/settings#about` (used by the "update available"
+	// badge on the main page) select a tab directly. Without this the hash was
+	// simply ignored and the page always opened on 常规.
+	useEffect(() => {
+		const applyHash = () => {
+			const hash = window.location.hash.replace(/^#/, "");
+			if (!hash) return;
+			if (hash.startsWith("player.") || hash.startsWith("extension.")) {
+				setCurrentPage(hash);
+				return;
+			}
+			setCurrentPage(`player.${hash}`);
+		};
+		applyHash();
+		window.addEventListener("hashchange", applyHash);
+		return () => {
+			window.removeEventListener("hashchange", applyHash);
+		};
+	}, [setCurrentPage]);
+
 	const [isMenuOpen, setMenuOpen] = useState(false);
 
 	const handleNavigate = (pageId: string) => {
@@ -301,23 +320,33 @@ export const Component: FC = () => {
 				gap="3"
 				style={{
 					position: "fixed",
-					top: "var(--space-4)",
+					// A 40px control cannot be vertically centred inside the 32px
+					// titlebar without 4px hanging outside the window, which is
+					// what clipped the top of the arrow. The row is now a fixed
+					// 40px tall strip pinned to the top edge, independent of the
+					// titlebar variable (that variable used to collapse to 0 in
+					// fullscreen, pushing the button above the viewport).
+					top: 0,
 					left: 0,
-					height: "var(--system-titlebar-height)",
+					height: 40,
 					paddingLeft: "var(--space-4)",
 					paddingRight: "var(--space-4)",
 					zIndex: 10,
 				}}
 			>
-				<Tooltip
-					content={t("common.page.back", "返回")}
-					side="right"
-					sideOffset={8}
+				{/* No Tooltip here on purpose. In fullscreen the titlebar collapses
+				   to zero height, so the hint was flipped below the button and
+				   covered it; it is also pure decoration for a one-glyph button
+				   that already has an aria-label. Removing it fixes both the
+				   occluded arrow and the bubble that appeared on hover. */}
+				<Button
+					variant="soft"
+					onClick={() => history.back()}
+					size="3"
+					aria-label={t("common.page.back", "返回")}
 				>
-					<Button variant="soft" onClick={() => history.back()} size="3">
-						<ArrowLeftIcon />
-					</Button>
-				</Tooltip>
+					<ArrowLeftIcon />
+				</Button>
 				<Button
 					variant="soft"
 					onClick={() => setMenuOpen(true)}

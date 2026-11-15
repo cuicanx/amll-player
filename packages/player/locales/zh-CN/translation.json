@@ -5,7 +5,9 @@
 			"codec": "音频解码器",
 			"sampleFormat": "采样格式",
 			"sampleRate": "采样率",
-			"title": "音频解码信息"
+			"title": "音频解码信息",
+			"subtitle": "当前播放音频的实际解码参数",
+			"channelUnit": "声道"
 		},
 		"contextMenu": {
 			"editMusicOverrideMessage": "编辑歌曲覆盖信息",
@@ -18,7 +20,9 @@
 			"rewindSong": "上一首",
 			"toggleFullscreen": "全屏 / 取消全屏",
 			"toggleLyrics": "显示歌词",
-			"windowAlwaysOnTop": "窗口置顶"
+			"windowAlwaysOnTop": "窗口置顶",
+			"enterFullscreen": "进入全屏",
+			"exitFullscreen": "退出全屏"
 		},
 		"loadAudioError": "播放后端加载音频失败\n{error}",
 		"migrationDialog": {
@@ -135,15 +139,31 @@
 	},
 	"page": {
 		"about": {
+			"updateProgress": "正在下载更新… {percent}%",
+			"updateError": "更新失败：{error}",
+			"updateRetry": "重试",
+			"updateManualHint": "已多次失败，可前往发布页手动下载安装包",
+			"updateManualDownload": "打开发布页",
+			"upstreamAvailable": "上游有新构建（{version}），查看上游发布页",
+			"description": "Apple Music-like Lyrics Player",
+			"upstream": "基于 AMLL（Apple Music-like Lyrics）上游项目，保留其技术背景与致谢",
+			"maintainerLink": "主要维护者：cuicanx (GitHub)",
+			"releaseLink": "版本与构建：cuicanx/amll-player",
 			"contributorsTitle": "贡献者",
-			"credits": "由 SteveXMH 及其所有 Github 协作者共同开发",
+			"credits": "当前版本由 cuicanx 主要维护并参与贡献",
 			"downloading": "正在下载更新…… {progressText}",
 			"installing": "正在安装更新，将会自动重启，请稍后……",
 			"installUpdate": "更新并安装",
 			"loadingContributors": "正在加载贡献者列表…",
 			"newVersion": "有可用更新从 {currentVersion} 升级至 {nextVersion}",
 			"subtitle": "关于",
-			"updating": "正在更新，完成后将会自动重启，请稍后……"
+			"updating": "正在更新，完成后将会自动重启，请稍后……",
+			"maintainerRole": "主要维护者",
+			"otherContributors": "其他贡献者",
+			"noOtherContributors": "暂无其他贡献者",
+			"releaseNotes": "更新内容",
+			"releaseNotesEmpty": "此版本没有附带更新说明，可直接安装。",
+			"updatePreparing": "正在连接更新源…"
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 开发者页面",
@@ -259,6 +279,10 @@
 		},
 		"settings": {
 			"general": {
+				"f11Fullscreen": {
+					"description": "开启后按 F11 可进入或退出无边框全屏；关闭时 F11 不生效",
+					"label": "启用 F11 无边框全屏"
+				},
 				"displayLanguage": {
 					"cimode": "本地化 ID",
 					"label": "显示语言"

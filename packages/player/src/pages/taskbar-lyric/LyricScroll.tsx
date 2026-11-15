@@ -59,7 +59,15 @@ export const LyricScroll = ({
 		if (overflow > 0 && text.trim().length > 0) {
 			setShouldScroll(true);
 			// 添加一些偏移量以便歌词能够滚动到右侧遮罩左边而不会滚动完了还会被遮罩挡住
-			setMaxTranslate(overflow + 2);
+			const limit = overflow + 2;
+			setMaxTranslate(limit);
+			// Right-aligned lyrics rest flush against the right edge, so the
+			// tail of a long line is the first thing on screen. Start at the
+			// full offset instead: the line then begins at its first character
+			// and travels left, which is the normal left-to-right read order.
+			if (!isVert && align === "right") {
+				contentRef.current.style.transform = `translateX(${limit}px)`;
+			}
 		} else {
 			setShouldScroll(false);
 			setMaxTranslate(0);
@@ -67,7 +75,7 @@ export const LyricScroll = ({
 				contentRef.current.style.transform = "none";
 			}
 		}
-	}, [isVert, text]);
+	}, [isVert, text, align]);
 
 	useLayoutEffect(() => {
 		measure();
@@ -98,9 +106,16 @@ export const LyricScroll = ({
 
 			const safeProgress = Math.max(0, Math.min(1, progress));
 
+			// Horizontal: move the line leftwards so later characters enter
+			// from the right edge (normal reading order).
+			//  - left-aligned: content starts at the left, so offset 0 -> -max.
+			//  - right-aligned: content starts flush right, so it must first be
+			//    pushed to the left edge (+max) and then travel back to 0.
+			// The previous right-aligned branch ran 0 -> +max, which read the
+			// sentence end-first and scrolled the wrong way.
 			let translation = -safeProgress * maxTranslate;
 			if (!isVert && align === "right") {
-				translation = safeProgress * maxTranslate;
+				translation = (1 - safeProgress) * maxTranslate;
 			}
 			if (isVert && align === "right") {
 				translation = -safeProgress * maxTranslate;

@@ -32,6 +32,12 @@
 		--amll-glass-popover-border: rgba(24, 34, 60, 0.12);
 		--amll-glass-popover-highlight: rgba(255, 255, 255, 0.45);
 		--amll-glass-popover-shadow: 0 10px 24px rgba(20, 30, 55, 0.14);
+		/* Dialogs sit above menus and carry real content, so they use a
+		   denser tint and a deeper shadow for a clear layering step. */
+		--amll-glass-dialog: rgba(252, 253, 255, 0.95);
+		--amll-glass-dialog-shadow:
+			0 18px 48px rgba(20, 30, 55, 0.20), 0 2px 6px rgba(20, 30, 55, 0.06);
+		--amll-glass-hairline: rgba(24, 34, 60, 0.08);
 
 		/* Popover material copied from the "青柠起始页" reference CSS:
 		   --universal-backdrop-filter: blur(30px) saturate(1.25);
@@ -77,6 +83,10 @@
 		--amll-glass-popover-border: rgba(255, 255, 255, 0.10);
 		--amll-glass-popover-highlight: rgba(255, 255, 255, 0.05);
 		--amll-glass-popover-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+		--amll-glass-dialog: rgba(24, 27, 35, 0.96);
+		--amll-glass-dialog-shadow:
+			0 18px 46px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.30);
+		--amll-glass-hairline: rgba(255, 255, 255, 0.08);
 		--amll-glass-item-highlight: rgba(255, 255, 255, 0.12);
 		--amll-glass-callout-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 		--amll-glass-toast-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
@@ -235,6 +245,40 @@
 	.rt-ContextMenuItem[data-highlighted] *,
 	.rt-SelectItem[data-highlighted] * {
 		color: inherit !important;
+	}
+
+	/* Menu rhythm. The right-click menu, the three-dot menu and the dropdowns
+	   now share one row height, one inner padding and one separator weight, so
+	   they read as the same control instead of three different lists. */
+	[role="menu"] {
+		padding: 6px !important;
+		min-width: 188px;
+	}
+	[role="menuitem"],
+	[role="menuitemcheckbox"],
+	[role="menuitemradio"] {
+		border-radius: 7px !important;
+		padding: 6px 9px !important;
+		min-height: 30px;
+		gap: 10px;
+		font-size: 12.5px !important;
+		line-height: 1.35 !important;
+		cursor: default;
+	}
+	[role="menu"] [role="separator"] {
+		margin: 4px 2px !important;
+		height: 1px !important;
+		background-color: var(--amll-glass-hairline) !important;
+	}
+	[role="menu"] [data-disabled] {
+		opacity: 0.45;
+	}
+	/* Shortcut hints ("Ctrl Alt ←") are secondary information: keep them on the
+	   same baseline as the label but visibly quieter than it. */
+	[role="menu"] [role="menuitem"] > span:last-child:not(:first-child) {
+		font-size: 11.5px;
+		opacity: 0.55;
+		letter-spacing: 0.01em;
 	}
 
 	/* Dialog scrim: a lighter blur so content behind stays recognisable. */

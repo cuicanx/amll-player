@@ -5,7 +5,9 @@
 			"codec": "Audio codec",
 			"sampleFormat": "Sample format",
 			"sampleRate": "Sample rate",
-			"title": "Audio Quality Details"
+			"title": "Audio Quality Details",
+			"subtitle": "Decoding parameters of the current track",
+			"channelUnit": "ch"
 		},
 		"contextMenu": {
 			"editMusicOverrideMessage": "Edit Track Override Data",
@@ -18,7 +20,9 @@
 			"rewindSong": "Previous Song",
 			"toggleFullscreen": "Enter / Exit full screen",
 			"toggleLyrics": "Lyrics",
-			"windowAlwaysOnTop": "窗口置顶"
+			"windowAlwaysOnTop": "窗口置顶",
+			"enterFullscreen": "Enter fullscreen",
+			"exitFullscreen": "Exit fullscreen"
 		},
 		"loadAudioError": "The player backend encountered an error when loading the audio file:\n{error}",
 		"migrationDialog": {
@@ -135,15 +139,31 @@
 	},
 	"page": {
 		"about": {
+			"updateProgress": "Downloading update… {percent}%",
+			"updateError": "Update failed: {error}",
+			"updateRetry": "Retry",
+			"updateManualHint": "Failed repeatedly - download the installer manually from the release page",
+			"updateManualDownload": "Open release page",
+			"upstreamAvailable": "Upstream has a newer build ({version}) - view upstream release",
+			"description": "Apple Music-like Lyrics Player",
+			"upstream": "Based on the upstream AMLL (Apple Music-like Lyrics) project",
+			"maintainerLink": "Main maintainer: cuicanx (GitHub)",
+			"releaseLink": "Releases: cuicanx/amll-player",
 			"contributorsTitle": "Contributors",
-			"credits": "Made by SteveXMH and all Contributors from GitHub",
+			"credits": "This edition is mainly maintained and contributed by cuicanx",
 			"downloading": "Downloading updates…… {progressText}",
 			"installing": "Installing update, player will restart, wait a minute...",
 			"installUpdate": "Install this update",
 			"loadingContributors": "Loading contributors…",
 			"newVersion": "Available update from {currentVersion} to {nextVersion}",
 			"subtitle": "About",
-			"updating": "Player will restart after update, hold on a second...."
+			"updating": "Player will restart after update, hold on a second....",
+			"maintainerRole": "Maintainer",
+			"otherContributors": "Other contributors",
+			"noOtherContributors": "No other contributors yet",
+			"releaseNotes": "What's new",
+			"releaseNotesEmpty": "This release has no notes attached.",
+			"updatePreparing": "Connecting to the update source…"
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics Developer Page",
@@ -259,6 +279,10 @@
 		},
 		"settings": {
 			"general": {
+				"f11Fullscreen": {
+					"description": "When enabled, F11 toggles borderless fullscreen. Disabled by default.",
+					"label": "Enable F11 borderless fullscreen"
+				},
 				"displayLanguage": {
 					"cimode": "Localization ID",
 					"label": "Display Language"

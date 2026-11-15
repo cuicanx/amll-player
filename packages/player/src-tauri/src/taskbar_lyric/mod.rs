@@ -118,13 +118,19 @@ pub fn open_taskbar_lyric(app: tauri::AppHandle) {
         let url = tauri::WebviewUrl::App("taskbar-lyric.html".into());
 
         let win_builder = tauri::WebviewWindowBuilder::new(&app_clone, "taskbar-lyric", url)
-            .decorations(true)
+            // No native decorations: a transparent window WITH decorations
+            // painted a titlebar frame for one frame before the embed.
+            .decorations(false)
             .transparent(true)
-            .always_on_top(true)
-            .skip_taskbar(false)
+            .shadow(false)
+            // The control lives inside the taskbar. Letting it register as a
+            // normal window is what made a second taskbar button appear and
+            // immediately vanish.
+            .skip_taskbar(true)
             .resizable(false)
             .maximizable(false)
             .minimizable(false)
+            .focused(false)
             // Created hidden: the window is embedded into the taskbar *after*
             // creation, so showing it immediately made it flash (first as a
             // floating transparent window, then as the embedded control). The
@@ -216,9 +222,18 @@ pub fn open_taskbar_lyric(app: tauri::AppHandle) {
                         tray: taskbar_lyric::TrayWatcher::new(tray_cb).ok(),
                         reg: taskbar_lyric::RegistryWatcher::new(reg_cb).ok(),
                     });
-
-                    let _ = win.show();
                 }
+
+                // Reveal only after the embed call above has run and the first
+                // layout pass has positioned the window. Showing it at build
+                // time (or on the page's first paint, which happens before the
+                // embed finishes) produced the "a window pops up and instantly
+                // disappears" flash.
+                let win_show = win.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_millis(180)).await;
+                    let _ = win_show.show();
+                });
             } else {
                 tracing::warn!("Failed to get hwnd for taskbar-lyric window");
             }

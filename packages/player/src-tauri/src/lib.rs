@@ -25,6 +25,7 @@ mod player;
 mod screen_capture;
 mod server;
 mod ttml_db;
+mod updater;
 mod utils;
 mod window;
 
@@ -271,6 +272,8 @@ pub fn run() {
             db::commands::get_song,
             db::commands::get_songs_by_ids,
             db::commands::get_playlist_cover_paths,
+            updater::updater_check,
+            updater::updater_install,
             db::commands::update_song,
             db::commands::get_playlist_songs,
             db::commands::save_playlist_cover,

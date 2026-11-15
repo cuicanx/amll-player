@@ -39,7 +39,6 @@ import {
 	Button,
 	Card,
 	Flex,
-	Grid,
 	Select,
 	Separator,
 	Slider,
@@ -56,6 +55,13 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { platform } from "@tauri-apps/plugin-os";
 import { atom, useAtom, useAtomValue, useSetAtom, type WritableAtom } from "jotai";
 import { loadable } from "jotai/utils";
+import { ReleaseNotes } from "../../components/ReleaseNotes/index.tsx";
+import { formatSpeed } from "../../states/updater.ts";
+import {
+	detectUpdateRegion,
+	mirrorUrl,
+	peekUpdateRegion,
+} from "../../utils/update-region.ts";
 import React, {
 	type FC,
 	type PropsWithChildren,
@@ -90,6 +96,7 @@ import {
 	updateErrorAtom,
 	updateInfoAtom,
 	updateProgressAtom,
+	updateSpeedAtom,
 	upstreamUpdateAtom,
 } from "../../states/appAtoms.ts";
 import {
@@ -99,6 +106,7 @@ import {
 	UPDATE_RELEASE_PAGE,
 } from "../../states/updater.ts";
 import { restartApp } from "../../utils/player.ts";
+import about from "./about.module.css";
 import styles from "./index.module.css";
 
 const SettingEntry: FC<
@@ -1199,40 +1207,70 @@ interface Contributor {
 const MAINTAINER: Contributor = {
 	id: 0,
 	login: "cuicanx",
+	// Resolved per region at render time (see `maintainerAvatar()`): the
+	// github.com avatar host is unreliable on mainland networks.
 	avatar: "https://github.com/cuicanx.png",
 	url: "https://github.com/cuicanx",
 };
 
-const CONTRIBUTORS_API =
-	"https://api.github.com/repos/cuicanx/amll-player/contributors?per_page=100&anon=true";
-const MIRROR_PREFIX = "https://gh-proxy.com/";
+const MAINTAINER_AVATAR = "https://avatars.githubusercontent.com/cuicanx";
+
+function maintainerAvatar(): string {
+	return avatarFor(MAINTAINER_AVATAR);
+}
 
 /**
- * Fetch the contributor list from the mirror and the direct GitHub API
- * concurrently and keep whichever answers first. Trying them in sequence meant
- * a slow/unreachable first source delayed the whole list by its full timeout;
- * racing them makes the load time the faster of the two, which is also the
- * "measure both, use the faster one" behaviour the user asked for.
+ * Avatars are served from `avatars.githubusercontent.com`, which is one of the
+ * hosts mainland networks usually cannot reach. Route them through the same
+ * region-aware transport as everything else instead of leaving broken images.
+ */
+function avatarFor(url: string): string {
+	if (!url) return url;
+	return peekUpdateRegion() === "global" ? url : mirrorUrl(url);
+}
+
+const REPOSITORY_URL = "https://github.com/cuicanx/amll-player";
+
+const CONTRIBUTORS_API =
+	"https://api.github.com/repos/cuicanx/amll-player/contributors?per_page=100&anon=true";
+
+/**
+ * Fetch the contributor list from the region-appropriate transport.
+ *
+ * Same rule as the updater: the egress IP decides which source leads, so a
+ * mainland user goes through the proxy while a VPN user whose exit node is
+ * abroad talks to GitHub directly. The other transport is started shortly
+ * afterwards as a fallback instead of racing from the first millisecond - that
+ * way the preferred source still wins when both are reachable, but a dead one
+ * cannot stall the list.
  */
 async function fetchContributorsFast(): Promise<unknown[] | null> {
-	const targets = [CONTRIBUTORS_API, `${MIRROR_PREFIX}${CONTRIBUTORS_API}`];
-	const controllers = targets.map(() => new AbortController());
-	const attempt = (url: string, index: number) =>
-		fetch(url, {
-			signal: controllers[index].signal,
+	const region = await detectUpdateRegion();
+	const primary = region === "global" ? CONTRIBUTORS_API : mirrorUrl(CONTRIBUTORS_API);
+	const fallback = region === "global" ? mirrorUrl(CONTRIBUTORS_API) : CONTRIBUTORS_API;
+	const controller = new AbortController();
+	const request = async (url: string) => {
+		const response = await fetch(url, {
+			signal: controller.signal,
 			headers: { Accept: "application/vnd.github+json" },
-		}).then(async (response) => {
-			if (!response.ok) throw new Error(`HTTP ${response.status}`);
-			const data = await response.json();
-			// Cancel the slower request so it does not keep the connection busy.
-			for (let i = 0; i < controllers.length; i++) {
-				if (i !== index) controllers[i].abort();
-			}
-			return data;
 		});
+		if (!response.ok) throw new Error(`HTTP ${response.status}`);
+		const data = await response.json();
+		if (!Array.isArray(data)) throw new Error("unexpected payload");
+		return data as unknown[];
+	};
+
+	const fallbackDelay = new Promise<never>((_, reject) => {
+		window.setTimeout(() => reject(new Error("fallback")), 1200);
+	});
+
 	try {
-		const data = await Promise.any(targets.map(attempt));
-		return Array.isArray(data) ? data : null;
+		const data = await Promise.any([
+			request(primary),
+			Promise.race([fallbackDelay, request(fallback)]),
+		]);
+		controller.abort();
+		return data;
 	} catch {
 		return null;
 	}
@@ -1240,7 +1278,7 @@ async function fetchContributorsFast(): Promise<unknown[] | null> {
 
 const ContributorsSection: FC = () => {
 	const { t } = useTranslation();
-	const [contributors, setContributors] = useState<Contributor[]>([MAINTAINER]);
+	const [contributors, setContributors] = useState<Contributor[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
@@ -1263,7 +1301,7 @@ const ContributorsSection: FC = () => {
 							avatar: item.avatar_url || "",
 							url: item.html_url || `https://github.com/${item.login}`,
 						}));
-					setContributors([MAINTAINER, ...list]);
+					setContributors(list);
 				}
 			} catch (error) {
 				console.error("Failed to fetch contributors:", error);
@@ -1275,59 +1313,55 @@ const ContributorsSection: FC = () => {
 		fetchData();
 	}, []);
 
-	const renderContributorCard = (item: Contributor) => (
-		<Card
-			key={item.id}
-			asChild
-			style={{
-				cursor: "pointer",
-				textDecoration: "none",
-				color: "inherit",
-				maxWidth: "30rem",
-			}}
-		>
-			<a
-				href={item.url}
-				target="_blank"
-				rel="noopener noreferrer"
-				onClick={(e) => {
-					e.preventDefault();
-					openLink(item.url);
-				}}
-			>
-				<Flex align="center" gap="2">
-					<Avatar
-						size="2"
-						radius="full"
-						src={item.avatar}
-						fallback={item.login.substring(0, 2).toUpperCase()}
-					/>
-					<Text weight="bold" size="2" truncate style={{ overflow: "hidden" }}>
-						{item.login}
-					</Text>
-				</Flex>
-			</a>
-		</Card>
-	);
-
+// The maintainer is rendered as a highlighted card above; everyone else is
+// deliberately quieter: a compact chip row instead of equal-sized cards, so
+// the edition's maintainer stays the focus of the page.
 	return (
-		<Box my="4">
-			<SubTitle my="2">
-				{t("page.about.contributorsTitle", "贡献者")}
-			</SubTitle>
-			{loading && (
-				<Text color="gray" size="2" my="2" as="div">
+		<>
+			<div className={about.sectionHeader}>
+				<span className={about.sectionTitle}>
+					{t("page.about.otherContributors", "其他贡献者")}
+				</span>
+				{!loading && contributors.length > 0 && (
+					<span className={about.sectionCount}>{contributors.length}</span>
+				)}
+			</div>
+			{loading ? (
+				<div className={about.loadingHint}>
 					{t("page.about.loadingContributors", "正在加载贡献者列表…")}
-				</Text>
+				</div>
+			) : contributors.length === 0 ? (
+				<div className={about.loadingHint}>
+					{t("page.about.noOtherContributors", "暂无其他贡献者")}
+				</div>
+			) : (
+				<div className={about.contributorList}>
+					{contributors.map((item) => (
+						<a
+							key={item.id}
+							className={about.contributorChip}
+							href={item.url}
+							target="_blank"
+							rel="noopener noreferrer"
+							onClick={(e) => {
+								e.preventDefault();
+								openLink(item.url);
+							}}
+						>
+							{item.avatar ? (
+								<img
+									className={about.chipAvatar}
+									src={avatarFor(item.avatar)}
+									alt=""
+									loading="lazy"
+								/>
+							) : null}
+							<span>{item.login}</span>
+						</a>
+					))}
+				</div>
 			)}
-			<Grid
-				style={{ gridTemplateColumns: "repeat(auto-fill, minmax(20rem, 1fr))" }}
-				gap="3"
-				my="2"
-			>
-				{contributors.map(renderContributorCard)}
-			</Grid>
-		</Box>
+		</>
 	);
 };
 
@@ -1337,6 +1371,7 @@ const AboutSettings = () => {
 	const appVersion = useAtomValue(appVersionAtom);
 	const updating = useAtomValue(isInstallingUpdateAtom);
 	const updateProgress = useAtomValue(updateProgressAtom);
+	const updateSpeed = useAtomValue(updateSpeedAtom);
 	const updateError = useAtomValue(updateErrorAtom);
 	const installAttempts = useAtomValue(installAttemptsAtom);
 	const upstreamRelease = useAtomValue(upstreamUpdateAtom);
@@ -1354,74 +1389,103 @@ const AboutSettings = () => {
 			<SubTitle>
 				<Trans i18nKey="page.about.subtitle">关于</Trans>
 			</SubTitle>
-			<Text as="div">{t("page.about.description", "Apple Music-like Lyrics Player")}</Text>
-			<Text as="div" style={{ opacity: "0.5" }}>
-				{" "}
-				{appVersion.state === "hasData" ? `${appVersion.data} - ` : ""}{" "}
-				{commit.substring(0, 7)} - {branch}{" "}
-			</Text>
-			<Text as="div">
-				<Trans i18nKey="page.about.credits">
-					当前版本由 cuicanx 主要维护并参与贡献
-				</Trans>
-			</Text>
-			<Text as="div" size="2" color="gray">
+
+			<div className={about.hero}>
+				<div className={about.heroName}>AMLL Player</div>
+				<div className={about.heroMeta}>
+					{appVersion.state === "hasData" ? `${appVersion.data} · ` : ""}
+					{commit.substring(0, 7)} · {branch}
+				</div>
+				<p className={about.heroDesc}>
+					{t("page.about.description", "Apple Music-like Lyrics Player")}
+				</p>
+			</div>
+
+			{/* The maintainer of this edition is the one identity that should
+			   stand out; everything else on the page is deliberately quieter. */}
+			<div className={about.maintainer}>
+				<Avatar
+					className={about.maintainerAvatar}
+					size="5"
+					radius="full"
+					src={maintainerAvatar()}
+					fallback="CX"
+				/>
+				<div className={about.maintainerBody}>
+					<div className={about.maintainerName}>
+						<span>{MAINTAINER.login}</span>
+						<span className={about.roleChip}>
+							{t("page.about.maintainerRole", "主要维护者")}
+						</span>
+					</div>
+					<div className={about.maintainerNote}>
+						<Trans i18nKey="page.about.credits">
+							当前版本由 cuicanx 主要维护并参与贡献
+						</Trans>
+					</div>
+					<div className={about.maintainerLinks}>
+						<a
+							className={about.link}
+							href={MAINTAINER.url}
+							target="_blank"
+							rel="noopener noreferrer"
+							onClick={(e) => {
+								e.preventDefault();
+								openLink(MAINTAINER.url);
+							}}
+						>
+							{t("page.about.maintainerLink", "GitHub · cuicanx")}
+						</a>
+						<a
+							className={about.link}
+							href={REPOSITORY_URL}
+							target="_blank"
+							rel="noopener noreferrer"
+							onClick={(e) => {
+								e.preventDefault();
+								openLink(REPOSITORY_URL);
+							}}
+						>
+							{t("page.about.releaseLink", "cuicanx/amll-player")}
+						</a>
+					</div>
+				</div>
+			</div>
+
+			{/* Upstream credit: present, but clearly secondary. */}
+			<p className={about.upstream}>
 				<Trans i18nKey="page.about.upstream">
-					基于 AMLL（Apple Music-like Lyrics）上游项目，保留其技术背景与致谢
+					本项目基于 AMLL（Apple Music-like Lyrics）上游项目开发，感谢原作者 SteveXMH
+					与上游全体贡献者。
 				</Trans>
-			</Text>
-			<Flex gap="3" my="2" align="center" wrap="wrap">
-				<a
-					href={MAINTAINER.url}
-					target="_blank"
-					rel="noopener noreferrer"
-					onClick={(e) => {
-						e.preventDefault();
-						openLink(MAINTAINER.url);
-					}}
-					style={{ color: "inherit", textDecoration: "underline" }}
-				>
-					<Text size="2">
-						{t("page.about.maintainerLink", "主要维护者：cuicanx (GitHub)")}
-					</Text>
-				</a>
-				<a
-					href="https://github.com/cuicanx/amll-player"
-					target="_blank"
-					rel="noopener noreferrer"
-					onClick={(e) => {
-						e.preventDefault();
-						openLink("https://github.com/cuicanx/amll-player");
-					}}
-					style={{ color: "inherit", textDecoration: "underline" }}
-				>
-					<Text size="2">
-						{t("page.about.releaseLink", "版本与构建：cuicanx/amll-player")}
-					</Text>
-				</a>
-			</Flex>
+			</p>
+
 			<ContributorsSection />
 			<Suspense>
 				{updateInfo && (
 					<>
 						<Separator size="4" my="3" />
 						<div id="updater">
-							{t(
-								"page.about.newVersion",
-								"有可用更新从 {currentVersion} 升级至 {nextVersion}",
-								{
-									currentVersion: updateInfo.currentVersion,
-									nextVersion: updateInfo.version,
-								},
-							)}
-						</div>
-						<div
-							style={{
-								margin: "1em 0",
-								whiteSpace: "pre-wrap",
-							}}
-						>
-							{updateInfo.body}
+							<Text weight="bold" size="3" as="div" mt="1">
+								{t(
+									"page.about.newVersion",
+									"有可用更新从 {currentVersion} 升级至 {nextVersion}",
+									{
+										currentVersion: updateInfo.currentVersion,
+										nextVersion: updateInfo.version,
+									},
+								)}
+							</Text>
+							<ReleaseNotes
+								body={updateInfo.body}
+								version={updateInfo.version}
+								currentVersion={updateInfo.currentVersion}
+								label={t("page.about.releaseNotes", "更新内容")}
+								emptyHint={t(
+									"page.about.releaseNotesEmpty",
+									"此版本没有附带更新说明，可直接安装。",
+								)}
+							/>
 						</div>
 						<Flex gap="3" align="center" wrap="wrap">
 							<Button
@@ -1433,13 +1497,18 @@ const AboutSettings = () => {
 							>
 								<Trans i18nKey="page.about.installUpdate">更新并安装</Trans>
 							</Button>
-							{updating && updateProgress !== null && (
+							{updating && (
 								<Text size="2" color="gray">
-									{t(
-										"page.about.updateProgress",
-										"正在下载更新… {percent}%",
-										{ percent: Math.round(updateProgress * 100) },
-									)}
+									{updateProgress === null
+										? t("page.about.updatePreparing", "正在连接更新源…")
+										: t(
+												"page.about.updateProgress",
+												"正在下载更新… {percent}%",
+												{ percent: Math.round(updateProgress * 100) },
+											)}
+									{formatSpeed(updateSpeed)
+										? ` · ${formatSpeed(updateSpeed)}`
+										: ""}
 								</Text>
 							)}
 						</Flex>

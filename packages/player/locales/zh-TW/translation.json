@@ -5,7 +5,9 @@
 			"codec": "音訊解碼器",
 			"sampleFormat": "取樣格式",
 			"sampleRate": "取樣率",
-			"title": "音訊解碼資訊"
+			"title": "音訊解碼資訊",
+			"subtitle": "目前播放音訊的實際解碼參數",
+			"channelUnit": "聲道"
 		},
 		"contextMenu": {
 			"editMusicOverrideMessage": "編輯歌曲覆蓋訊息",
@@ -18,7 +20,9 @@
 			"rewindSong": "上一首",
 			"toggleFullscreen": "全熒幕 / 取消全熒幕",
 			"toggleLyrics": "顯示歌詞",
-			"windowAlwaysOnTop": "窗口置顶"
+			"windowAlwaysOnTop": "窗口置顶",
+			"enterFullscreen": "進入全螢幕",
+			"exitFullscreen": "退出全螢幕"
 		},
 		"loadAudioError": "播放後端加載音頻失敗\n{error}",
 		"migrationDialog": {
@@ -135,13 +139,29 @@
 	},
 	"page": {
 		"about": {
-			"credits": "由 SteveXMH 及其所有 Github 協作者共同開發",
+			"updateProgress": "正在下載更新… {percent}%",
+			"updateError": "更新失敗：{error}",
+			"updateRetry": "重試",
+			"updateManualHint": "已多次失敗，可前往發佈頁手動下載安裝包",
+			"updateManualDownload": "開啟發佈頁",
+			"upstreamAvailable": "上游有新組建（{version}），查看上游發佈頁",
+			"description": "Apple Music-like Lyrics Player",
+			"upstream": "基於 AMLL（Apple Music-like Lyrics）上游專案，保留其技術背景與致謝",
+			"maintainerLink": "主要維護者：cuicanx (GitHub)",
+			"releaseLink": "版本與建置：cuicanx/amll-player",
+			"credits": "目前版本由 cuicanx 主要維護並參與貢獻",
 			"downloading": "正在下載更新…… {progressText}",
 			"installing": "正在安裝更新，將會自動重啟，請稍後……",
 			"installUpdate": "更新并安裝",
 			"newVersion": "有可用更新从 {currentVersion} 升級至 {nextVersion}",
 			"subtitle": "關於",
-			"updating": "正在更新，完成后將會自動重啟，請稍後……"
+			"updating": "正在更新，完成后將會自動重啟，請稍後……",
+			"maintainerRole": "主要維護者",
+			"otherContributors": "其他貢獻者",
+			"noOtherContributors": "尚無其他貢獻者",
+			"releaseNotes": "更新內容",
+			"releaseNotesEmpty": "此版本沒有附帶更新說明，可直接安裝。",
+			"updatePreparing": "正在連線更新來源…"
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 開發者頁面",
@@ -257,6 +277,10 @@
 		},
 		"settings": {
 			"general": {
+				"f11Fullscreen": {
+					"description": "開啟後按 F11 可進入或退出無邊框全螢幕；關閉時 F11 不生效",
+					"label": "啟用 F11 無邊框全螢幕"
+				},
 				"displayLanguage": {
 					"cimode": "本地化 ID",
 					"label": "顯示語言"

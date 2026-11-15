@@ -1,15 +1,19 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { check } from "@tauri-apps/plugin-updater";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import chalk from "chalk";
 import { atom } from "jotai";
 import { restartApp } from "../utils/player.ts";
+import { detectUpdateRegion, mirrorUrl } from "../utils/update-region.ts";
 import {
 	installAttemptsAtom,
 	isCheckingUpdateAtom,
 	isInstallingUpdateAtom,
+	type UpdateInfo,
 	updateErrorAtom,
 	updateInfoAtom,
 	updateProgressAtom,
+	updateSpeedAtom,
 	upstreamUpdateAtom,
 } from "./appAtoms";
 
@@ -19,10 +23,11 @@ const LOG_TAG = chalk.bgHex("#FFAA00").hex("#FFFFFF")(" UPDATER ");
  * Default (primary) update source.
  *
  * The repository for this maintained edition is `cuicanx/amll-player`; the
- * same address is recorded in README.md, README-CN.md, Cargo.toml
- * (`repository`) and the build workflow, so no address had to be invented.
- * `tauri.conf.json -> plugins.updater.endpoints` must point at exactly this
- * URL: check, download and install are all derived from that config entry.
+ * same address is recorded in README.md, Cargo.toml (`repository`) and the
+ * build workflow. The endpoint *list* lives in `src-tauri/src/updater.rs`
+ * because it has to be reordered per region at runtime - the Tauri updater
+ * plugin reads `tauri.conf.json` endpoints once at startup, which made a
+ * region-dependent choice impossible from the frontend.
  */
 export const UPDATE_ENDPOINT =
 	"https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest.json";
@@ -70,7 +75,7 @@ function friendlyUpdateError(err: unknown): string {
 	if (/timed? ?out|timeout/i.test(raw)) {
 		return `${raw}（下载超时，可切换网络后重试）`;
 	}
-	if (/dns|connect|tcp|network/i.test(raw)) {
+	if (/dns|connect|tcp|network|request/i.test(raw)) {
 		return `${raw}（无法连接更新服务器，请检查网络或代理设置）`;
 	}
 	return raw;
@@ -96,17 +101,15 @@ export const checkUpdateAtom = atom(null, async (get, set) => {
 	if (get(isCheckingUpdateAtom) || get(isInstallingUpdateAtom)) return;
 	set(isCheckingUpdateAtom, true);
 	set(updateErrorAtom, null);
-	const previous = get(updateInfoAtom);
-	if (previous) {
-		try {
-			await previous.close();
-		} catch {}
-	}
 	set(updateInfoAtom, false);
 	try {
-		const update = await check();
-		console.log(LOG_TAG, "检查更新返回结果", update);
-		set(updateInfoAtom, update || false);
+		// Region comes from the egress IP (cached for six hours), so a VPN whose
+		// exit node is outside mainland China is served by the official source
+		// instead of the proxy.
+		const region = await detectUpdateRegion();
+		const update = await invoke<UpdateInfo | null>("updater_check", { region });
+		console.log(LOG_TAG, "检查更新返回结果", region, update);
+		set(updateInfoAtom, update ?? false);
 	} catch (e) {
 		console.warn(LOG_TAG, "检查更新失败", e);
 		// Previously this only logged to the console, so the UI looked like
@@ -118,14 +121,15 @@ export const checkUpdateAtom = atom(null, async (get, set) => {
 });
 
 /**
- * Download + install from the primary source.
+ * Download + install from the region-appropriate source.
  *
- * Fixes the old flow, which called `downloadAndInstall` without awaiting or
- * catching it: on failure the button stayed `loading` forever, the same broken
- * `Update` handle was reused on the next click, and no reason was ever shown.
- * Here a failure is caught, the handle is closed, `updateInfo` is cleared so
- * the next attempt performs a fresh check, and the attempt counter lets the UI
- * stop an endless retry loop.
+ * The transfer runs in Rust (`updater_install`): the manifest - and therefore
+ * the download host - must be the one picked for this machine's region.
+ * Progress and speed arrive as `updater://progress` events.
+ *
+ * Failure handling is the same contract as before: the reason is surfaced, the
+ * attempt counter increments so the UI can offer a manual fallback, and the
+ * button never stays stuck in a loading state.
  */
 export const installUpdateAtom = atom(null, async (get, set) => {
 	if (installInFlight) return installInFlight;
@@ -136,28 +140,44 @@ export const installUpdateAtom = atom(null, async (get, set) => {
 		set(isInstallingUpdateAtom, true);
 		set(updateErrorAtom, null);
 		set(updateProgressAtom, null);
-		let contentLength: number | undefined;
-		let received = 0;
+		set(updateSpeedAtom, null);
+
+		let unlisten: (() => void) | null = null;
+		let lastBytes = 0;
+		let lastAt = 0;
 		try {
-			await update.downloadAndInstall((event) => {
-				switch (event.event) {
-					case "Started":
-						contentLength = event.data.contentLength;
-						received = 0;
-						set(updateProgressAtom, contentLength ? 0 : null);
-						break;
-					case "Progress":
-						received += event.data.chunkLength;
-						set(
-							updateProgressAtom,
-							contentLength ? Math.min(1, received / contentLength) : null,
+			unlisten = await listen<{ downloaded: number; total?: number | null }>(
+				"updater://progress",
+				(event) => {
+					const { downloaded, total } = event.payload;
+					if (total && total > 0) {
+						set(updateProgressAtom, Math.min(1, downloaded / total));
+					}
+					const now = performance.now();
+					if (lastAt === 0) {
+						lastBytes = downloaded;
+						lastAt = now;
+					} else if (now - lastAt >= 250) {
+						const bytesPerSecond =
+							((downloaded - lastBytes) * 1000) / (now - lastAt);
+						// Exponential smoothing: raw per-chunk deltas flicker far too
+						// much to be readable as "MB/s".
+						set(updateSpeedAtom, (prev) =>
+							prev === null
+								? bytesPerSecond
+								: prev * 0.7 + bytesPerSecond * 0.3,
 						);
-						break;
-					case "Finished":
-						set(updateProgressAtom, 1);
-						break;
-				}
-			});
+						lastBytes = downloaded;
+						lastAt = now;
+					}
+				},
+			);
+
+			// Re-detect here as well: a failed attempt is very often a network
+			// change (VPN toggled), so the retry must hit the right source.
+			const region = await detectUpdateRegion(true);
+			await invoke("updater_install", { region });
+			set(updateProgressAtom, 1);
 			// The NSIS installer normally takes over and exits the process. If
 			// it does not (some environments), restart explicitly after a grace
 			// period so the new version actually becomes active.
@@ -169,15 +189,12 @@ export const installUpdateAtom = atom(null, async (get, set) => {
 			console.error(LOG_TAG, "下载/安装更新失败", e);
 			set(updateErrorAtom, friendlyUpdateError(e));
 			set(installAttemptsAtom, get(installAttemptsAtom) + 1);
-			// Drop the poisoned handle and force a fresh check next time.
-			try {
-				await update.close();
-			} catch {}
 			set(updateInfoAtom, false);
 			return false;
 		} finally {
+			unlisten?.();
 			set(isInstallingUpdateAtom, false);
-			set(updateProgressAtom, null);
+			set(updateSpeedAtom, null);
 			installInFlight = null;
 		}
 	})();
@@ -186,16 +203,28 @@ export const installUpdateAtom = atom(null, async (get, set) => {
 	return run;
 });
 
+/** Formats a byte rate as `12.4 MB/s` (or null when unknown). */
+export function formatSpeed(bytesPerSecond: number | null): string | null {
+	if (!bytesPerSecond || !Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) {
+		return null;
+	}
+	const mb = bytesPerSecond / (1024 * 1024);
+	if (mb >= 1) return `${mb.toFixed(1)} MB/s`;
+	return `${Math.max(1, Math.round(bytesPerSecond / 1024))} KB/s`;
+}
+
 /**
- * GitHub asset / API requests are attempted directly and through a mirror
- * **concurrently**, keeping whichever responds first. A sequential attempt
- * meant a slow first transport delayed the result by its full timeout.
+ * GitHub asset / API requests are attempted through the region-appropriate
+ * transport first, then the other one. Trying them in sequence meant a slow
+ * first transport delayed the result by its full timeout.
  */
 async function fetchJsonWithMirror<T>(
 	url: string,
 	init?: RequestInit,
 ): Promise<T | null> {
-	const targets = [url, `https://gh-proxy.com/${url}`];
+	const region = await detectUpdateRegion();
+	const targets =
+		region === "global" ? [url, mirrorUrl(url)] : [mirrorUrl(url), url];
 	const controllers = targets.map(() => new AbortController());
 	const attempt = (target: string, index: number) =>
 		fetch(target, { ...init, signal: controllers[index].signal }).then(

@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Update } from "@tauri-apps/plugin-updater";
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import i18n from "../i18n";
@@ -106,7 +105,20 @@ export const wsProtocolConnectedAddrsAtom = atom(new Set<string>());
 
 export const isCheckingUpdateAtom = atom(false);
 
-export const updateInfoAtom = atom<Update | false>(false);
+/**
+ * Result of the last successful update check. The updater now runs in Rust
+ * (see `src-tauri/src/updater.rs`) so the endpoint list can be chosen from the
+ * machine's egress region; the shape mirrors the fields the UI actually uses.
+ */
+export interface UpdateInfo {
+	version: string;
+	currentVersion: string;
+	body?: string | null;
+	date?: string | null;
+	downloadHost?: string;
+}
+
+export const updateInfoAtom = atom<UpdateInfo | false>(false);
 
 export const autoUpdateAtom = atomWithStorage("amll-player.autoUpdate", true);
 
@@ -120,6 +132,8 @@ export const autoUpdateAtom = atomWithStorage("amll-player.autoUpdate", true);
 export const isInstallingUpdateAtom = atom(false);
 export const updateErrorAtom = atom<string | null>(null);
 export const updateProgressAtom = atom<number | null>(null);
+/** Bytes per second, smoothed; null while unknown. */
+export const updateSpeedAtom = atom<number | null>(null);
 export const installAttemptsAtom = atom(0);
 
 export interface UpstreamRelease {

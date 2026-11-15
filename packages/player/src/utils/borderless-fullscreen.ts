@@ -11,20 +11,24 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
  * with its layout CSS variables and maximise glyph, otherwise the content
  * keeps a 32px offset or shows the wrong button state.
  *
- * Two Windows-specific details are handled here:
+ * Three Windows-specific details are handled here:
  *
  * 1. Going fullscreen from a *maximised* window leaves a taskbar-sized black
  *    strip at the bottom: the maximised frame still reserves the work-area
  *    and the client area is not recomputed after the style switch. Dropping
- *    the maximised state first and letting the window settle for two frames
- *    makes Windows compute a correct fullscreen rect.
- * 2. The native state switch has no animation, which reads as an abrupt jump.
- *    A short black fade covers the switch; it is a plain composited layer
- *    (opacity only), so it costs nothing in frame time.
+ *    the maximised state fixes the rect.
+ * 2. The maximised state must be dropped and the fullscreen flag raised *in
+ *    the same tick*. The previous version awaited two animation frames in
+ *    between, so Windows painted the restored (smaller) window before going
+ *    fullscreen - the visible "shrinks, then grows" jump. Leaving fullscreen
+ *    had the mirror-image problem: `setFullscreen(false)` then `maximize()`
+ *    with an await between them showed the small frame first.
+ * 3. The old implementation covered the switch with a black overlay. That was
+ *    the "black flash": it faded the whole window to black for 140 ms before
+ *    and after every toggle. The overlay is gone. What remains is a
+ *    single-frame state change (the same thing that happens when the user
+ *    clicks maximise), which reads as instant rather than as a flash.
  */
-
-const FADE_MS = 140;
-const MASK_ID = "amll-window-transition-mask";
 
 let toggling = false;
 /** Remember whether the window was maximised so leaving fullscreen restores it. */
@@ -32,38 +36,20 @@ let wasMaximized = false;
 
 type AppWindow = ReturnType<typeof getCurrentWindow>;
 
-function nextFrame(): Promise<void> {
+/** Resolve on the next resize event, or after `timeout` ms. */
+function waitForResize(timeout = 220): Promise<void> {
 	return new Promise((resolve) => {
-		requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+		let done = false;
+		const finish = () => {
+			if (done) return;
+			done = true;
+			window.clearTimeout(timer);
+			window.removeEventListener("resize", finish);
+			resolve();
+		};
+		const timer = window.setTimeout(finish, timeout);
+		window.addEventListener("resize", finish);
 	});
-}
-
-function ensureMask(): HTMLDivElement {
-	let mask = document.getElementById(MASK_ID) as HTMLDivElement | null;
-	if (!mask) {
-		mask = document.createElement("div");
-		mask.id = MASK_ID;
-		mask.style.cssText = [
-			"position:fixed",
-			"inset:0",
-			"z-index:2147483647",
-			"pointer-events:none",
-			"background:#000",
-			"opacity:0",
-			`transition:opacity ${FADE_MS}ms ease`,
-			"will-change:opacity",
-		].join(";");
-		document.body.appendChild(mask);
-	}
-	return mask;
-}
-
-async function fadeMask(to: number): Promise<void> {
-	const mask = ensureMask();
-	// Force a style flush so the transition runs even on the very first toggle.
-	void mask.offsetHeight;
-	mask.style.opacity = String(to);
-	await new Promise((resolve) => window.setTimeout(resolve, FADE_MS));
 }
 
 async function restoreTitlebarChrome(win: AppWindow): Promise<void> {
@@ -103,44 +89,45 @@ export async function toggleBorderlessFullscreen(): Promise<void> {
 		const win = getCurrentWindow();
 		const next = !(await win.isFullscreen());
 
-		// Fade to black first so the native state switch is never visible.
-		await fadeMask(1);
-
 		if (next) {
 			wasMaximized = await win.isMaximized().catch(() => false);
-			if (wasMaximized) {
-				// Drop the maximised frame first, otherwise the fullscreen
-				// client area keeps the work-area height (black taskbar strip).
-				await win.unmaximize();
-				await nextFrame();
-			}
-			await win.setFullscreen(true);
+			// Hide the titlebar buttons first so they do not stretch across the
+			// top edge while the window grows.
 			setSystemTitlebarFullscreen(true);
+			// Both calls are dispatched back to back and awaited together: the
+			// window is un-maximised and made fullscreen within one IPC round
+			// trip, so no intermediate frame reaches the compositor.
+			const unmaximize = wasMaximized ? win.unmaximize() : Promise.resolve();
+			await Promise.all([
+				unmaximize.catch(() => undefined),
+				win.setFullscreen(true),
+			]);
 		} else {
-			await win.setFullscreen(false);
+			const restoreMaximize = wasMaximized
+				? win.maximize().catch(() => undefined)
+				: Promise.resolve();
+			await Promise.all([
+				win.setFullscreen(false).catch(() => undefined),
+				restoreMaximize,
+			]);
+			wasMaximized = false;
+			// Wait until the window has actually reached its final size before
+			// re-drawing the titlebar, otherwise the glyph and the 32px offset
+			// animate in while the frame is still moving.
+			await waitForResize();
 			setSystemTitlebarFullscreen(false);
-			if (wasMaximized) {
-				await win.maximize().catch(() => undefined);
-				wasMaximized = false;
-				await nextFrame();
-			}
 			await restoreTitlebarChrome(win);
 		}
 
-		await nextFrame();
 		// Fullscreen is triggered from the keyboard, so the last focused button
 		// keeps focus across the window state change and its tooltip re-opens by
-		// itself (which used to leave a stray glass bubble over the titlebar).
-		// Drop that focus once the switch has settled.
+		// itself. Drop that focus once the switch has settled.
 		const active = document.activeElement;
 		if (active instanceof HTMLElement && active.tagName === "BUTTON") {
 			active.blur();
 		}
-		await fadeMask(0);
 	} catch (err) {
 		console.error("切换无边框全屏失败", err);
-		// Never leave the mask covering the window if the switch failed.
-		await fadeMask(0);
 	} finally {
 		toggling = false;
 	}
@@ -150,12 +137,16 @@ export async function exitBorderlessFullscreenIfActive(): Promise<void> {
 	if (!(await isBorderlessFullscreen())) return;
 	try {
 		const win = getCurrentWindow();
-		await win.setFullscreen(false);
+		const restoreMaximize = wasMaximized
+			? win.maximize().catch(() => undefined)
+			: Promise.resolve();
+		await Promise.all([
+			win.setFullscreen(false).catch(() => undefined),
+			restoreMaximize,
+		]);
+		wasMaximized = false;
+		await waitForResize();
 		setSystemTitlebarFullscreen(false);
-		if (wasMaximized) {
-			await win.maximize().catch(() => undefined);
-			wasMaximized = false;
-		}
 		await restoreTitlebarChrome(win);
 	} catch (err) {
 		console.error("退出无边框全屏失败", err);
