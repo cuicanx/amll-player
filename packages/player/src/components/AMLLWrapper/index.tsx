@@ -4,10 +4,9 @@ import {
 	onPlayOrResumeAtom,
 	PrebuiltLyricPlayer,
 } from "@applemusic-like-lyrics/react-full";
-import { ContextMenu } from "@radix-ui/themes";
 import classnames from "classnames";
 import { useAtomValue, useSetAtom } from "jotai";
-import { type FC, useEffect, useLayoutEffect, useRef } from "react";
+import { type FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
 	borderlessFullscreenAtom,
 	lyricPageSuspendedAtom,
@@ -16,7 +15,10 @@ import { syncBorderlessFullscreenState } from "../../utils/borderless-fullscreen
 import { resetLyricScroll } from "../../utils/lyric-player-instance.ts";
 import { useCursorAutoHide } from "../../utils/useCursorAutoHide.ts";
 import { useTitlebarAutoHide } from "../../utils/useTitlebarAutoHide.ts";
-import { AMLLContextMenuContent } from "../AMLLContextMenu/index.tsx";
+import {
+	AMLLContextMenu,
+	type ContextMenuPoint,
+} from "../AMLLContextMenu/index.tsx";
 import { AudioQualityDialog } from "../AudioQualityDialog/index.tsx";
 import { BottomLyricInfo } from "../BottomLyricInfo";
 import { RecordPanel } from "../RecordPanel/index.tsx";
@@ -36,6 +38,9 @@ export const AMLLWrapper: FC = () => {
 	const cursorHidden = useCursorAutoHide(isLyricPageOpened);
 	const isPlaying = useAtomValue(musicPlayingAtom);
 	const pageRef = useRef<HTMLDivElement>(null);
+	// Menu anchor comes from the real contextmenu event, so a second right-click
+	// elsewhere always lands at the new point.
+	const [menuPoint, setMenuPoint] = useState<ContextMenuPoint | null>(null);
 
 	// Memory pressure valve. The lyric page is normally kept mounted so opening
 	// it is instant; only when the JS heap crosses a high-water mark do we let
@@ -154,38 +159,37 @@ export const AMLLWrapper: FC = () => {
 
 	return (
 		<>
-			<ContextMenu.Root
-				onOpenChange={(open) => {
-					if (open) void syncBorderlessFullscreenState();
+			<div
+				ref={pageRef}
+				onContextMenu={(event) => {
+					event.preventDefault();
+					setMenuPoint({ x: event.clientX, y: event.clientY });
 				}}
+				className={classnames(
+					styles.lyricPage,
+					isLyricPageOpened && styles.opened,
+					// Hiding the cursor is done with a class on the page itself. The
+					// previous implementation floated a full-size overlay with
+					// `cursor: none` on top of everything; being a real element it
+					// swallowed every pointer and wheel event after 1.2 s of mouse
+					// idleness - the lyric player stopped getting wheel input
+					// (scrolling "suddenly stopped working") and never saw
+					// pointerleave, so a manual scroll never handed control back to
+					// the auto-align of the playing line.
+					cursorHidden && styles.cursorHidden,
+				)}
+				id="amll-lyric-player-wrapper"
 			>
-				<ContextMenu.Trigger>
-					<div
-						ref={pageRef}
-						className={classnames(
-							styles.lyricPage,
-							isLyricPageOpened && styles.opened,
-							// Hiding the cursor is done with a class on the page itself.
-							// The previous implementation floated a full-size overlay
-							// with `cursor: none` on top of everything; being a real
-							// element, it swallowed every pointer and wheel event after
-							// 1.2 s of mouse idleness - the lyric player stopped getting
-							// wheel input (scrolling "suddenly stopped working") and never
-							// saw pointerleave, so a manual scroll never handed control
-							// back to the auto-align of the playing line.
-							cursorHidden && styles.cursorHidden,
-						)}
-						id="amll-lyric-player-wrapper"
-					>
-						<PrebuiltLyricPlayer
-							id="amll-lyric-player"
-							style={{ width: "100%", height: "100%" }}
-							bottomLineSlot={<BottomLyricInfo />}
-						/>
-					</div>
-				</ContextMenu.Trigger>
-				<AMLLContextMenuContent />
-			</ContextMenu.Root>
+				<PrebuiltLyricPlayer
+					id="amll-lyric-player"
+					style={{ width: "100%", height: "100%" }}
+					bottomLineSlot={<BottomLyricInfo />}
+				/>
+			</div>
+			<AMLLContextMenu
+				point={menuPoint}
+				onClose={() => setMenuPoint(null)}
+			/>
 			<AudioQualityDialog />
 			<RecordPanel />
 		</>
