@@ -8,7 +8,6 @@ import {
 } from "@applemusic-like-lyrics/react-full";
 import { ContextMenu } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import type { FC } from "react";
 import { Trans } from "react-i18next";
@@ -17,6 +16,7 @@ import {
 	enableAlwaysOnTopAtom,
 	recordPanelOpenedAtom,
 } from "../../states/appAtoms.ts";
+import { toggleBorderlessFullscreen } from "../../utils/borderless-fullscreen.ts";
 
 export const AMLLContextMenuContent: FC = () => {
 	const [hideLyricView, setHideLyricView] = useAtom(hideLyricViewAtom);
@@ -40,14 +40,7 @@ export const AMLLContextMenuContent: FC = () => {
 				<Trans i18nKey="amll.contextMenu.forwardSong">下一首</Trans>
 			</ContextMenu.Item>
 			<ContextMenu.Separator />
-			<ContextMenu.Item
-				onClick={async () => {
-					const win = getCurrentWindow();
-					const isFullscreen = await win.isFullscreen();
-					setSystemTitlebarFullscreen(!isFullscreen);
-					await win.setFullscreen(!isFullscreen);
-				}}
-			>
+			<ContextMenu.Item onClick={() => void toggleBorderlessFullscreen()}>
 				<Trans i18nKey="amll.contextMenu.toggleFullscreen">
 					全屏 / 取消全屏
 				</Trans>

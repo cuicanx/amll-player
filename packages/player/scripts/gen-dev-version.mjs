@@ -39,8 +39,16 @@ if (isIos) {
 	tauriConf.bundle.iOS.bundleVersion = commitCount;
 	console.log(`Generated iOS dev version: ${baseVersion} (${commitCount})`);
 } else {
-	// 其它平台：保留原有逻辑
-	const devVersion = `${baseVersion}+${commitCount}`;
+	// 其它平台：用 commit 次数作为 patch 号。
+	//
+	// 这里曾经写成 baseVersion 后面接 "+" 再接 commit 次数（例如 0.0.1+1143）。
+	// semver 规定 `+` 之后是 build metadata，**不参与版本比较**，所以
+	// `0.0.1+1143` 和 `0.0.1+1137` 被判为同一版本：updater 永远认为没有
+	// 新版本，用户手动装完新包后仍被提示/或完全收不到提示，表现为
+	// “下载了也装不上、反复卡在同一步”。改成把 commit 次数放进 patch
+	// 位（0.0.1143 -> 0.0.1144）后，版本才单调递增且可比较。
+	const [major, minor] = baseVersion.split(".");
+	const devVersion = `${major}.${minor}.${commitCount}`;
 	tauriConf.version = devVersion;
 	console.log(`Generated dev version: ${baseVersion} -> ${devVersion}`);
 }

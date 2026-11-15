@@ -11,13 +11,24 @@ import {
 	Text,
 } from "@radix-ui/themes";
 import type { Loadable } from "jotai/vanilla/utils/loadable";
-import { type CSSProperties, forwardRef, memo, useMemo } from "react";
+import {
+	type CSSProperties,
+	forwardRef,
+	memo,
+	useCallback,
+	useMemo,
+	useSyncExternalStore,
+} from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { router } from "../../router.tsx";
-import { db, type Song } from "../../utils/db-client.ts";
-import { useDbQuery } from "../../utils/use-db-query.ts";
+import type { Song } from "../../utils/db-client.ts";
+import {
+	readSong,
+	subscribeSong,
+} from "../../utils/song-batch-loader.ts";
 import { useSongCover } from "../../utils/use-song-cover.ts";
+import styles from "./index.module.css";
 
 export const PlaylistSongCard = memo(forwardRef<
 	HTMLDivElement,
@@ -29,12 +40,17 @@ export const PlaylistSongCard = memo(forwardRef<
 		style?: CSSProperties;
 	}
 >(({ songId, songIndex, onPlayList, onDeleteSong, style }, ref) => {
-	const { data: songData, loading } = useDbQuery(
-		() => db.songs.get(songId),
+	// One shared, coalesced IPC for all visible rows instead of one IPC per
+	// row. The snapshot is a stable cache reference, so useSyncExternalStore
+	// never loops and rows that scroll out unsubscribe immediately.
+	const subscribe = useCallback(
+		(onChange: () => void) => subscribeSong(songId, onChange),
 		[songId],
-		undefined as Song | undefined,
-		["songs"],
 	);
+	const getSnapshot = useCallback(() => readSong(songId), [songId]);
+	const cached = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+	const loading = cached === undefined;
+	const songData = cached === null ? undefined : cached;
 	const song: Loadable<Song> = useMemo(() => {
 		if (loading) return { state: "loading" };
 		if (!songData)
@@ -49,8 +65,17 @@ export const PlaylistSongCard = memo(forwardRef<
 
 	return (
 		<Skeleton
-			style={style}
-			key={`song-card-${songId}`}
+			className={styles.songRow}
+			style={
+				{
+					...style,
+					// Keep the loading skeleton and the loaded row at the same
+					// height so ViewportList never has to re-measure on data
+					// arrival while the user is flinging the list.
+					minHeight: "68px",
+					"--enter-delay": `${(songIndex % 6) * 26}ms`,
+				} as CSSProperties
+			}
 			loading={song.state === "loading"}
 			ref={ref}
 			onDoubleClick={() => onPlayList(songIndex)}

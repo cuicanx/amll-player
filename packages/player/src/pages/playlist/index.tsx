@@ -49,6 +49,7 @@ import { PlaylistSongCard } from "../../components/PlaylistSongCard/index.tsx";
 import { queueManagerAtom } from "../../states/appAtoms.ts";
 import { db, type Song } from "../../utils/db-client.ts";
 import { queuePlaylistIdAtom } from "../../utils/play-queue-manager.ts";
+import { prefetchSongs } from "../../utils/song-batch-loader.ts";
 import {
 	readLocalMusicMetadata,
 	resolveContentUri,
@@ -172,6 +173,61 @@ export const Component: FC = () => {
 	useEffect(() => {
 		setSettingsPlaylistName(playlist?.name || "");
 	}, [playlist?.name]);
+
+	// PERF: warm the song cache ahead of the viewport. Rows used to start
+	// their own IPC only after they mounted, so a fast continuous fling showed
+	// skeletons until a backlog of past rows had drained. Here the target
+	// region is prefetched while scrolling (throttled) and again after it
+	// settles, so rows appearing on screen are already in memory. The scroll
+	// direction only drives the entrance animation offset, written at most
+	// once per direction change.
+	useEffect(() => {
+		const el = playlistViewRef.current;
+		const ids = playlist?.songIds;
+		if (!el || !ids?.length) return;
+
+		const ROW_ESTIMATE = 68;
+		let lastTop = 0;
+		let lastDir = "";
+		let lastPrefetch = 0;
+		let settleTimer: number | undefined;
+
+		const prefetchAround = (top: number) => {
+			const start = Math.max(0, Math.floor(top / ROW_ESTIMATE) - 8);
+			const end = Math.min(
+				ids.length,
+				Math.ceil((top + el.clientHeight) / ROW_ESTIMATE) + 16,
+			);
+			prefetchSongs(ids.slice(start, end));
+		};
+
+		const onScroll = () => {
+			const top = el.scrollTop;
+			const dir = top >= lastTop ? "down" : "up";
+			lastTop = top;
+			if (dir !== lastDir) {
+				el.style.setProperty(
+					"--amll-enter-from",
+					dir === "up" ? "-8px" : "8px",
+				);
+				lastDir = dir;
+			}
+			const now = performance.now();
+			if (now - lastPrefetch > 120) {
+				lastPrefetch = now;
+				prefetchAround(top);
+			}
+			if (settleTimer) clearTimeout(settleTimer);
+			settleTimer = window.setTimeout(() => prefetchAround(el.scrollTop), 90);
+		};
+
+		el.addEventListener("scroll", onScroll, { passive: true });
+		prefetchAround(0);
+		return () => {
+			el.removeEventListener("scroll", onScroll);
+			if (settleTimer) clearTimeout(settleTimer);
+		};
+	}, [playlist?.songIds]);
 
 	const saveSettingsPlaylistName = useCallback(async () => {
 		if (!playlist) return;

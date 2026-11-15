@@ -1,0 +1,40 @@
+/**
+ * Per-row entrance animation for the virtualised song list.
+ *
+ * Only opacity and transform are animated (compositor properties), so the
+ * animation never triggers layout or a ViewportList re-measure. The delay is
+ * bounded to 6 steps (0..130ms) using the row index, which produces a soft
+ * "one after another" reveal both when scrolling down and up without ever
+ * accumulating a long delay on a long playlist.
+ *
+ * `--amll-enter-from` is set on the scroll container by the playlist page
+ * when the scroll direction changes: rows appearing while scrolling up rise
+ * from below, rows appearing while scrolling down drop from above.
+ */
+.songRow {
+	animation: songRowIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+	animation-delay: var(--enter-delay, 0ms);
+}
+
+@keyframes songRowIn {
+	from {
+		opacity: 0;
+		transform: translateY(var(--amll-enter-from, 8px));
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Never block interaction: the row is clickable throughout the fade. */
+.songRow,
+.songRow * {
+	pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.songRow {
+		animation: none;
+	}
+}

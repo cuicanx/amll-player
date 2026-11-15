@@ -12,6 +12,11 @@ import {
 import type { Atom } from "jotai";
 import { useAtomValue } from "jotai";
 import { type FC, useEffect } from "react";
+import { enableF11FullscreenAtom } from "../../states/appAtoms.ts";
+import {
+	exitBorderlessFullscreenIfActive,
+	toggleBorderlessFullscreen,
+} from "../../utils/borderless-fullscreen.ts";
 
 const useShotcut = (shotcut: string, callback?: () => void) => {
 	useEffect(() => {
@@ -36,10 +41,36 @@ const useShotcutAtom = (
 	useShotcut(shotcut, callback);
 };
 
+/**
+ * F11 is intentionally a window-local DOM listener rather than a Tauri global
+ * shortcut: a global F11 would also fire while another app has focus, and the
+ * feature is opt-in anyway. Only when the setting is enabled do we attach the
+ * listener; turning it off also leaves fullscreen so the toggle has an
+ * unambiguous state.
+ */
+const useF11FullscreenShotcut = () => {
+	const enabled = useAtomValue(enableF11FullscreenAtom);
+
+	useEffect(() => {
+		if (!enabled) {
+			void exitBorderlessFullscreenIfActive();
+			return;
+		}
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key !== "F11") return;
+			event.preventDefault();
+			void toggleBorderlessFullscreen();
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [enabled]);
+};
+
 export const ShotcutContext: FC = () => {
 	useShotcutAtom("CmdOrCtrl+Alt+P", onPlayOrResumeAtom);
 	useShotcutAtom("CmdOrCtrl+Alt+ArrowRight", onRequestNextSongAtom);
 	useShotcutAtom("CmdOrCtrl+Alt+ArrowLeft", onRequestPrevSongAtom);
+	useF11FullscreenShotcut();
 
 	return null;
 };

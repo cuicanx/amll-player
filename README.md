@@ -8,6 +8,18 @@ An independent lyrics page player that obtains audio playback information throug
 
 </div>
 
+## Maintainer & Contributors
+
+This edition is **maintained by [cuicanx](https://github.com/cuicanx)**, who also contributes code, bug fixes, performance work and release builds. The maintained repository is [cuicanx/amll-player](https://github.com/cuicanx/amll-player).
+
+The project originated from the [amll-dev](https://github.com/amll-dev) AMLL ecosystem (Apple Music-like Lyrics); that upstream work remains the technical background and is gratefully acknowledged. Development and releases of this edition are handled independently by the current maintainer.
+
+| Role | |
+| --- | --- |
+| Main maintainer | [cuicanx](https://github.com/cuicanx) |
+| Contributor | [cuicanx](https://github.com/cuicanx) |
+| Upstream project | [amll-dev/amll-player](https://github.com/amll-dev/amll-player) |
+
 ## List of functions/features：
 
 - Communicate with any client that implements the AMLL WS Protocol, synchronize the progress of the playback information, and get the corresponding lyrics for playback display
@@ -18,15 +30,13 @@ An independent lyrics page player that obtains audio playback information throug
 
 ## Install and use
 
-Since the player is still compatible, the development build can only be downloaded through [Github Action](https://github.com/amll-dev/amll-player/actions/workflows/build-player.yaml), and the official version will be released in the future.
+Since the player is still compatible, development builds are published on the [maintained repository's Releases page](https://github.com/cuicanx/amll-player/releases/tag/main-player-dev), produced by its [GitHub Action](https://github.com/cuicanx/amll-player/actions/workflows/build-player.yaml).
 
 ## Why is there this？
 
 The lyrics player is equivalent to software like external subtitles, and the lyrics are played in an environment independent of the plug-in environment.
 
-After the author's performance test, it is found that embedding it in the form of a plug-in on the playback page will cause frame drops and uncertain stuttering due to the browser framework problems of the plug-in running environment.
-
-Therefore, the author decided to separate the playback page into a separate desktop program to improve the playback performance and effect, while the original plug-in was responsible for transmitting the playback information and status to the lyric player.
+The original design separated the lyrics page from the plug-in environment: benchmarks showed that embedding it as a plug-in caused frame drops and intermittent stuttering in the host browser framework, so the playback page became an independent desktop program while the plug-in only transmits playback information.
 
 So if you also have a little stuttering, you can try using this lyric player, and the performance should be improved.
 
@@ -41,6 +51,7 @@ pnpm tauri dev            # Development mode
 
 ### Acknowledgements
 
+-   [cuicanx](https://github.com/cuicanx) — current maintainer and contributor
 -   [woshizja/sound-processor](https://github.com/woshizja/sound-processor)
 -   [FFmpeg](http://ffmpeg.org/)
 -   And many other frameworks and libraries used by AMLL, thank you very much!

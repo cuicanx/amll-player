@@ -71,6 +71,16 @@ export const showStatJSFrameAtom = atomWithStorage(
 	false,
 );
 
+/**
+ * F11 borderless fullscreen is opt-in: with this off (the default) F11 does
+ * nothing at all, so it can never steal the key from another application or
+ * change the window unexpectedly.
+ */
+export const enableF11FullscreenAtom = atomWithStorage(
+	"amll-player.enableF11Fullscreen",
+	false,
+);
+
 export const autoDarkModeAtom = atom(true);
 
 export const isDarkThemeAtom = atom(
@@ -99,6 +109,29 @@ export const isCheckingUpdateAtom = atom(false);
 export const updateInfoAtom = atom<Update | false>(false);
 
 export const autoUpdateAtom = atomWithStorage("amll-player.autoUpdate", true);
+
+/**
+ * Update flow state. Previously `updating` was a component-local boolean that
+ * was set to true and never reset when `downloadAndInstall` rejected, so the
+ * button stayed in a permanent loading state and every retry reused the same
+ * broken Update instance. These atoms are the single source of truth so a
+ * failure is visible and recoverable from anywhere in the UI.
+ */
+export const isInstallingUpdateAtom = atom(false);
+export const updateErrorAtom = atom<string | null>(null);
+export const updateProgressAtom = atom<number | null>(null);
+export const installAttemptsAtom = atom(0);
+
+export interface UpstreamRelease {
+	version: string;
+	url: string;
+}
+
+/**
+ * Upstream (amll-dev) has a newer development build. This is a hint only: it
+ * never changes the default update source and never triggers an install.
+ */
+export const upstreamUpdateAtom = atom<UpstreamRelease | null>(null);
 
 export const enableTaskbarLyricAtom = atomWithStorage(
 	"amll-player.enableTaskbarLyric",

@@ -65,10 +65,8 @@
 }
 
 .dialogContent {
-	background-color: var(--gray-1);
-	box-shadow:
-		hsl(206 22% 7% / 35%) 0px 10px 38px -10px,
-		hsl(206 22% 7% / 20%) 0px 10px 20px -15px;
+	background-color: var(--amll-glass-popover);
+	box-shadow: var(--amll-glass-popover-shadow);
 	position: fixed;
 	top: 0;
 	left: 0;

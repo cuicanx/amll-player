@@ -54,7 +54,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { platform } from "@tauri-apps/plugin-os";
-import { atom, useAtom, useAtomValue, type WritableAtom } from "jotai";
+import { atom, useAtom, useAtomValue, useSetAtom, type WritableAtom } from "jotai";
 import { loadable } from "jotai/utils";
 import React, {
 	type FC,
@@ -77,15 +77,27 @@ import {
 	DarkMode,
 	darkModeAtom,
 	enableAlwaysOnTopAtom,
+	enableF11FullscreenAtom,
 	enableMediaControlsAtom,
 	enableTaskbarLyricAtom,
+	installAttemptsAtom,
+	isInstallingUpdateAtom,
 	languageAtom,
 	showStatJSFrameAtom,
 	taskbarLyricAlignSettingAtom,
 	taskbarLyricModeSettingAtom,
 	taskbarLyricThemeSettingAtom,
+	updateErrorAtom,
 	updateInfoAtom,
+	updateProgressAtom,
+	upstreamUpdateAtom,
 } from "../../states/appAtoms.ts";
+import {
+	checkUpdateAtom,
+	checkUpstreamUpdateAtom,
+	installUpdateAtom,
+	UPDATE_RELEASE_PAGE,
+} from "../../states/updater.ts";
 import { restartApp } from "../../utils/player.ts";
 import styles from "./index.module.css";
 
@@ -380,6 +392,17 @@ const GeneralSettings = () => {
 					configAtom={enableAlwaysOnTopAtom}
 				/>
 			)}
+			<SwitchSettings
+				label={t(
+					"page.settings.general.f11Fullscreen.label",
+					"启用 F11 无边框全屏",
+				)}
+				description={t(
+					"page.settings.general.f11Fullscreen.description",
+					"开启后按 F11 可进入或退出无边框全屏；关闭时 F11 不生效",
+				)}
+				configAtom={enableF11FullscreenAtom}
+			/>
 		</>
 	);
 };
@@ -1170,16 +1193,26 @@ interface Contributor {
 	url: string;
 }
 
+// This edition is maintained by cuicanx. Pin the maintainer card so it is
+// always visible even when the GitHub API is unreachable, and mark it as the
+// primary maintainer in the About page.
+const MAINTAINER: Contributor = {
+	id: 0,
+	login: "cuicanx",
+	avatar: "https://github.com/cuicanx.png",
+	url: "https://github.com/cuicanx",
+};
+
 const ContributorsSection: FC = () => {
 	const { t } = useTranslation();
-	const [contributors, setContributors] = useState<Contributor[]>([]);
+	const [contributors, setContributors] = useState<Contributor[]>([MAINTAINER]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
 				const response = await fetch(
-					"https://api.github.com/repos/amll-dev/amll-player/contributors?per_page=100&anon=true",
+					"https://api.github.com/repos/cuicanx/amll-player/contributors?per_page=100&anon=true",
 				);
 				if (response.ok) {
 					const data = await response.json();
@@ -1188,6 +1221,7 @@ const ContributorsSection: FC = () => {
 							.filter(
 								(item: any) =>
 									item.login &&
+									item.login.toLowerCase() !== MAINTAINER.login &&
 									item.login !== "type-bot" &&
 									item.type !== "Bot" &&
 									!item.login.endsWith("[bot]"),
@@ -1198,7 +1232,7 @@ const ContributorsSection: FC = () => {
 								avatar: item.avatar_url || "",
 								url: item.html_url || `https://github.com/${item.login}`,
 							}));
-						setContributors(list);
+						setContributors([MAINTAINER, ...list]);
 					}
 				}
 			} catch (error) {
@@ -1210,18 +1244,6 @@ const ContributorsSection: FC = () => {
 
 		fetchData();
 	}, []);
-
-	if (loading) {
-		return (
-			<Text color="gray" size="2" my="2" as="div">
-				{t("page.about.loadingContributors", "正在加载贡献者列表…")}
-			</Text>
-		);
-	}
-
-	if (contributors.length === 0) {
-		return null;
-	}
 
 	const renderContributorCard = (item: Contributor) => (
 		<Card
@@ -1263,6 +1285,11 @@ const ContributorsSection: FC = () => {
 			<SubTitle my="2">
 				{t("page.about.contributorsTitle", "贡献者")}
 			</SubTitle>
+			{loading && (
+				<Text color="gray" size="2" my="2" as="div">
+					{t("page.about.loadingContributors", "正在加载贡献者列表…")}
+				</Text>
+			)}
 			<Grid
 				style={{ gridTemplateColumns: "repeat(auto-fill, minmax(20rem, 1fr))" }}
 				gap="3"
@@ -1278,14 +1305,26 @@ const AboutSettings = () => {
 	const { t } = useTranslation();
 	const updateInfo = useAtomValue(updateInfoAtom);
 	const appVersion = useAtomValue(appVersionAtom);
-	const [updating, setUpdating] = useState(false);
+	const updating = useAtomValue(isInstallingUpdateAtom);
+	const updateProgress = useAtomValue(updateProgressAtom);
+	const updateError = useAtomValue(updateErrorAtom);
+	const installAttempts = useAtomValue(installAttemptsAtom);
+	const upstreamRelease = useAtomValue(upstreamUpdateAtom);
+	const checkUpdate = useSetAtom(checkUpdateAtom);
+	const installUpdate = useSetAtom(installUpdateAtom);
+	const checkUpstreamUpdate = useSetAtom(checkUpstreamUpdateAtom);
+
+	// Informational only: never blocks or changes the primary update flow.
+	useEffect(() => {
+		void checkUpstreamUpdate();
+	}, [checkUpstreamUpdate]);
 
 	return (
 		<>
 			<SubTitle>
 				<Trans i18nKey="page.about.subtitle">关于</Trans>
 			</SubTitle>
-			<Text as="div">Apple Music-like Lyrics Player</Text>
+			<Text as="div">{t("page.about.description", "Apple Music-like Lyrics Player")}</Text>
 			<Text as="div" style={{ opacity: "0.5" }}>
 				{" "}
 				{appVersion.state === "hasData" ? `${appVersion.data} - ` : ""}{" "}
@@ -1293,9 +1332,44 @@ const AboutSettings = () => {
 			</Text>
 			<Text as="div">
 				<Trans i18nKey="page.about.credits">
-					由 SteveXMH 及其所有 Github 协作者共同开发
+					当前版本由 cuicanx 主要维护并参与贡献
 				</Trans>
 			</Text>
+			<Text as="div" size="2" color="gray">
+				<Trans i18nKey="page.about.upstream">
+					基于 AMLL（Apple Music-like Lyrics）上游项目，保留其技术背景与致谢
+				</Trans>
+			</Text>
+			<Flex gap="3" my="2" align="center" wrap="wrap">
+				<a
+					href={MAINTAINER.url}
+					target="_blank"
+					rel="noopener noreferrer"
+					onClick={(e) => {
+						e.preventDefault();
+						openLink(MAINTAINER.url);
+					}}
+					style={{ color: "inherit", textDecoration: "underline" }}
+				>
+					<Text size="2">
+						{t("page.about.maintainerLink", "主要维护者：cuicanx (GitHub)")}
+					</Text>
+				</a>
+				<a
+					href="https://github.com/cuicanx/amll-player"
+					target="_blank"
+					rel="noopener noreferrer"
+					onClick={(e) => {
+						e.preventDefault();
+						openLink("https://github.com/cuicanx/amll-player");
+					}}
+					style={{ color: "inherit", textDecoration: "underline" }}
+				>
+					<Text size="2">
+						{t("page.about.releaseLink", "版本与构建：cuicanx/amll-player")}
+					</Text>
+				</a>
+			</Flex>
 			<ContributorsSection />
 			<Suspense>
 				{updateInfo && (
@@ -1319,73 +1393,82 @@ const AboutSettings = () => {
 						>
 							{updateInfo.body}
 						</div>
-						<Button
-							disabled={updating}
-							loading={updating}
-							onClick={() => {
-								setUpdating(true);
-								const toastId = toast.loading(
-									t(
-										"page.about.updating",
-										"正在更新，完成后将会自动重启，请稍后……",
-									),
-								);
-								let contentLength: number | undefined;
-								let receivedLength = 0;
-								function getProgressSizeText() {
-									const rec = `${(receivedLength / 1024 / 1024).toFixed(2)} MiB`;
-									if (contentLength === undefined) {
-										return `(${rec})`;
-									}
-									const total = `${(contentLength / 1024 / 1024).toFixed(
-										2,
-									)} MiB`;
-									return `(${rec} / ${total}) (${(
-										(receivedLength / contentLength) * 100
-									).toFixed(1)}%)`;
-								}
-								const getDownloadMessage = (progressText: string) =>
-									t("page.about.downloading", "正在下载更新…… {progressText}", {
-										progressText,
-									});
-								updateInfo.downloadAndInstall((evt) => {
-									switch (evt.event) {
-										case "Started": {
-											contentLength = evt.data.contentLength;
-											toast.update(toastId, {
-												render: getDownloadMessage(getProgressSizeText()),
-											});
-											break;
-										}
-										case "Progress": {
-											receivedLength += evt.data.chunkLength;
-											toast.update(toastId, {
-												render: getDownloadMessage(getProgressSizeText()),
-												progress:
-													contentLength === undefined
-														? null
-														: receivedLength / contentLength,
-											});
-											break;
-										}
-										case "Finished":
-											toast.update(toastId, {
-												render: t(
-													"page.about.installing",
-													"正在安装更新，将会自动重启，请稍后……",
-												),
-												progress: null,
-											});
-											setTimeout(restartApp, 1000);
-											break;
-									}
-								});
-							}}
-						>
-							<Trans i18nKey="page.about.installUpdate">更新并安装</Trans>
-						</Button>
+						<Flex gap="3" align="center" wrap="wrap">
+							<Button
+								disabled={updating}
+								loading={updating}
+								onClick={() => {
+									void installUpdate();
+								}}
+							>
+								<Trans i18nKey="page.about.installUpdate">更新并安装</Trans>
+							</Button>
+							{updating && updateProgress !== null && (
+								<Text size="2" color="gray">
+									{t(
+										"page.about.updateProgress",
+										"正在下载更新… {percent}%",
+										{ percent: Math.round(updateProgress * 100) },
+									)}
+								</Text>
+							)}
+						</Flex>
 						<Box mb="3" />
 					</>
+				)}
+				{updateError && (
+					<>
+						<Separator size="4" my="3" />
+						<Text as="div" color="red" size="2">
+							{t("page.about.updateError", "更新失败：{error}", {
+								error: updateError,
+							})}
+						</Text>
+						{installAttempts >= 2 && (
+							<Text as="div" color="gray" size="1" my="1">
+								{t(
+									"page.about.updateManualHint",
+									"已多次失败，可前往发布页手动下载安装包",
+								)}
+							</Text>
+						)}
+						<Flex gap="3" mt="2" wrap="wrap">
+							<Button
+								variant="soft"
+								onClick={() => {
+									void checkUpdate();
+								}}
+							>
+								{t("page.about.updateRetry", "重试")}
+							</Button>
+							<Button
+								variant="ghost"
+								onClick={() => {
+									openLink(UPDATE_RELEASE_PAGE);
+								}}
+							>
+								{t("page.about.updateManualDownload", "打开发布页")}
+							</Button>
+						</Flex>
+					</>
+				)}
+				{upstreamRelease && (
+					<Text as="div" size="1" color="gray" mt="2">
+						<a
+							href={upstreamRelease.url}
+							onClick={(e) => {
+								e.preventDefault();
+								openLink(upstreamRelease.url);
+							}}
+							style={{ color: "inherit", textDecoration: "underline" }}
+						>
+							{t(
+								"page.about.upstreamAvailable",
+								"上游有新构建（{version}），查看上游发布页",
+								{ version: upstreamRelease.version },
+							)}
+						</a>
+					</Text>
 				)}
 			</Suspense>
 		</>

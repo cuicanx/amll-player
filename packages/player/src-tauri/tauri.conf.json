@@ -19,6 +19,18 @@
 			"icons/icon.png"
 		],
 		"createUpdaterArtifacts": true,
+		"publisher": "cuicanx",
+		"shortDescription": "Apple Music 风格歌词播放器",
+		"longDescription": "AMLL Player（cuicanx 维护版）—— 支持内嵌歌词自动识别、WebSocket 播放联动与高帧率歌词动画的桌面歌词播放器。",
+		"windows": {
+			"nsis": {
+				"languages": ["SimpChinese"],
+				"displayLanguageSelector": false
+			},
+			"wix": {
+				"language": "zh-CN"
+			}
+		},
 		"android": {
 			"minSdkVersion": 26
 		}
@@ -28,9 +40,10 @@
 	"identifier": "net.stevexmh.amllplayer",
 	"plugins": {
 		"updater": {
-			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVBMzY2M0I2Qjc4MjBBNTUKUldSVkNvSzN0bU0yV2k0bUhxcm9jczBNYk9lTllYaTFyWHVEZ2xaSloxaVhpSnQ1RHZFSUtnS2IK",
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDMUY4OTlDMUQ1N0JFNDgKUldSSXZsY2RuSWtmM0Vab0pzZGZPeVZhMXJISlJvZlp5T1BhejFSTHNaQzdKbFQ0SzN5OU5Ka3IK",
 			"endpoints": [
-				"https://github.com/amll-dev/amll-player/releases/download/main-player-dev/latest.json"
+				"https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest.json",
+				"https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest.json"
 			]
 		}
 	},

@@ -1,10 +1,10 @@
 [package]
 name = "amll-player"
 version = "0.0.0"
-description = "AMLL Player"
-authors = ["you"]
+description = "AMLL Player - cuicanx maintained edition"
+authors = ["cuicanx <https://github.com/cuicanx>"]
 license = ""
-repository = ""
+repository = "https://github.com/cuicanx/amll-player"
 edition = "2024"
 
 build = "build.rs"

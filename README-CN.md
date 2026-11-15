@@ -8,6 +8,18 @@
 
 </div>
 
+## 维护者与贡献者
+
+本版本由 **[cuicanx](https://github.com/cuicanx)** 主要负责维护，代码修复、性能优化与版本构建也由其贡献。当前维护仓库为 [cuicanx/amll-player](https://github.com/cuicanx/amll-player)。
+
+项目最初源自 [amll-dev](https://github.com/amll-dev) 的 AMLL（Apple Music-like Lyrics）生态，上游成果作为技术背景保留并致谢；本版本的后续开发与发布由当前维护者独立推进。
+
+| 角色 | |
+| --- | --- |
+| 主要维护者 | [cuicanx](https://github.com/cuicanx) |
+| 贡献者 | [cuicanx](https://github.com/cuicanx) |
+| 上游项目 | [amll-dev/amll-player](https://github.com/amll-dev/amll-player) |
+
 
 ## 功能/特性列表：
 
@@ -19,15 +31,13 @@
 
 ## 安装使用
 
-由于播放器还在兼容状态，所以仅可通过 [Github Action](https://github.com/amll-dev/amll-player/actions/workflows/build-player.yaml) 下载开发构建，日后会推出正式版。
+由于播放器还在兼容状态，目前可在 [维护仓库的 Releases 页面](https://github.com/cuicanx/amll-player/releases/tag/main-player-dev) 下载开发构建，产物由该仓库的 [GitHub Action](https://github.com/cuicanx/amll-player/actions/workflows/build-player.yaml) 生成。
 
 ## 为什么会有这个？
 
 歌词播放器相当于外挂字幕一样的软件，在独立于插件环境以外的环境播放歌词。
 
-经过作者的性能测试，发现以插件形式嵌入到播放页面会因为插件运行环境自身浏览器框架问题导致掉帧和不定卡顿的问题。
-
-故作者决定将播放页面分离到一个独立的桌面程序进行以提高播放性能和效果，而原插件则负责将播放的信息和状态传递给歌词播放器。
+最初的设计把歌词页面从插件环境中分离出来：当时测试发现以插件形式嵌入播放页面，会因宿主浏览器框架问题导致掉帧与不定卡顿，因此改为独立桌面程序，原插件只负责传递播放信息。
 
 因此如果你也有少许卡顿现象，可以尝试使用这个歌词播放器，性能应该可以有所改善。
 
@@ -41,6 +51,7 @@ pnpm tauri dev     # 开发模式
 
 ### 鸣谢
 
+-   [cuicanx](https://github.com/cuicanx) — 当前维护者与贡献者
 -   [woshizja/sound-processor](https://github.com/woshizja/sound-processor)
 -   [FFmpeg](http://ffmpeg.org/)
 -   还有很多被 AMLL 使用的框架和库，非常感谢！
