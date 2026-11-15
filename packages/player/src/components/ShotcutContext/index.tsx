@@ -57,7 +57,11 @@ const useF11FullscreenShotcut = () => {
 			return;
 		}
 		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key !== "F11") return;
+			// `event.repeat` matters: holding F11 for a moment fires keydown
+			// again every ~30 ms, and a repeat that arrives just after the
+			// transition finished toggled straight back out. That looked like
+			// "sometimes F11 does nothing".
+			if (event.key !== "F11" || event.repeat) return;
 			event.preventDefault();
 			void toggleBorderlessFullscreen();
 		};

@@ -143,10 +143,29 @@ export const installUpdateAtom = atom(null, async (get, set) => {
 		set(updateSpeedAtom, null);
 
 		let unlisten: (() => void) | null = null;
+		let unlistenRetrying: (() => void) | null = null;
+		let unlistenProgress: (() => void) | null = null;
 		let lastBytes = 0;
 		let lastAt = 0;
 		try {
-			unlisten = await listen<{ downloaded: number; total?: number | null }>(
+			// A retry restarts the transfer from zero, so the progress bar and the
+			// speed average must be reset instead of jumping backwards.
+			unlisten = await listen("updater://started", () => {
+				lastBytes = 0;
+				lastAt = 0;
+				set(updateProgressAtom, 0);
+				set(updateSpeedAtom, null);
+			});
+			unlistenRetrying = await listen("updater://retrying", () => {
+				lastBytes = 0;
+				lastAt = 0;
+				set(updateProgressAtom, null);
+				set(updateSpeedAtom, null);
+			});
+			unlistenProgress = await listen<{
+				downloaded: number;
+				total?: number | null;
+			}>(
 				"updater://progress",
 				(event) => {
 					const { downloaded, total } = event.payload;
@@ -193,6 +212,8 @@ export const installUpdateAtom = atom(null, async (get, set) => {
 			return false;
 		} finally {
 			unlisten?.();
+			unlistenRetrying?.();
+			unlistenProgress?.();
 			set(isInstallingUpdateAtom, false);
 			set(updateSpeedAtom, null);
 			installInFlight = null;

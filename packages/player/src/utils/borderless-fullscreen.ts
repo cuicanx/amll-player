@@ -10,34 +10,45 @@ import { borderlessFullscreenAtom } from "../states/appAtoms.ts";
  * *borderless* full-screen window:
  *
  *   - the Tauri window fullscreen flag is raised, which makes the OS size the
- *     window to the whole monitor (taskbar included) and drops the frame, and
+ *     window to the whole monitor (taskbar included) and drop the frame, and
  *   - the self-drawn titlebar is hidden, because the main window already runs
  *     with `decorations: false`.
  *
  * It is deliberately NOT "maximise the window": a maximised window keeps the
- * work-area reservation (a taskbar-high strip), which is a different thing and
- * would leave the taskbar visible.
+ * work-area reservation (a taskbar-high strip), which is a different thing.
  *
- * Two Windows-specific details are handled here:
+ * ── Why this file keeps its own state (the "hard" bug) ──────────────────────
  *
- * 1. Going fullscreen from a *maximised* window leaves a taskbar-sized black
- *    strip at the bottom: the maximised frame still reserves the work-area and
- *    the client area is not recomputed after the style switch. Dropping the
- *    maximised state first fixes the rect.
- * 2. The maximised state must be dropped and the fullscreen flag raised *in the
- *    same tick*. Awaiting an animation frame in between let Windows paint the
- *    restored (smaller) window first - the visible "shrinks, then grows" jump.
- *    Leaving fullscreen had the mirror-image problem.
+ * On Windows, `isFullscreen()` lags behind the real window right after a
+ * switch. Trusting it as the toggle input produced two very confusing bugs:
  *
- * An earlier version also covered the switch with a black overlay; that overlay
- * was the "black flash" users saw, so it is gone. What remains is a single
- * frame state change, the same thing that happens when the user clicks
- * maximise.
+ *   1. Second F11 did nothing. It still answered `false` while the window was
+ *      already fullscreen, so we ran the *enter* path again. The path began by
+ *      hiding the titlebar and then raced `unmaximize()` against
+ *      `setFullscreen(true)`; when the un-maximise landed last it cleared the
+ *      fullscreen style, leaving a restored window with no titlebar - i.e. a
+ *      window that can no longer be dragged.
+ *   2. The menu always said "进入全屏". Every open re-synced from the same
+ *      lagging flag and overwrote the correct state with `false`.
+ *
+ * So: the module owns an authoritative `state`, native queries are only used to
+ * *initialise* / re-sync it when nothing is settling, and "is it really
+ * fullscreen" is answered by geometry (does the window cover the whole
+ * monitor?) instead of the cached flag. Window calls are always strictly
+ * ordered - the two-frame await that used to make the switch look like
+ * "shrink, then grow" is gone, but so is the race.
  */
+
+const PUBLISH_SETTLE_MS = 900;
+const STATE_TIMEOUT_MS = 700;
 
 let toggling = false;
 /** Remember whether the window was maximised so leaving fullscreen restores it. */
 let wasMaximized = false;
+/** Authoritative state. `null` until it has been read once. */
+let state: boolean | null = null;
+/** Timestamp of the last toggle, used to ignore lagging native reads. */
+let lastToggleAt = 0;
 
 type AppWindow = ReturnType<typeof getCurrentWindow>;
 
@@ -46,6 +57,53 @@ const store = getDefaultStore();
 
 function publish(isFullscreen: boolean): void {
 	store.set(borderlessFullscreenAtom, isFullscreen);
+}
+
+const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+
+/**
+ * Truth about the window geometry, independent of the (lagging) fullscreen
+ * flag: a borderless fullscreen window covers the whole monitor, while a
+ * maximised one leaves the taskbar out.
+ */
+async function coversMonitor(win: AppWindow): Promise<boolean> {
+	try {
+		const [monitor, size] = await Promise.all([
+			win.currentMonitor(),
+			win.outerSize(),
+		]);
+		if (!monitor) return false;
+		const physical = size.toPhysical(monitor.scaleFactor);
+		// 8px of slack: logical -> physical rounding, and a window border on some
+		// DPI settings. A maximised window is off by the taskbar height (~48px),
+		// so this still tells the two apart.
+		return (
+			Math.abs(physical.width - monitor.size.width) <= 8 &&
+			Math.abs(physical.height - monitor.size.height) <= 8
+		);
+	} catch {
+		return false;
+	}
+}
+
+async function isActuallyFullscreen(): Promise<boolean> {
+	const win = getCurrentWindow();
+	try {
+		if (await win.isFullscreen()) return true;
+	} catch {
+		/* fall through to the geometric check */
+	}
+	return coversMonitor(win);
+}
+
+/** Poll until the window really is (or really is not) fullscreen. */
+async function waitForState(want: boolean, timeout = STATE_TIMEOUT_MS) {
+	const deadline = Date.now() + timeout;
+	for (;;) {
+		if ((await isActuallyFullscreen()) === want) return true;
+		if (Date.now() >= deadline) return false;
+		await sleep(50);
+	}
 }
 
 /** Resolve on the next resize event, or after `timeout` ms. */
@@ -86,65 +144,94 @@ async function restoreTitlebarChrome(win: AppWindow): Promise<void> {
 }
 
 export async function isBorderlessFullscreen(): Promise<boolean> {
-	try {
-		return await getCurrentWindow().isFullscreen();
-	} catch {
-		return false;
-	}
+	return isActuallyFullscreen();
 }
 
 /**
- * Re-read the native state and publish it. Called when the context menu opens
- * so the entry can never show a stale label (e.g. if the window was put into
- * fullscreen by something outside this module).
+ * Re-read the real state and publish it. Called when the context menu opens.
+ *
+ * While a switch is still settling the native/geometry answer can be one frame
+ * behind, so the authoritative value wins for a short window instead of
+ * overwriting it - that overwrite was why the menu kept offering "进入全屏".
  */
 export async function syncBorderlessFullscreenState(): Promise<boolean> {
-	const state = await isBorderlessFullscreen();
-	publish(state);
-	return state;
+	const actual = await isActuallyFullscreen();
+	const settling = Date.now() - lastToggleAt < PUBLISH_SETTLE_MS;
+	if (state === null || (!settling && actual !== state)) {
+		state = actual;
+	}
+	publish(state === true);
+	return state === true;
 }
 
-/** Enter borderless fullscreen. No-op when already fullscreen. */
+/** Enter borderless fullscreen. No-op when already there. */
 export async function enterBorderlessFullscreen(): Promise<void> {
-	const win = getCurrentWindow();
-	if (await win.isFullscreen()) {
+	if (state === true) {
 		publish(true);
 		return;
 	}
+	const win = getCurrentWindow();
 	wasMaximized = await win.isMaximized().catch(() => false);
-	// Hide the titlebar buttons first so they do not stretch across the top
-	// edge while the window grows.
+	lastToggleAt = Date.now();
+
+	// Hide the titlebar buttons first so they do not stretch across the top edge
+	// while the window grows. Rolled back below if the switch does not take.
 	setSystemTitlebarFullscreen(true);
-	// Both calls are dispatched back to back and awaited together: the window is
-	// un-maximised and made fullscreen within one IPC round trip, so no
-	// intermediate frame reaches the compositor.
-	const unmaximize = wasMaximized ? win.unmaximize() : Promise.resolve();
-	await Promise.all([unmaximize.catch(() => undefined), win.setFullscreen(true)]);
+
+	// Strict order: un-maximise, then go fullscreen. Racing these let the
+	// un-maximise clear the fullscreen style afterwards, which produced a
+	// restored window with no titlebar (not draggable).
+	if (wasMaximized) {
+		await win.unmaximize().catch(() => undefined);
+	}
+	await win.setFullscreen(true).catch((err) => {
+		console.error("进入全屏失败", err);
+	});
+
+	if (!(await waitForState(true))) {
+		// Never leave a non-fullscreen window without its titlebar.
+		console.warn("进入全屏未生效，已回滚标题栏");
+		setSystemTitlebarFullscreen(false);
+		await restoreTitlebarChrome(win);
+		state = false;
+		publish(false);
+		return;
+	}
+
+	state = true;
 	publish(true);
 }
 
 /** Leave borderless fullscreen and restore the previous maximised state. */
 export async function exitBorderlessFullscreen(): Promise<void> {
-	const win = getCurrentWindow();
-	if (!(await win.isFullscreen())) {
+	if (state === false) {
 		publish(false);
 		return;
 	}
-	const restoreMaximize = wasMaximized
-		? win.maximize().catch(() => undefined)
-		: Promise.resolve();
-	await Promise.all([
-		win.setFullscreen(false).catch(() => undefined),
-		restoreMaximize,
-	]);
+	const win = getCurrentWindow();
+	lastToggleAt = Date.now();
+
+	// Ordered, but without waiting for a frame in between: `setFullscreen(false)`
+	// followed immediately by `maximize()` is the correct sequence and takes one
+	// IPC round trip, so the restored (small) frame is not painted.
+	await win.setFullscreen(false).catch((err) => {
+		console.error("退出全屏失败", err);
+	});
+	if (wasMaximized) {
+		await win.maximize().catch(() => undefined);
+	}
 	wasMaximized = false;
-	publish(false);
+
 	// Wait until the window has actually reached its final size before
 	// re-drawing the titlebar, otherwise the glyph and the 32px offset animate
 	// in while the frame is still moving.
+	await waitForState(false);
 	await waitForResize();
 	setSystemTitlebarFullscreen(false);
 	await restoreTitlebarChrome(win);
+
+	state = false;
+	publish(false);
 }
 
 export async function toggleBorderlessFullscreen(): Promise<void> {
@@ -152,8 +239,8 @@ export async function toggleBorderlessFullscreen(): Promise<void> {
 	if (toggling) return;
 	toggling = true;
 	try {
-		const win = getCurrentWindow();
-		if (await win.isFullscreen()) {
+		if (state === null) state = await isActuallyFullscreen();
+		if (state) {
 			await exitBorderlessFullscreen();
 		} else {
 			await enterBorderlessFullscreen();
@@ -169,12 +256,14 @@ export async function toggleBorderlessFullscreen(): Promise<void> {
 	} catch (err) {
 		console.error("切换无边框全屏失败", err);
 	} finally {
+		lastToggleAt = Date.now();
 		toggling = false;
 	}
 }
 
 export async function exitBorderlessFullscreenIfActive(): Promise<void> {
-	if (!(await isBorderlessFullscreen())) {
+	if (state === null) state = await isActuallyFullscreen();
+	if (!state) {
 		publish(false);
 		return;
 	}

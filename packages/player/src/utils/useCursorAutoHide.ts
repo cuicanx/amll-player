@@ -32,11 +32,18 @@ export function useCursorAutoHide(enabled: boolean, delay = 1200) {
 
 		window.addEventListener("mousemove", bump, { passive: true });
 		window.addEventListener("mousedown", bump, { passive: true });
+		// Scrolling with the wheel is pointer activity too. Without this the
+		// cursor disappeared in the middle of a long scroll (a wheel produces no
+		// mousemove), which is exactly when the user still needs to see it.
+		window.addEventListener("wheel", bump, { passive: true });
+		window.addEventListener("touchstart", bump, { passive: true });
 		return () => {
 			clearTimeout(timerId);
 			cancelAnimationFrame(rafId);
 			window.removeEventListener("mousemove", bump);
 			window.removeEventListener("mousedown", bump);
+			window.removeEventListener("wheel", bump);
+			window.removeEventListener("touchstart", bump);
 			setHidden(false);
 		};
 	}, [enabled, delay]);

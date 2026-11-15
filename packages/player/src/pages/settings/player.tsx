@@ -1277,6 +1277,37 @@ async function fetchContributorsFast(): Promise<unknown[] | null> {
 	}
 }
 
+/**
+ * Circular contributor avatar.
+ *
+ * Radix's `Avatar` rendered as a rounded square in this app (its radius comes
+ * from a theme token we override), so the image and its initials fallback are
+ * drawn directly with a 50% radius. Drawn at module level on purpose: a
+ * component declared inside the section would get a new identity on every
+ * render and remount every avatar (losing the error fallback each time).
+ */
+const ContributorAvatar: FC<{ item: Contributor }> = ({ item }) => {
+	const [failed, setFailed] = useState(false);
+	const showImage = Boolean(item.avatar) && !failed;
+	return (
+		<span className={about.avatar}>
+			{showImage ? (
+				<img
+					className={about.avatarImage}
+					src={avatarFor(item.avatar)}
+					alt=""
+					loading="lazy"
+					onError={() => setFailed(true)}
+				/>
+			) : (
+				<span className={about.avatarFallback}>
+					{item.login.substring(0, 2).toUpperCase()}
+				</span>
+			)}
+		</span>
+	);
+};
+
 const ContributorsSection: FC = () => {
 	const { t } = useTranslation();
 	const [contributors, setContributors] = useState<Contributor[]>([]);
@@ -1315,17 +1346,20 @@ const ContributorsSection: FC = () => {
 	}, []);
 
 	// The maintainer keeps the highlighted card above. Everyone else uses the
-	// same card size as before (avatar + bold login) so the list stays readable
-	// and clickable; only its position and the quieter heading demote it.
+	// same card layout (avatar + bold login) at a slightly smaller size.
+	// Slightly smaller than the previous card: `size="1"` tightens the padding
+	// and the grid column is narrower, while the avatar + bold name layout is
+	// kept so the rows stay scannable.
 	const renderContributorCard = (item: Contributor) => (
 		<Card
 			key={item.id}
 			asChild
+			size="1"
 			style={{
 				cursor: "pointer",
 				textDecoration: "none",
 				color: "inherit",
-				maxWidth: "30rem",
+				maxWidth: "24rem",
 			}}
 		>
 			<a
@@ -1338,13 +1372,8 @@ const ContributorsSection: FC = () => {
 				}}
 			>
 				<Flex align="center" gap="2">
-					<Avatar
-						size="2"
-						radius="full"
-						src={avatarFor(item.avatar)}
-						fallback={item.login.substring(0, 2).toUpperCase()}
-					/>
-					<Text weight="bold" size="2" truncate style={{ overflow: "hidden" }}>
+					<ContributorAvatar item={item} />
+					<Text weight="bold" size="1" truncate style={{ overflow: "hidden" }}>
 						{item.login}
 					</Text>
 				</Flex>
@@ -1373,7 +1402,7 @@ const ContributorsSection: FC = () => {
 			) : (
 				<Grid
 					style={{
-						gridTemplateColumns: "repeat(auto-fill, minmax(20rem, 1fr))",
+						gridTemplateColumns: "repeat(auto-fill, minmax(17rem, 1fr))",
 					}}
 					gap="3"
 					my="2"

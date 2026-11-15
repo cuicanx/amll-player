@@ -1,0 +1,32 @@
+/* Checkable context-menu rows.
+   Radix Themes puts the check mark in absolutely positioned gutter on the left
+   and widens every row's left padding to reserve it. Two consequences:
+     - an unchecked row keeps that empty gutter, which reads as a stray indent;
+     - the mark sits on the "wrong" side compared to the rest of this UI.
+   Both are fixed here: the built-in indicator is hidden, the row uses the same
+   padding as a plain row, and the mark is rendered at the right edge. */
+
+.item {
+	/* Same 9px inset as [role="menuitem"] in the global menu rhythm. */
+	padding: 6px 9px !important;
+}
+
+.item :global(.rt-BaseMenuItemIndicator) {
+	display: none;
+}
+
+.mark {
+	margin-left: auto;
+	padding-left: var(--space-3);
+	display: inline-flex;
+	align-items: center;
+	flex: none;
+	opacity: 0.8;
+}
+
+.label {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

@@ -87,6 +87,33 @@ export const AMLLWrapper: FC = () => {
 		};
 	}, [isLyricPageOpened, isPlaying]);
 
+	// Same "go back to the playing line" guarantee for the case where the
+	// pointer never leaves the window: after the wheel has been idle for a
+	// moment we hand control back to the auto-align. The player itself only
+	// re-aligns when the current line changes *and* is still inside its render
+	// range, so a long manual scroll could otherwise stay stranded.
+	useEffect(() => {
+		if (!isLyricPageOpened) return;
+		const page = pageRef.current;
+		if (!page) return;
+
+		let idle = 0;
+		const onWheel = () => {
+			window.clearTimeout(idle);
+			idle = window.setTimeout(() => {
+				if (isPlaying) {
+					resetLyricScroll(document.getElementById("amll-lyric-player"));
+				}
+			}, 1500);
+		};
+
+		page.addEventListener("wheel", onWheel, { passive: true });
+		return () => {
+			window.clearTimeout(idle);
+			page.removeEventListener("wheel", onWheel);
+		};
+	}, [isLyricPageOpened, isPlaying]);
+
 	// Publish the native fullscreen state once at startup so the menu label is
 	// correct even before the first toggle (the atom defaults to false).
 	useEffect(() => {

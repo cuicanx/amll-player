@@ -6,6 +6,7 @@ import {
 	onRequestNextSongAtom,
 	onRequestPrevSongAtom,
 } from "@applemusic-like-lyrics/react-full";
+import { CheckIcon } from "@radix-ui/react-icons";
 import { ContextMenu } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
@@ -19,6 +20,7 @@ import {
 	recordPanelOpenedAtom,
 } from "../../states/appAtoms.ts";
 import { toggleBorderlessFullscreen } from "../../utils/borderless-fullscreen.ts";
+import styles from "./index.module.css";
 
 export const AMLLContextMenuContent: FC = () => {
 	const { t } = useTranslation();
@@ -62,18 +64,28 @@ export const AMLLContextMenuContent: FC = () => {
 						: t("amll.contextMenu.enterFullscreen", "进入全屏")}
 				</ContextMenu.Item>
 			)}
+			{/* Check mark on the right: an unchecked row then has no empty left
+			   gutter, so every row starts on the same vertical line. */}
 			<ContextMenu.CheckboxItem
+				className={styles.item}
 				checked={alwaysOnTop}
 				onCheckedChange={(e) => setAlwaysOnTop(!!e)}
 			>
-				<Trans i18nKey="amll.contextMenu.windowAlwaysOnTop">窗口置顶</Trans>
+				<span className={styles.label}>
+					<Trans i18nKey="amll.contextMenu.windowAlwaysOnTop">窗口置顶</Trans>
+				</span>
+				{alwaysOnTop && <CheckIcon className={styles.mark} />}
 			</ContextMenu.CheckboxItem>
 			<ContextMenu.Separator />
 			<ContextMenu.CheckboxItem
+				className={styles.item}
 				checked={!hideLyricView}
 				onCheckedChange={(e) => setHideLyricView(!e)}
 			>
-				<Trans i18nKey="amll.contextMenu.toggleLyrics">显示歌词</Trans>
+				<span className={styles.label}>
+					<Trans i18nKey="amll.contextMenu.toggleLyrics">显示歌词</Trans>
+				</span>
+				{!hideLyricView && <CheckIcon className={styles.mark} />}
 			</ContextMenu.CheckboxItem>
 			<ContextMenu.Item
 				onClick={() => {

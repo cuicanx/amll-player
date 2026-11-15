@@ -92,16 +92,9 @@ pub async fn updater_check(
     }))
 }
 
-/// Downloads and installs the pending update, emitting `updater://progress`.
-///
-/// Doing this in Rust (instead of the JS plugin) is what makes the endpoint
-/// choice above apply to the download as well as to the check: the plugin's JS
-/// `downloadAndInstall` always uses the manifest configured at build time,
-/// while here the manifest - and therefore the download host - is the one we
-/// picked for this machine's region.
-#[tauri::command]
-pub async fn updater_install(app: tauri::AppHandle, region: String) -> Result<(), String> {
-    let updater = build_updater(&app, &region)?;
+/// One download-and-install attempt using a specific endpoint order.
+async fn attempt_install(app: &tauri::AppHandle, region: &str) -> Result<(), String> {
+    let updater = build_updater(app, region)?;
     let update = updater
         .check()
         .await
@@ -125,4 +118,73 @@ pub async fn updater_install(app: tauri::AppHandle, region: String) -> Result<()
         )
         .await
         .map_err(|e| e.to_string())
+}
+
+/// Failures that are worth retrying over the other transport.
+///
+/// The installer bytes and the manifest are published separately, so a mirror
+/// can hand back a body that does not match the signature the manifest
+/// announces: a transparent proxy that kept an older copy of the same file
+/// name (re-runs of one commit produce the same `0.0.<commitCount>` name), a
+/// truncated stream, or an HTML error page served with status 200. All of them
+/// surface as "signature verification failed" and are not deterministic - the
+/// same retry a second later usually succeeds, especially through the other
+/// source. Network-ish errors are retried for the same reason.
+fn is_retryable_install_error(message: &str) -> bool {
+    let text = message.to_lowercase();
+    [
+        "signature",
+        "verify",
+        "verification",
+        "decode",
+        "corrupt",
+        "incomplete",
+        "unexpected eof",
+        "length",
+        "timed out",
+        "timeout",
+        "connection",
+        "reset by peer",
+        "broken pipe",
+        "failed to download",
+    ]
+    .iter()
+    .any(|needle| text.contains(needle))
+}
+
+/// Downloads and installs the pending update, emitting `updater://progress`.
+///
+/// Doing this in Rust (instead of the JS plugin) is what makes the endpoint
+/// choice above apply to the download as well as to the check: the plugin's JS
+/// `downloadAndInstall` always uses the manifest configured at build time,
+/// while here the manifest - and therefore the download host - is the one we
+/// picked for this machine's region.
+///
+/// A failed attempt is retried once through the *other* transport. Verification
+/// happens inside `download_and_install` (it downloads, verifies, then runs the
+/// installer), so a bad copy never reaches the system; retrying elsewhere is
+/// therefore safe and fixes the most common "sometimes signature fails" case.
+#[tauri::command]
+pub async fn updater_install(app: tauri::AppHandle, region: String) -> Result<(), String> {
+    let primary = if region == "global" { "global" } else { "cn" };
+    let secondary = if primary == "global" { "cn" } else { "global" };
+
+    match attempt_install(&app, primary).await {
+        Ok(()) => Ok(()),
+        Err(first) => {
+            if !is_retryable_install_error(&first) {
+                return Err(first);
+            }
+            tracing::warn!(
+                "update install failed via {primary}, retrying via {secondary}: {first}"
+            );
+            let _ = app.emit("updater://retrying", ());
+            match attempt_install(&app, secondary).await {
+                Ok(()) => Ok(()),
+                Err(second) => Err(format!(
+                    "{first}（已自动换源重试，仍失败：{second}）"
+                )),
+            }
+        }
+    }
 }
