@@ -198,6 +198,38 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
+      # 官方 latest.json 里的 download url 是 api.github.com 的 asset 接口，
+      # 会 302 到 release-assets.githubusercontent.com。该域名在部分网络与
+      # VPN 分流规则下不可达，表现就是"能查到更新、点下载必然失败"。
+      # 这里另存一份把 url 换成 gh-proxy 直链的清单，供更新器优先使用。
+      - name: 生成镜像更新清单
+        if: matrix.artifact_name_suffix == 'windows-x64'
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}-player-dev
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --repo "$REPO" -p latest.json -D . --clobber
+          node -e '
+          const fs = require("node:fs");
+          const { execSync } = require("node:child_process");
+          const repo = process.env.REPO, tag = process.env.TAG;
+          const rel = JSON.parse(execSync(`gh release view ${tag} --repo ${repo} --json assets`).toString());
+          const msi = rel.assets.map((a) => a.name).find((n) => n.endsWith(".msi"));
+          const src = JSON.parse(fs.readFileSync("latest.json", "utf8"));
+          const base = `https://gh-proxy.com/https://github.com/${repo}/releases/download/${tag}/`;
+          for (const platform of Object.values(src.platforms || {})) {
+            if (msi) platform.url = base + encodeURIComponent(msi);
+          }
+          src.notes = (src.notes || "") + "\n\n（镜像下载地址：国内网络无需 VPN）";
+          fs.writeFileSync("latest-mirror.json", JSON.stringify(src, null, 2));
+          console.log("latest-mirror.json ->", msi);
+          '
+          gh release upload "$TAG" latest-mirror.json --repo "$REPO" --clobber
+
       - name: 上传产物到 Action Artifact
         uses: actions/upload-artifact@v7
         with:

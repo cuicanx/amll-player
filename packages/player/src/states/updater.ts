@@ -54,6 +54,29 @@ function describeError(err: unknown): string {
 }
 
 /**
+ * Turn the updater's raw English errors into something actionable. The two
+ * failures users actually hit are a blocked manifest fetch (VPN / DNS) and an
+ * unreachable asset host - "Could not fetch a valid release JSON from the
+ * remote" on its own says nothing about what to do next.
+ */
+function friendlyUpdateError(err: unknown): string {
+	const raw = describeError(err);
+	if (/release json/i.test(raw)) {
+		return `${raw}（更新清单获取失败：网络可能被拦截，可关闭 VPN 或改用「打开发布页」手动更新）`;
+	}
+	if (/signature|verify/i.test(raw)) {
+		return `${raw}（安装包签名校验失败）`;
+	}
+	if (/timed? ?out|timeout/i.test(raw)) {
+		return `${raw}（下载超时，可切换网络后重试）`;
+	}
+	if (/dns|connect|tcp|network/i.test(raw)) {
+		return `${raw}（无法连接更新服务器，请检查网络或代理设置）`;
+	}
+	return raw;
+}
+
+/**
  * Extracts a monotonically comparable build number.
  *   our dev builds: 0.0.<commitCount>   -> patch
  *   upstream builds: 0.0.1+<commitCount> -> build metadata
@@ -88,7 +111,7 @@ export const checkUpdateAtom = atom(null, async (get, set) => {
 		console.warn(LOG_TAG, "检查更新失败", e);
 		// Previously this only logged to the console, so the UI looked like
 		// "nothing happened". Surface it so the user knows why.
-		set(updateErrorAtom, describeError(e));
+		set(updateErrorAtom, friendlyUpdateError(e));
 	} finally {
 		set(isCheckingUpdateAtom, false);
 	}
@@ -144,7 +167,7 @@ export const installUpdateAtom = atom(null, async (get, set) => {
 			return true;
 		} catch (e) {
 			console.error(LOG_TAG, "下载/安装更新失败", e);
-			set(updateErrorAtom, describeError(e));
+			set(updateErrorAtom, friendlyUpdateError(e));
 			set(installAttemptsAtom, get(installAttemptsAtom) + 1);
 			// Drop the poisoned handle and force a fresh check next time.
 			try {
