@@ -23,8 +23,12 @@
 /* PERF/UX: the queue popover previously appeared with no transition at all.
    Animate only transform + opacity (compositor properties) so the entrance
    is smooth without reflowing the playbar. The resting state is unchanged. */
+/* The queue popover used to be positioned inside the playbar, so the settings
+   page (position:fixed, z-index:1000) painted over its top edge. It is now a
+   fixed-position layer above any page chrome. */
 .playlistCardPopover {
 	transform-origin: bottom right;
+	z-index: 1100;
 	animation: playlistCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

@@ -26,12 +26,12 @@
 		--amll-acrylic-bloom-a: rgba(120, 150, 220, 0.10);
 		--amll-acrylic-bloom-b: rgba(180, 150, 220, 0.08);
 		--amll-acrylic-tint: rgba(250, 251, 255, 0.72);
-		--amll-glass-panel: rgba(255, 255, 255, 0.62);
-		--amll-glass-popover: rgba(250, 251, 255, 0.72);
+		--amll-glass-panel: rgba(255, 255, 255, 0.82);
+		--amll-glass-popover: rgba(252, 253, 255, 0.92);
 		--amll-glass-popover-text: #1c2024;
-		--amll-glass-popover-border: rgba(24, 34, 60, 0.10);
-		--amll-glass-popover-highlight: rgba(255, 255, 255, 0.55);
-		--amll-glass-popover-shadow: 0 15px 30px rgba(28, 38, 66, 0.18);
+		--amll-glass-popover-border: rgba(24, 34, 60, 0.12);
+		--amll-glass-popover-highlight: rgba(255, 255, 255, 0.45);
+		--amll-glass-popover-shadow: 0 10px 24px rgba(20, 30, 55, 0.14);
 
 		/* Popover material copied from the "青柠起始页" reference CSS:
 		   --universal-backdrop-filter: blur(30px) saturate(1.25);
@@ -48,7 +48,10 @@
 		--amll-glass-transition:
 			background-color 0.25s, color 0.25s, box-shadow 0.25s,
 			transform 0.25s;
-		--amll-glass-item-highlight: rgba(24, 34, 60, 0.08);
+		--amll-glass-item-highlight: rgba(24, 34, 60, 0.07);
+		/* Callouts are inline notices, not floating panels: a large drop
+		   shadow under them looks detached from the page. */
+		--amll-glass-callout-shadow: 0 1px 2px rgba(20, 30, 60, 0.06);
 		--amll-glass-toast: rgba(28, 32, 42, 0.82);
 		--amll-glass-toast-text: #f2f5fb;
 		--amll-glass-toast-border: rgba(255, 255, 255, 0.08);
@@ -64,13 +67,14 @@
 		--amll-acrylic-bloom-a: rgba(70, 100, 170, 0.14);
 		--amll-acrylic-bloom-b: rgba(105, 75, 155, 0.12);
 		--amll-acrylic-tint: rgba(28, 32, 42, 0.78);
-		--amll-glass-panel: rgba(38, 43, 56, 0.62);
-		--amll-glass-popover: rgba(20, 23, 31, 0.76);
+		--amll-glass-panel: rgba(32, 36, 46, 0.86);
+		--amll-glass-popover: rgba(22, 25, 33, 0.94);
 		--amll-glass-popover-text: #eef1f8;
-		--amll-glass-popover-border: rgba(255, 255, 255, 0.08);
-		--amll-glass-popover-highlight: rgba(255, 255, 255, 0.06);
-		--amll-glass-popover-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-		--amll-glass-item-highlight: rgba(255, 255, 255, 0.10);
+		--amll-glass-popover-border: rgba(255, 255, 255, 0.10);
+		--amll-glass-popover-highlight: rgba(255, 255, 255, 0.05);
+		--amll-glass-popover-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+		--amll-glass-item-highlight: rgba(255, 255, 255, 0.12);
+		--amll-glass-callout-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 		--amll-glass-toast-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
 	}
 
@@ -189,13 +193,34 @@
 		box-shadow: var(--amll-glass-popover-shadow) !important;
 		color: var(--amll-glass-popover-text) !important;
 		transition: var(--amll-glass-transition) !important;
+		/* Radix derives highlighted-item label colours from these tokens.
+		   Without overriding them a hovered menu item flipped its text to the
+		   accent contrast colour (near-white) on top of the dark hover tint,
+		   which is what made the new menus unreadable. */
+		--accent-contrast: var(--amll-glass-popover-text);
+		--gray-contrast: var(--amll-glass-popover-text);
 	}
 
-	/* Highlighted menu / select items need their own readable tint on glass. */
+	/* Inline notices get a hairline shadow instead of a floating-panel drop
+	   shadow, which looked detached and left a grey halo under each bar. */
+	.rt-CalloutRoot {
+		box-shadow: var(--amll-glass-callout-shadow) !important;
+	}
+
+	/* Highlighted menu / select items: a neutral tint plus an explicitly
+	   restored label colour, so hovering never trades readability for contrast. */
 	.rt-DropdownMenuItem[data-highlighted],
 	.rt-ContextMenuItem[data-highlighted],
 	.rt-SelectItem[data-highlighted] {
 		background-color: var(--amll-glass-item-highlight) !important;
+		color: var(--amll-glass-popover-text) !important;
+	}
+
+	/* The same guarantee for any nested text/icon inside a highlighted item. */
+	.rt-DropdownMenuItem[data-highlighted] *,
+	.rt-ContextMenuItem[data-highlighted] *,
+	.rt-SelectItem[data-highlighted] * {
+		color: inherit !important;
 	}
 
 	/* Dialog scrim: a lighter blur so content behind stays recognisable. */

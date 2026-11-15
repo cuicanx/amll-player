@@ -164,24 +164,32 @@ export const installUpdateAtom = atom(null, async (get, set) => {
 });
 
 /**
- * GitHub asset / API requests are attempted directly and then through a
- * mirror, so a blocked or slow github.com never breaks the flow. The mirror
- * is only a transport fallback - the payload and its signature are unchanged.
+ * GitHub asset / API requests are attempted directly and through a mirror
+ * **concurrently**, keeping whichever responds first. A sequential attempt
+ * meant a slow first transport delayed the result by its full timeout.
  */
 async function fetchJsonWithMirror<T>(
 	url: string,
 	init?: RequestInit,
 ): Promise<T | null> {
-	for (const target of [url, `https://gh-proxy.com/${url}`]) {
-		try {
-			const res = await fetch(target, init);
-			if (!res.ok) continue;
-			return (await res.json()) as T;
-		} catch {
-			/* try the next transport */
-		}
+	const targets = [url, `https://gh-proxy.com/${url}`];
+	const controllers = targets.map(() => new AbortController());
+	const attempt = (target: string, index: number) =>
+		fetch(target, { ...init, signal: controllers[index].signal }).then(
+			async (res) => {
+				if (!res.ok) throw new Error(`HTTP ${res.status}`);
+				const data = (await res.json()) as T;
+				for (let i = 0; i < controllers.length; i++) {
+					if (i !== index) controllers[i].abort();
+				}
+				return data;
+			},
+		);
+	try {
+		return await Promise.any(targets.map(attempt));
+	} catch {
+		return null;
 	}
-	return null;
 }
 
 /**

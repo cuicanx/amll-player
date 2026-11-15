@@ -100,7 +100,7 @@ export const NowPlayingBar: FC = () => {
 					className={styles.playlistCardPopover}
 					direction="row-reverse"
 					mx="3"
-					position="absolute"
+					position="fixed"
 					right="0"
 					bottom="calc(var(--amll-player-playbar-bottom) + var(--space-3))"
 				>

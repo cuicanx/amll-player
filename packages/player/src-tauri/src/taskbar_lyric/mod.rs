@@ -125,9 +125,23 @@ pub fn open_taskbar_lyric(app: tauri::AppHandle) {
             .resizable(false)
             .maximizable(false)
             .minimizable(false)
-            .visible(true);
+            // Created hidden: the window is embedded into the taskbar *after*
+            // creation, so showing it immediately made it flash (first as a
+            // floating transparent window, then as the embedded control). The
+            // page reveals it once its first frame is painted; the fallback
+            // below guarantees it can never stay invisible.
+            .visible(false);
 
         if let Ok(win) = win_builder.build() {
+            {
+                let win_for_fallback = win.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+                    if let Ok(false) = win_for_fallback.is_visible() {
+                        let _ = win_for_fallback.show();
+                    }
+                });
+            }
             if let Ok(hwnd) = win.hwnd() {
                 let hwnd_ptr = hwnd.0 as usize;
                 let top_hwnd = HWND(hwnd.0.cast());

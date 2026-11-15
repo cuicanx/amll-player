@@ -1203,6 +1203,41 @@ const MAINTAINER: Contributor = {
 	url: "https://github.com/cuicanx",
 };
 
+const CONTRIBUTORS_API =
+	"https://api.github.com/repos/cuicanx/amll-player/contributors?per_page=100&anon=true";
+const MIRROR_PREFIX = "https://gh-proxy.com/";
+
+/**
+ * Fetch the contributor list from the mirror and the direct GitHub API
+ * concurrently and keep whichever answers first. Trying them in sequence meant
+ * a slow/unreachable first source delayed the whole list by its full timeout;
+ * racing them makes the load time the faster of the two, which is also the
+ * "measure both, use the faster one" behaviour the user asked for.
+ */
+async function fetchContributorsFast(): Promise<unknown[] | null> {
+	const targets = [CONTRIBUTORS_API, `${MIRROR_PREFIX}${CONTRIBUTORS_API}`];
+	const controllers = targets.map(() => new AbortController());
+	const attempt = (url: string, index: number) =>
+		fetch(url, {
+			signal: controllers[index].signal,
+			headers: { Accept: "application/vnd.github+json" },
+		}).then(async (response) => {
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			const data = await response.json();
+			// Cancel the slower request so it does not keep the connection busy.
+			for (let i = 0; i < controllers.length; i++) {
+				if (i !== index) controllers[i].abort();
+			}
+			return data;
+		});
+	try {
+		const data = await Promise.any(targets.map(attempt));
+		return Array.isArray(data) ? data : null;
+	} catch {
+		return null;
+	}
+}
+
 const ContributorsSection: FC = () => {
 	const { t } = useTranslation();
 	const [contributors, setContributors] = useState<Contributor[]>([MAINTAINER]);
@@ -1211,29 +1246,24 @@ const ContributorsSection: FC = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const response = await fetch(
-					"https://api.github.com/repos/cuicanx/amll-player/contributors?per_page=100&anon=true",
-				);
-				if (response.ok) {
-					const data = await response.json();
-					if (Array.isArray(data)) {
-						const list: Contributor[] = data
-							.filter(
-								(item: any) =>
-									item.login &&
-									item.login.toLowerCase() !== MAINTAINER.login &&
-									item.login !== "type-bot" &&
-									item.type !== "Bot" &&
-									!item.login.endsWith("[bot]"),
-							)
-							.map((item: any) => ({
-								id: item.id,
-								login: item.login,
-								avatar: item.avatar_url || "",
-								url: item.html_url || `https://github.com/${item.login}`,
-							}));
-						setContributors([MAINTAINER, ...list]);
-					}
+				const data = await fetchContributorsFast();
+				if (data) {
+					const list: Contributor[] = data
+						.filter(
+							(item: any) =>
+								item.login &&
+								item.login.toLowerCase() !== MAINTAINER.login &&
+								item.login !== "type-bot" &&
+								item.type !== "Bot" &&
+								!item.login.endsWith("[bot]"),
+						)
+						.map((item: any) => ({
+							id: item.id,
+							login: item.login,
+							avatar: item.avatar_url || "",
+							url: item.html_url || `https://github.com/${item.login}`,
+						}));
+					setContributors([MAINTAINER, ...list]);
 				}
 			} catch (error) {
 				console.error("Failed to fetch contributors:", error);
