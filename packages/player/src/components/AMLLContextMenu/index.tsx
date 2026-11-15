@@ -9,18 +9,16 @@ import {
 import { ContextMenu } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { type FC, useEffect, useState } from "react";
+import type { FC } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { router } from "../../router.tsx";
 import {
+	borderlessFullscreenAtom,
 	enableAlwaysOnTopAtom,
 	enableF11FullscreenAtom,
 	recordPanelOpenedAtom,
 } from "../../states/appAtoms.ts";
-import {
-	isBorderlessFullscreen,
-	toggleBorderlessFullscreen,
-} from "../../utils/borderless-fullscreen.ts";
+import { toggleBorderlessFullscreen } from "../../utils/borderless-fullscreen.ts";
 
 export const AMLLContextMenuContent: FC = () => {
 	const { t } = useTranslation();
@@ -34,20 +32,11 @@ export const AMLLContextMenuContent: FC = () => {
 	const onPlayOrResume = useAtomValue(onPlayOrResumeAtom).onEmit;
 	const musicId = useAtomValue(musicIdAtom);
 
-	// The menu content only exists while the menu is open, so querying the
-	// window state on mount is enough to label the entry correctly. Reading it
-	// here (instead of keeping a global atom in sync) avoids a stale label if
-	// the window was put into fullscreen by something else.
-	const [isFullscreen, setIsFullscreen] = useState(false);
-	useEffect(() => {
-		let cancelled = false;
-		void isBorderlessFullscreen().then((value) => {
-			if (!cancelled) setIsFullscreen(value);
-		});
-		return () => {
-			cancelled = true;
-		};
-	}, []);
+	// Live state, not a snapshot. This component is mounted once with the app
+	// (only the Radix portal is created per open), so an effect that queried
+	// `isFullscreen()` on mount kept the startup value forever and the entry
+	// still said "进入全屏" while the window already was fullscreen.
+	const isFullscreen = useAtomValue(borderlessFullscreenAtom);
 
 	return (
 		<ContextMenu.Content>

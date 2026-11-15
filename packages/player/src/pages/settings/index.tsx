@@ -288,7 +288,12 @@ export const Component: FC = () => {
 		<div
 			style={{
 				position: "fixed",
-				top: "var(--space-8)",
+				// +10px: the back button used to sit flush against the window's
+				// top-left corner, where the rounded corner (and, in windowed
+				// mode, the 32px drag region of the titlebar) clipped it. The
+				// content is shifted by the same amount so the gap between the
+				// button row and the first sidebar entry stays identical.
+				top: "calc(var(--space-8) + 10px)",
 				left: 0,
 				right: 0,
 				bottom: "80px",
@@ -321,17 +326,17 @@ export const Component: FC = () => {
 				style={{
 					position: "fixed",
 					// A 40px control cannot be vertically centred inside the 32px
-					// titlebar without 4px hanging outside the window, which is
-					// what clipped the top of the arrow. The row is now a fixed
-					// 40px tall strip pinned to the top edge, independent of the
-					// titlebar variable (that variable used to collapse to 0 in
-					// fullscreen, pushing the button above the viewport).
-					top: 0,
+					// titlebar without 4px hanging outside the window. The row is a
+					// fixed 40px strip, offset 10px from the top so the button never
+					// touches the window corner, and stacked ABOVE the system
+					// titlebar (z-index 10000): that bar is a full-width drag region,
+					// so anything under it loses the first 32px of its hit area.
+					top: 10,
 					left: 0,
 					height: 40,
 					paddingLeft: "var(--space-4)",
 					paddingRight: "var(--space-4)",
-					zIndex: 10,
+					zIndex: 10001,
 				}}
 			>
 				{/* No Tooltip here on purpose. In fullscreen the titlebar collapses

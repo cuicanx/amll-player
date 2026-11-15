@@ -80,7 +80,20 @@ export const enableF11FullscreenAtom = atomWithStorage(
 	false,
 );
 
+/**
+ * Live borderless-fullscreen state, mirrored from the native window.
+ *
+ * This exists because the context menu component is mounted once with the app
+ * (only its Radix portal is created per open), so reading `isFullscreen()`
+ * inside that component's effect captured the state at startup and never
+ * changed - the menu kept offering "进入全屏" while the window was already
+ * fullscreen. Every code path that changes the state publishes it here, and
+ * the menu also re-syncs when it opens (see AMLLWrapper).
+ */
+export const borderlessFullscreenAtom = atom(false);
+
 export const autoDarkModeAtom = atom(true);
+
 
 export const isDarkThemeAtom = atom(
 	(get) =>

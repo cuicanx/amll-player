@@ -34,9 +34,10 @@
 	}
 }
 
-.cursorHiddenOverlay {
-	position: absolute;
-	inset: 0;
-	cursor: none;
-	z-index: 9999;
+/* Hides the pointer without any element in between: the previous version put a
+   full-size overlay on top of the lyric page, which also ate the wheel events
+   the lyric player needs for manual scrolling. */
+.cursorHidden,
+.cursorHidden * {
+	cursor: none !important;
 }

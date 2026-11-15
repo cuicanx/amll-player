@@ -39,6 +39,7 @@ import {
 	Button,
 	Card,
 	Flex,
+	Grid,
 	Select,
 	Separator,
 	Slider,
@@ -1313,9 +1314,44 @@ const ContributorsSection: FC = () => {
 		fetchData();
 	}, []);
 
-// The maintainer is rendered as a highlighted card above; everyone else is
-// deliberately quieter: a compact chip row instead of equal-sized cards, so
-// the edition's maintainer stays the focus of the page.
+	// The maintainer keeps the highlighted card above. Everyone else uses the
+	// same card size as before (avatar + bold login) so the list stays readable
+	// and clickable; only its position and the quieter heading demote it.
+	const renderContributorCard = (item: Contributor) => (
+		<Card
+			key={item.id}
+			asChild
+			style={{
+				cursor: "pointer",
+				textDecoration: "none",
+				color: "inherit",
+				maxWidth: "30rem",
+			}}
+		>
+			<a
+				href={item.url}
+				target="_blank"
+				rel="noopener noreferrer"
+				onClick={(e) => {
+					e.preventDefault();
+					openLink(item.url);
+				}}
+			>
+				<Flex align="center" gap="2">
+					<Avatar
+						size="2"
+						radius="full"
+						src={avatarFor(item.avatar)}
+						fallback={item.login.substring(0, 2).toUpperCase()}
+					/>
+					<Text weight="bold" size="2" truncate style={{ overflow: "hidden" }}>
+						{item.login}
+					</Text>
+				</Flex>
+			</a>
+		</Card>
+	);
+
 	return (
 		<>
 			<div className={about.sectionHeader}>
@@ -1335,31 +1371,15 @@ const ContributorsSection: FC = () => {
 					{t("page.about.noOtherContributors", "暂无其他贡献者")}
 				</div>
 			) : (
-				<div className={about.contributorList}>
-					{contributors.map((item) => (
-						<a
-							key={item.id}
-							className={about.contributorChip}
-							href={item.url}
-							target="_blank"
-							rel="noopener noreferrer"
-							onClick={(e) => {
-								e.preventDefault();
-								openLink(item.url);
-							}}
-						>
-							{item.avatar ? (
-								<img
-									className={about.chipAvatar}
-									src={avatarFor(item.avatar)}
-									alt=""
-									loading="lazy"
-								/>
-							) : null}
-							<span>{item.login}</span>
-						</a>
-					))}
-				</div>
+				<Grid
+					style={{
+						gridTemplateColumns: "repeat(auto-fill, minmax(20rem, 1fr))",
+					}}
+					gap="3"
+					my="2"
+				>
+					{contributors.map(renderContributorCard)}
+				</Grid>
 			)}
 		</>
 	);

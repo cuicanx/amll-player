@@ -254,9 +254,7 @@
 		padding: 6px !important;
 		min-width: 188px;
 	}
-	[role="menuitem"],
-	[role="menuitemcheckbox"],
-	[role="menuitemradio"] {
+	[role="menuitem"] {
 		border-radius: 7px !important;
 		padding: 6px 9px !important;
 		min-height: 30px;
@@ -264,6 +262,24 @@
 		font-size: 12.5px !important;
 		line-height: 1.35 !important;
 		cursor: default;
+	}
+	/* Checkable rows are laid out by Radix itself: the check mark sits in its own
+	   gutter and the item reserves space for it. Overriding padding/gap here
+	   pushed the mark on top of the label, which is why "显示歌词" looked
+	   misaligned. Only the shared type scale and shape are applied. */
+	[role="menuitemcheckbox"],
+	[role="menuitemradio"] {
+		border-radius: 7px !important;
+		min-height: 30px;
+		font-size: 12.5px !important;
+		line-height: 1.35 !important;
+		cursor: default;
+	}
+	/* Keep the mark centred on the row whatever the label height is. */
+	[role="menuitemcheckbox"] > svg,
+	[role="menuitemradio"] > svg {
+		flex: none;
+		align-self: center;
 	}
 	[role="menu"] [role="separator"] {
 		margin: 4px 2px !important;
