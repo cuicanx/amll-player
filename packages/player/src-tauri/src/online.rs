@@ -473,3 +473,41 @@ pub async fn online_resolve(
         other => Err(format!("内置音源暂不支持平台 {other}，请在设置中启用可用的自定义音源")),
     }
 }
+
+/// Read the source list of an installed lx-music-desktop.
+///
+/// LX keeps every imported source in `LxDatas/user_api.json`, with the script
+/// stored as `gz_` + base64(zlib). Returning the raw file keeps this command
+/// dependency-free; the frontend inflates and imports it, so a user can bring
+/// over the exact sources their LX already trusts instead of hunting for links.
+#[tauri::command]
+pub fn lx_sources_raw() -> Result<String, String> {
+    let mut candidates: Vec<String> = Vec::new();
+
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        candidates.push(format!("{appdata}\\lx-music-desktop\\LxDatas\\user_api.json"));
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        candidates.push(format!(
+            "{home}/.config/lx-music-desktop/LxDatas/user_api.json"
+        ));
+        candidates.push(format!(
+            "{home}/Library/Application Support/lx-music-desktop/LxDatas/user_api.json"
+        ));
+    }
+    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
+        candidates.push(format!("{xdg}/lx-music-desktop/LxDatas/user_api.json"));
+    }
+
+    for path in candidates {
+        match std::fs::read_to_string(&path) {
+            Ok(content) => {
+                if content.contains("userApis") {
+                    return Ok(content);
+                }
+            }
+            Err(_) => continue,
+        }
+    }
+    Err("没有找到洛雪音乐的音源数据，请确认已安装并导入过音源".into())
+}

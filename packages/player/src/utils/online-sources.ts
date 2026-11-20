@@ -8,6 +8,7 @@
  * Two community sources ship with the app so online mode is usable out of the
  * box. They are seeded once and never re-added after the user deletes them.
  */
+import { invoke } from "@tauri-apps/api/core";
 import dujiaSource from "../assets/online-sources/dujia.js?raw";
 import yehuaSource from "../assets/online-sources/yehua.js?raw";
 import { type LxSourceInfo, parseScriptInfo } from "./lx-source-runtime.ts";
@@ -114,4 +115,54 @@ export function restoreBuiltinSources(): StoredSource[] {
 	}
 	saveSources(list);
 	return list;
+}
+
+/**
+ * LX stores each imported source as `gz_` + base64(zlib). Inflate it back to
+ * text so the exact script the user already trusts can be imported.
+ */
+async function inflateStoredScript(stored: string): Promise<string | null> {
+	if (!stored) return null;
+	if (!stored.startsWith("gz_")) return stored;
+	try {
+		const binary = atob(stored.slice(3));
+		const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+		const stream = new Blob([bytes as unknown as BlobPart])
+			.stream()
+			.pipeThrough(new DecompressionStream("deflate"));
+		const out = new Uint8Array(await new Response(stream).arrayBuffer());
+		return new TextDecoder("utf-8").decode(out);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Import every custom source already installed in the local lx-music-desktop.
+ *
+ * This is the most reliable way to get a *working* source: the user's LX has
+ * already proven those scripts load, and we skip the guesswork of finding a
+ * download link whose server still answers.
+ */
+export async function importFromLxMusic(): Promise<{ imported: number; skipped: number }> {
+	const raw = await invoke<string>("lx_sources_raw");
+	const data = JSON.parse(raw) as { userApis?: { script?: string }[] };
+	const list = data.userApis ?? [];
+	let imported = 0;
+	let skipped = 0;
+
+	for (const api of list) {
+		const text = await inflateStoredScript(api.script ?? "");
+		if (!text) {
+			skipped++;
+			continue;
+		}
+		try {
+			importSource(text);
+			imported++;
+		} catch {
+			skipped++;
+		}
+	}
+	return { imported, skipped };
 }

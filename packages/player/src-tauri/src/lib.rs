@@ -283,6 +283,7 @@ pub fn run() {
             online::online_http,
             online::online_search,
             online::online_resolve,
+            online::lx_sources_raw,
             updater::updater_check,
             updater::updater_install,
             db::commands::update_song,

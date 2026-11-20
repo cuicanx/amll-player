@@ -54,6 +54,36 @@ const PROBE_SONG: OnlineSong = {
 const runtimes = new Map<string, LxSourceRuntime>();
 const health = new Map<string, { ok: boolean; message: string }>();
 
+/** Probe results survive a restart so the first search stays instant. */
+const HEALTH_KEY = "amll-player.sourceHealth";
+const HEALTH_TTL = 24 * 60 * 60 * 1000;
+
+function loadPersistedHealth(): Map<string, { ok: boolean; message: string }> | null {
+	try {
+		const raw = localStorage.getItem(HEALTH_KEY);
+		if (!raw) return null;
+		const parsed = JSON.parse(raw) as {
+			at: number;
+			items: Record<string, { ok: boolean; message: string }>;
+		};
+		if (Date.now() - parsed.at > HEALTH_TTL) return null;
+		return new Map(Object.entries(parsed.items));
+	} catch {
+		return null;
+	}
+}
+
+function persistHealth(map: Map<string, { ok: boolean; message: string }>): void {
+	try {
+		localStorage.setItem(
+			HEALTH_KEY,
+			JSON.stringify({ at: Date.now(), items: Object.fromEntries(map) }),
+		);
+	} catch {
+		// Storage full or disabled - the in-memory result still works.
+	}
+}
+
 function runtimeFor(source: StoredSource): LxSourceRuntime {
 	const cached = runtimes.get(source.id);
 	if (cached) return cached;
@@ -66,6 +96,11 @@ function runtimeFor(source: StoredSource): LxSourceRuntime {
 export function resetOnlineRuntimeCache(): void {
 	runtimes.clear();
 	health.clear();
+	try {
+		localStorage.removeItem("amll-player.sourceHealth");
+	} catch {
+		// ignore
+	}
 }
 
 /**
@@ -74,7 +109,14 @@ export function resetOnlineRuntimeCache(): void {
  * the search, so the result list never shows rows that cannot be played.
  */
 export async function ensureSourceHealth(force = false): Promise<Map<string, { ok: boolean; message: string }>> {
-	if (!force && health.size > 0) return health;
+	if (!force) {
+		if (health.size > 0) return health;
+		const persisted = loadPersistedHealth();
+		if (persisted) {
+			persisted.forEach((value, key) => health.set(key, value));
+			return health;
+		}
+	}
 
 	const enabled = loadSources().filter((s) => s.enabled);
 	health.clear();
@@ -82,7 +124,8 @@ export async function ensureSourceHealth(force = false): Promise<Map<string, { o
 		enabled.map(async (source) => {
 			const runtime = runtimeFor(source);
 			try {
-				await runtime.init();
+				// A broken source must not stall the first search: fail fast.
+				await runtime.init(6000);
 				if (!runtime.sources[PROBE_SONG.source]) {
 					health.set(source.id, {
 						ok: false,
@@ -97,6 +140,7 @@ export async function ensureSourceHealth(force = false): Promise<Map<string, { o
 			}
 		}),
 	);
+	persistHealth(health);
 	return health;
 }
 

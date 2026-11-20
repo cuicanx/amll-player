@@ -128,6 +128,7 @@ import {
 	resetOnlineRuntimeCache,
 } from "../../utils/online-api.ts";
 import {
+	importFromLxMusic,
 	importSource,
 	loadSources,
 	removeSource,
@@ -1380,6 +1381,31 @@ const OnlineSourceSettings: FC = () => {
 		setMessage(t("page.settings.online.restored", "已恢复内置音源"));
 	};
 
+	const importFromLx = async () => {
+		setBusy("lx");
+		setMessage("");
+		try {
+			const result = await importFromLxMusic();
+			resetOnlineRuntimeCache();
+			refresh();
+			setMessage(
+				t(
+					"page.settings.online.lxImported",
+					"已从洛雪音乐导入 {imported} 个音源（跳过 {skipped} 个）",
+					{ imported: result.imported, skipped: result.skipped },
+				),
+			);
+		} catch (err) {
+			setMessage(
+				t("page.settings.online.lxImportFailed", "导入失败：{error}", {
+					error: (err as Error)?.message ?? String(err),
+				}),
+			);
+		} finally {
+			setBusy("");
+		}
+	};
+
 	return (
 		<>
 			<SubTitle>
@@ -1392,7 +1418,10 @@ const OnlineSourceSettings: FC = () => {
 			</Text>
 
 			<Flex gap="2" wrap="wrap" align="center">
-				<Button variant="solid" disabled={busy !== ""} onClick={() => void importFromFile()}>
+				<Button variant="solid" disabled={busy !== ""} onClick={() => void importFromLx()}>
+					<Trans i18nKey="page.settings.online.importLx">从洛雪音乐导入</Trans>
+				</Button>
+				<Button variant="soft" disabled={busy !== ""} onClick={() => void importFromFile()}>
 					<Trans i18nKey="page.settings.online.importFile">导入文件</Trans>
 				</Button>
 				<Button variant="soft" disabled={busy !== ""} onClick={() => void check()}>
