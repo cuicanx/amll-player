@@ -63,8 +63,13 @@ const runtimes = new Map<string, LxSourceRuntime>();
 const health = new Map<string, { ok: boolean; message: string }>();
 
 /** Probe results survive a restart so the first search stays instant. */
-const HEALTH_KEY = "amll-player.sourceHealth";
+const HEALTH_KEY = "amll-player.sourceHealth.v2";
 const HEALTH_TTL = 24 * 60 * 60 * 1000;
+
+function devLog(message: string): void {
+	// Diagnostics land in the app log so failures can be traced after the fact.
+	void invoke("dev_log", { message }).catch(() => {});
+}
 
 function loadPersistedHealth(): Map<string, { ok: boolean; message: string }> | null {
 	try {
@@ -75,7 +80,10 @@ function loadPersistedHealth(): Map<string, { ok: boolean; message: string }> | 
 			items: Record<string, { ok: boolean; message: string }>;
 		};
 		if (Date.now() - parsed.at > HEALTH_TTL) return null;
-		return new Map(Object.entries(parsed.items));
+		// Never trust a cached *failure*: a source blocked or offline earlier may
+		// work now, and a stale "不可用" badge is exactly what confused the user.
+		const items = Object.entries(parsed.items).filter(([, value]) => value.ok);
+		return items.length > 0 ? new Map(items) : null;
 	} catch {
 		return null;
 	}
@@ -155,17 +163,28 @@ export async function ensureSourceHealth(force = false): Promise<Map<string, { o
 			try {
 				// A broken source must not stall the first search: fail fast.
 				await runtime.init(6000);
-				if (!runtime.sources[PROBE_SONG.source]) {
-					health.set(source.id, {
-						ok: false,
-						message: "该音源不支持内置探测平台，暂不参与搜索",
-					});
-					return;
+				const platforms = Object.keys(runtime.sources);
+				let probe = "";
+				// The resolve test is informational only. A source that loads is
+				// usable even when this one song cannot be resolved (VIP tracks,
+				// region limits); marking the whole source broken was wrong.
+				if (platforms.includes(PROBE_SONG.source)) {
+					try {
+						await runtime.musicUrl(PROBE_SONG.source, toMusicInfo(PROBE_SONG), "128k");
+						probe = "解析测试通过";
+					} catch (err) {
+						probe = `解析测试失败：${(err as Error)?.message ?? err}`;
+					}
 				}
-				await runtime.musicUrl(PROBE_SONG.source, toMusicInfo(PROBE_SONG), "128k");
-				health.set(source.id, { ok: true, message: "可用" });
+				health.set(source.id, {
+					ok: true,
+					message: `已加载 ${platforms.join(" / ")}${probe ? `；${probe}` : ""}`,
+				});
+				devLog(`health ${source.name}: ok platforms=${platforms.join(",")} ${probe}`);
 			} catch (err) {
-				health.set(source.id, { ok: false, message: (err as Error)?.message ?? "不可用" });
+				const message = (err as Error)?.message ?? String(err);
+				health.set(source.id, { ok: false, message });
+				devLog(`health ${source.name}: FAILED ${message}`);
 			}
 		}),
 	);
@@ -284,14 +303,19 @@ export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
 			for (const quality of qualitiesFor(runtime, song.source)) {
 				try {
 					const url = await runtime.musicUrl(song.source, info, quality);
+					devLog(`resolve ${song.source}/${song.id} ok via ${source.name}/${quality}`);
 					resolveObserver?.(source.name);
 					return url;
 				} catch (err) {
-					errors.push(`${source.name}/${quality}: ${(err as Error)?.message ?? err}`);
+					const message = (err as Error)?.message ?? String(err);
+					errors.push(`${source.name}/${quality}: ${message}`);
+					devLog(`resolve ${song.source}/${song.id} fail via ${source.name}/${quality}: ${message}`);
 				}
 			}
 		} catch (err) {
-			errors.push(`${source.name}: ${(err as Error)?.message ?? err}`);
+			const message = (err as Error)?.message ?? String(err);
+			errors.push(`${source.name}: ${message}`);
+			devLog(`resolve ${song.source}/${song.id} source ${source.name} threw: ${message}`);
 		}
 	}
 

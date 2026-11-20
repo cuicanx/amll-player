@@ -143,6 +143,17 @@ pub async fn online_http(req: OnlineHttpRequest) -> Result<OnlineHttpResponse, S
     };
 
     let status = resp.status().as_u16();
+    if !(200..300).contains(&status) {
+        // A 4xx from a source's server is the whole story behind "unavailable"
+        // badges, so it must be visible in the log.
+        tracing::warn!(
+            target: "amll_player_lib::online",
+            "online_http {} {} -> HTTP {}",
+            method,
+            req.url,
+            status
+        );
+    }
     let headers = resp
         .headers()
         .iter()
@@ -574,6 +585,16 @@ async fn search_migu(client: &reqwest::Client, keyword: &str, limit: u32) -> Res
 }
 
 //#endregion
+
+/// Write a frontend diagnostic line into the app log.
+///
+/// The online pipeline decides almost everything in JS (which source resolved
+/// what, and why it failed), and that is invisible from Rust. This lets those
+/// decisions be traced after the fact instead of guessed at.
+#[tauri::command]
+pub fn dev_log(message: String) {
+    tracing::info!(target: "amll_player_lib::online", "{}", message);
+}
 
 #[tauri::command]
 pub async fn online_search(

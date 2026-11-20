@@ -290,6 +290,7 @@ pub fn run() {
             online::online_cache_clear,
             online::online_lyric,
             online::online_pic,
+            online::dev_log,
             updater::updater_check,
             updater::updater_install,
             db::commands::update_song,

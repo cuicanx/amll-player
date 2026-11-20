@@ -1336,6 +1336,17 @@ const OnlineSourceSettings: FC = () => {
 
 	useEffect(() => {
 		refresh();
+		// Show the real state as soon as the page opens instead of a stale badge
+		// left over from an earlier session.
+		void ensureSourceHealth()
+			.then((map) => {
+				const next: Record<string, { ok: boolean; message: string }> = {};
+				map.forEach((value, key) => {
+					next[key] = value;
+				});
+				setHealth(next);
+			})
+			.catch(() => {});
 	}, [refresh]);
 
 	const check = async () => {
