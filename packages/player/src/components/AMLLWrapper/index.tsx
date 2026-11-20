@@ -1,18 +1,22 @@
 import {
 	isLyricPageOpenedAtom,
 	musicPlayingAtom,
+	onLyricLineContextMenuAtom,
 	onPlayOrResumeAtom,
 	PrebuiltLyricPlayer,
 } from "@applemusic-like-lyrics/react-full";
 import classnames from "classnames";
-import { useAtomValue, useSetAtom } from "jotai";
+import { getDefaultStore, useAtomValue, useSetAtom } from "jotai";
 import { type FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
 	borderlessFullscreenAtom,
 	lyricPageSuspendedAtom,
 } from "../../states/appAtoms.ts";
 import { syncBorderlessFullscreenState } from "../../utils/borderless-fullscreen.ts";
-import { resetLyricScroll } from "../../utils/lyric-player-instance.ts";
+import {
+	captureLyricPlayer,
+	resetLyricScroll,
+} from "../../utils/lyric-player-instance.ts";
 import { useCursorAutoHide } from "../../utils/useCursorAutoHide.ts";
 import { useTitlebarAutoHide } from "../../utils/useTitlebarAutoHide.ts";
 import {
@@ -60,6 +64,25 @@ export const AMLLWrapper: FC = () => {
 		return () => window.clearInterval(timer);
 	}, [setSuspended]);
 
+	// Capture the real player handle the library hands out on lyric-line events.
+	// This is more reliable than walking React fibers: when the user right-clicks
+	// a lyric line we get the exact instance that owns the scroll state, and the
+	// 10s auto-return can then use the library's own rebuild API.
+	useEffect(() => {
+		const store = getDefaultStore();
+		const previous = store.get(onLyricLineContextMenuAtom);
+		store.set(onLyricLineContextMenuAtom, (_event, playerRef) => {
+			const candidate = playerRef as unknown as {
+				lyricPlayer?: unknown;
+			};
+			captureLyricPlayer(candidate?.lyricPlayer ?? playerRef);
+			previous?.(_event, playerRef);
+		});
+		return () => {
+			store.set(onLyricLineContextMenuAtom, previous);
+		};
+	}, []);
+
 	// Manual scrolling hands control to the user; after they stop and move the
 	// pointer away we give it back. The player's own auto-align only re-centres
 	// when the current line changes while still inside its render range, so a
@@ -88,7 +111,9 @@ export const AMLLWrapper: FC = () => {
 			// pointer still inside, the user is assumed to be reading.
 			if (!isPlaying || hovering) return;
 			timer = window.setTimeout(() => {
-				resetLyricScroll(document.getElementById("amll-lyric-player"));
+				resetLyricScroll(
+					document.getElementById("amll-lyric-player") ?? pageRef.current,
+				);
 			}, AUTO_RETURN_DELAY);
 		};
 

@@ -1103,7 +1103,7 @@ const ContextMenuSettings = () => {
 	return (
 		<>
 			<SubTitle>
-				<Trans i18nKey="page.settings.contextMenu.subtitle">鼠标右键菜单设置</Trans>
+				<Trans i18nKey="page.settings.contextMenu.subtitle">右键菜单设置</Trans>
 			</SubTitle>
 			<Text as="div" color="gray" size="2" mb="3">
 				<Trans i18nKey="page.settings.contextMenu.tip">

@@ -26,6 +26,8 @@ function looksLikeSectionTitle(line: string): boolean {
 	const text = line.trim();
 	if (!text) return false;
 	if (text.length > 24) return false;
+	// A line carrying inline markup is body text with emphasis, not a heading.
+	if (/\*\*|__|~~|`|\[[^\]]+\]\(/.test(text)) return false;
 	if (/[。.,，、:：;；!！?？)】\]]$/.test(text)) return false;
 	if (/^(latest|development|更新|本次)/i.test(text) && text.length > 10) {
 		return false;
@@ -114,7 +116,8 @@ function parse(body: string): Block[] {
 	return blocks;
 }
 
-const INLINE_RE = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
+const INLINE_RE =
+	/(\*\*[\s\S]+?\*\*|__[\s\S]+?__|~~[\s\S]+?~~|\*[^*\n]+\*|_[^_\n]+_|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
 
 async function openExternal(url: string) {
 	try {
@@ -133,8 +136,12 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
 		if (start > last) nodes.push(text.slice(last, start));
 		const token = match[0];
 		const key = `${keyPrefix}-${index++}`;
-		if (token.startsWith("**")) {
+		if (token.startsWith("**") || token.startsWith("__")) {
 			nodes.push(<strong key={key}>{token.slice(2, -2)}</strong>);
+		} else if (token.startsWith("~~")) {
+			nodes.push(<del key={key}>{token.slice(2, -2)}</del>);
+		} else if (token.startsWith("*") || token.startsWith("_")) {
+			nodes.push(<em key={key}>{token.slice(1, -1)}</em>);
 		} else if (token.startsWith("`")) {
 			nodes.push(
 				<code className={styles.code} key={key}>

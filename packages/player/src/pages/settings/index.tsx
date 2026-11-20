@@ -121,7 +121,7 @@ const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({
 			},
 			{
 				id: "contextMenu",
-				label: t("page.settings.contextMenu.subtitle", "鼠标右键菜单设置"),
+				label: t("page.settings.contextMenu.subtitle", "右键菜单设置"),
 				icon: <HamburgerMenuIcon width={20} height={20} />,
 			},
 		];

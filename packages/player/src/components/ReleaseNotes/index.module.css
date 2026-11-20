@@ -123,6 +123,19 @@
 	opacity: 1;
 }
 
+.item em,
+.paragraph em,
+.heading em {
+	font-style: italic;
+	opacity: 0.95;
+}
+
+.item del,
+.paragraph del {
+	opacity: 0.55;
+	text-decoration: line-through;
+}
+
 .code {
 	font-family: var(--code-font-family, ui-monospace, "Cascadia Code", monospace);
 	font-size: 11.5px;

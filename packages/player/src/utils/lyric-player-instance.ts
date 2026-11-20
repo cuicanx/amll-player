@@ -12,14 +12,27 @@
  * The player instance is reachable through the React tree, but the wrapper we
  * use (`PrebuiltLyricPlayer`) does not forward its ref, so there is no public
  * handle. We therefore look it up from the DOM node via React's fiber, with a
- * strict duck-type check (`resetScroll` + `getLyricLines`) so we can only ever
+ * strict duck-type check (`rebuildLyricView` + `getLyricLines`) so we can only ever
  * return the real player. Every step is guarded: if React changes its internals
  * the lookup simply returns null and the caller does nothing.
  */
 
 interface ResettableLyricPlayer {
-	resetScroll: () => void;
+	/** Public in core 0.6: clears gesture state AND re-lays out at a time. */
+	rebuildLyricView: (initialTime?: number) => void;
+	getCurrentTime?: () => number;
 	getLyricLines: () => unknown;
+}
+
+/**
+ * The library hands out a real player handle through the lyric-line callback
+ * atoms. We capture it there (see AMLLWrapper) and prefer it over the DOM
+ * fallback - a direct reference cannot break when React internals change.
+ */
+let capturedPlayer: ResettableLyricPlayer | null = null;
+
+export function captureLyricPlayer(player: unknown): void {
+	if (isLyricPlayer(player)) capturedPlayer = player;
 }
 
 const FIBER_KEY_PREFIX = "__reactFiber$";
@@ -30,7 +43,7 @@ function isLyricPlayer(value: unknown): value is ResettableLyricPlayer {
 	if (!value || typeof value !== "object") return false;
 	const candidate = value as Record<string, unknown>;
 	return (
-		typeof candidate.resetScroll === "function" &&
+		typeof candidate.rebuildLyricView === "function" &&
 		typeof candidate.getLyricLines === "function"
 	);
 }
@@ -92,11 +105,22 @@ export function findLyricPlayer(
  * Puts the lyric view back on the line that is currently playing.
  * Returns true when a player was found and asked to reset.
  */
+/**
+ * Put the lyrics back on the line that is currently playing.
+ *
+ * `resetScroll()` only clears the scroll engine's gesture state - it does NOT
+ * move the view back to the playing line, which is why calling it alone never
+ * produced the "back to now playing" effect. `rebuildLyricView(now)`, on the
+ * other hand, resets the gesture state, rebuilds the layout and aligns to the
+ * current playback time - exactly what happens when the user seeks back to
+ * the current second.
+ */
 export function resetLyricScroll(root: HTMLElement | null): boolean {
-	const player = findLyricPlayer(root);
+	const player = capturedPlayer ?? findLyricPlayer(root);
 	if (!player) return false;
 	try {
-		player.resetScroll();
+		const now = player.getCurrentTime?.();
+		player.rebuildLyricView(now);
 		return true;
 	} catch {
 		return false;

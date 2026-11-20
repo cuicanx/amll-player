@@ -259,8 +259,13 @@ export async function toggleBorderlessFullscreen(): Promise<void> {
 	if (toggling) return;
 	toggling = true;
 	try {
-		if (state === null) state = await isActuallyFullscreen();
-		if (state) {
+		// Decide the direction from the window's real geometry at this instant.
+		// Using the cached `state` here is what made the button look dead: when
+		// the cache and the window disagreed, we either ran the wrong branch or
+		// hit an early-return inside enter/exit and changed nothing.
+		const actuallyFullscreen = await isActuallyFullscreen();
+		state = actuallyFullscreen;
+		if (actuallyFullscreen) {
 			await exitBorderlessFullscreen();
 		} else {
 			await enterBorderlessFullscreen();

@@ -10,7 +10,7 @@ import { CheckIcon } from "@radix-ui/react-icons";
 import { DropdownMenu } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { type FC, useEffect } from "react";
+import { type FC } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { router } from "../../router.tsx";
 import {
@@ -20,10 +20,7 @@ import {
 	enableF11FullscreenAtom,
 	recordPanelOpenedAtom,
 } from "../../states/appAtoms.ts";
-import {
-	syncBorderlessFullscreenState,
-	toggleBorderlessFullscreen,
-} from "../../utils/borderless-fullscreen.ts";
+import { toggleBorderlessFullscreen } from "../../utils/borderless-fullscreen.ts";
 import styles from "./index.module.css";
 
 export interface ContextMenuPoint {
@@ -62,12 +59,6 @@ export const AMLLContextMenu: FC<{
 	const onPlayOrResume = useAtomValue(onPlayOrResumeAtom).onEmit;
 	const musicId = useAtomValue(musicIdAtom);
 	const menuVisibility = useAtomValue(contextMenuVisibilityAtom);
-
-	// Only mounted while open, so this runs once per opening: make sure the
-	// fullscreen entry reflects the real window state.
-	useEffect(() => {
-		if (point) void syncBorderlessFullscreenState();
-	}, [point]);
 
 	if (!point) return null;
 
