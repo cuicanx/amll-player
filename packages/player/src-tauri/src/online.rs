@@ -550,11 +550,16 @@ async fn search_migu(client: &reqwest::Client, keyword: &str, limit: u32) -> Res
                 .get("duration")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0) as u32;
-            song.cover_url = item
-                .get("img")
-                .and_then(|v| v.as_str())
-                .unwrap_or_default()
-                .to_string();
+            // Migu exposes covers as img1/img2/img3 (there is no plain `img`).
+            song.cover_url = ["img1", "img2", "img3"]
+                .iter()
+                .find_map(|key| {
+                    item.get(*key)
+                        .and_then(|v| v.as_str())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_default();
 
             let mut extra = item.clone();
             if let Some(map) = extra.as_object_mut() {

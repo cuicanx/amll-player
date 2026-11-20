@@ -33,8 +33,16 @@ export interface OnlineSong {
 /** Platforms the built-in resolver can talk to without any custom source. */
 const BUILTIN_PLATFORMS: OnlinePlatform[] = ["kw"];
 
-/** Platforms the Rust backend knows how to search. */
-const SEARCHABLE: OnlinePlatform[] = ["kw", "kg", "wy", "mg"];
+/**
+ * Platforms we search by default.
+ *
+ * Only platforms that can actually be played are listed: netease needs a VIP
+ * account and migu needs a paid endpoint, so both resolve to "get music url
+ * failed" with the community sources - showing them would just produce rows
+ * that cannot play. The Rust side still implements their searches, so enabling
+ * them later is a one-line change.
+ */
+const SEARCHABLE: OnlinePlatform[] = ["kw", "kg"];
 
 /** A song everyone has, used to check whether a source really works. */
 const PROBE_SONG: OnlineSong = {
