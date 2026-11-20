@@ -171,31 +171,55 @@ export async function onlineSearch(keyword: string): Promise<OnlineSong[]> {
 	});
 }
 
-/** A superset of every id field a source might look at. */
+/** LX formats durations as `m:ss`, not raw seconds. Sources depend on this. */
+function formatPlayTime(seconds: number): string {
+	const m = Math.floor(seconds / 60);
+	const s = Math.floor(seconds % 60);
+	return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+const ALL_QUALITIES = ["128k", "320k", "flac", "flac24bit"];
+
+/**
+ * Build the `musicInfo` object a source receives.
+ *
+ * The shape is not cosmetic: every source reads specific fields (kw uses
+ * `songmid`, kg uses `hash`, ...) and most of them refuse to resolve anything
+ * when `types` / `_types` are missing. This mirrors what LX itself builds in
+ * `musicSdk/<platform>/musicSearch.js`.
+ */
 export function toMusicInfo(song: OnlineSong): Record<string, unknown> {
+	const types = ALL_QUALITIES.map((type) => ({ type, size: "" }));
+	const typeMap: Record<string, { size: string }> = {};
+	for (const type of ALL_QUALITIES) typeMap[type] = { size: "" };
+
 	return {
-		source: song.source,
-		id: song.id,
-		songmid: song.songmid,
-		songId: song.id,
-		rid: song.songmid,
-		hash: song.hash,
-		name: song.name,
-		songName: song.name,
-		singer: song.singer,
-		artists: song.singer,
-		albumName: song.albumName,
-		albumId: song.albumId,
-		interval: String(song.interval),
-		duration: song.interval,
-		img: song.coverUrl,
+		// Upstream record first so it can never override the canonical fields.
 		...(song.extra ?? {}),
+		name: song.name,
+		singer: song.singer,
+		source: song.source,
+		songmid: song.songmid || song.id,
+		songId: song.songmid || song.id,
+		id: song.id,
+		hash: song.hash || song.songmid || song.id,
+		albumId: song.albumId,
+		albumName: song.albumName,
+		interval: formatPlayTime(song.interval),
+		lrc: null,
+		img: song.coverUrl || null,
+		otherSource: null,
+		types,
+		_types: typeMap,
+		typeUrl: {},
 	};
 }
 
 function qualitiesFor(runtime: LxSourceRuntime, platform: string): string[] {
 	const declared = runtime.sources[platform]?.qualitys ?? [];
-	const order = ["flac24bit", "flac", "320k", "128k"];
+	// Prefer 320k, then 128k. Lossless tiers fail on most free sources, so
+	// trying them first would only add failed round-trips.
+	const order = ["320k", "128k", "flac", "flac24bit"];
 	const usable = order.filter((q) => declared.includes(q));
 	return usable.length > 0 ? usable : ["128k"];
 }
