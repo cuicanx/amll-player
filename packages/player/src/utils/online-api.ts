@@ -96,10 +96,27 @@ function runtimeFor(source: StoredSource): LxSourceRuntime {
 	return runtime;
 }
 
+/** Initialise a source at most once per session. No network beyond its own init. */
+const ready = new Map<string, boolean>();
+
+async function ensureRuntimeReady(source: StoredSource): Promise<boolean> {
+	const cached = ready.get(source.id);
+	if (cached !== undefined) return cached;
+	try {
+		await runtimeFor(source).init(6000);
+		ready.set(source.id, true);
+		return true;
+	} catch {
+		ready.set(source.id, false);
+		return false;
+	}
+}
+
 /** Forget cached runtimes so a re-imported source is evaluated again. */
 export function resetOnlineRuntimeCache(): void {
 	runtimes.clear();
 	health.clear();
+	ready.clear();
 	try {
 		localStorage.removeItem("amll-player.sourceHealth");
 	} catch {
@@ -152,12 +169,14 @@ export function getSourceHealth(id: string) {
 	return health.get(id);
 }
 
-/** Platforms worth searching: built-in ones plus those of healthy sources. */
-export function platformsForSearch(): OnlinePlatform[] {
+/** Platforms worth searching: built-in ones plus those an enabled source declares. */
+export async function platformsForSearch(): Promise<OnlinePlatform[]> {
 	const result = new Set<OnlinePlatform>(BUILTIN_PLATFORMS);
 	for (const source of loadSources()) {
 		if (!source.enabled) continue;
-		if (!health.get(source.id)?.ok) continue;
+		// Only the source's own initialisation is needed here - no probe request.
+		// Probing on every search is what got us rate-limited ("block ip").
+		if (!(await ensureRuntimeReady(source))) continue;
 		for (const key of Object.keys(runtimeFor(source).sources)) {
 			if (SEARCHABLE.includes(key as OnlinePlatform)) result.add(key as OnlinePlatform);
 		}
@@ -166,8 +185,7 @@ export function platformsForSearch(): OnlinePlatform[] {
 }
 
 export async function onlineSearch(keyword: string): Promise<OnlineSong[]> {
-	await ensureSourceHealth();
-	const platforms = platformsForSearch();
+	const platforms = await platformsForSearch();
 	return invoke<OnlineSong[]>("online_search", {
 		keyword,
 		platforms,
@@ -231,17 +249,18 @@ function qualitiesFor(runtime: LxSourceRuntime, platform: string): string[] {
 /** Resolve a playable URL, custom sources first, built-in resolver last. */
 export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
 	const errors: string[] = [];
-	await ensureSourceHealth();
 
 	for (const source of loadSources()) {
 		if (!source.enabled) continue;
-		// Skip sources the health check already proved broken: they would only
-		// add a failed round-trip to every single playback.
-		if (health.get(source.id)?.ok === false) continue;
+		// No health gating here: a source marked unavailable earlier may already
+		// be fine again, and trying it costs one request at most.
 		const runtime = runtimeFor(source);
 		try {
 			if (!runtime.sources[song.source]) continue;
-			await runtime.init();
+			if (!(await ensureRuntimeReady(source))) {
+				errors.push(`${source.name}: 初始化失败`);
+				continue;
+			}
 			const info = toMusicInfo(song);
 			for (const quality of qualitiesFor(runtime, song.source)) {
 				try {
