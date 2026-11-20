@@ -487,6 +487,31 @@
 					"label": "主题设置",
 					"light": "浅色"
 				}
+			},
+			"contextMenu": {
+				"subtitle": "右クリックメニュー設定",
+				"tip": "再生ページの右クリックメニューに表示する項目を選択します。オフの項目は表示されません。",
+				"reset": "既定に戻す",
+				"prevSong": "前の曲",
+				"prevSongDesc": "「前の曲」をメニューに表示",
+				"playPause": "再生 / 一時停止",
+				"playPauseDesc": "「再生 / 一時停止」をメニューに表示",
+				"nextSong": "次の曲",
+				"nextSongDesc": "「次の曲」をメニューに表示",
+				"fullscreen": "全画面の開始 / 終了",
+				"fullscreenDesc": "全画面項目を表示（全般で F11 全画面を有効にする必要があります）",
+				"alwaysOnTop": "常に最前面",
+				"alwaysOnTopDesc": "「常に最前面」をメニューに表示",
+				"showLyrics": "歌詞を表示",
+				"showLyricsDesc": "「歌詞を表示」をメニューに表示",
+				"editSongInfo": "曲の上書き情報を編集",
+				"editSongInfoDesc": "「曲の上書き情報を編集」をメニューに表示",
+				"recordPanel": "キャプチャパネルを開く",
+				"recordPanelDesc": "「キャプチャパネルを開く」をメニューに表示",
+				"screenshot": "スクリーンショットツールを開く",
+				"screenshotDesc": "「スクリーンショットツールを開く」をメニューに表示",
+				"exitLyricPage": "歌詞ページを閉じる",
+				"exitLyricPageDesc": "「歌詞ページを閉じる」をメニューに表示"
 			}
 		},
 		"song": {

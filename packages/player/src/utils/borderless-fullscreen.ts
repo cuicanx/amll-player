@@ -39,7 +39,6 @@ import { borderlessFullscreenAtom } from "../states/appAtoms.ts";
  * "shrink, then grow" is gone, but so is the race.
  */
 
-const PUBLISH_SETTLE_MS = 900;
 const STATE_TIMEOUT_MS = 700;
 
 let toggling = false;
@@ -47,6 +46,15 @@ let toggling = false;
 let wasMaximized = false;
 /** Authoritative state. `null` until it has been read once. */
 let state: boolean | null = null;
+/**
+ * Set once a transition (or the startup probe) has been confirmed. Before
+ * that the native flag is the only source; after that our own state wins.
+ *
+ * This is the fix for "entered fullscreen but the menu still says 进入全屏":
+ * every menu opening used to re-read `isFullscreen()`, which lags on Windows,
+ * and overwrote the correct, freshly-confirmed state with `false`.
+ */
+let confirmed = false;
 /** Timestamp of the last toggle, used to ignore lagging native reads. */
 let lastToggleAt = 0;
 
@@ -155,11 +163,20 @@ export async function isBorderlessFullscreen(): Promise<boolean> {
  * overwriting it - that overwrite was why the menu kept offering "进入全屏".
  */
 export async function syncBorderlessFullscreenState(): Promise<boolean> {
-	const actual = await isActuallyFullscreen();
-	const settling = Date.now() - lastToggleAt < PUBLISH_SETTLE_MS;
-	if (state === null || (!settling && actual !== state)) {
-		state = actual;
+	// Once a transition has been confirmed, our state IS the truth. Native
+	// queries on Windows lag by a frame or more, so re-reading them here is
+	// exactly what made an already-fullscreen window report "进入全屏" again.
+	if (confirmed && state !== null) {
+		publish(state);
+		return state;
 	}
+
+	// Startup / not yet confirmed: take two agreeing samples so a single lagging
+	// read cannot establish a wrong initial state.
+	const first = await isActuallyFullscreen();
+	const second = await isActuallyFullscreen();
+	state = first === second ? first : await isActuallyFullscreen();
+	confirmed = true;
 	publish(state === true);
 	return state === true;
 }
@@ -194,11 +211,13 @@ export async function enterBorderlessFullscreen(): Promise<void> {
 		setSystemTitlebarFullscreen(false);
 		await restoreTitlebarChrome(win);
 		state = false;
+		confirmed = true;
 		publish(false);
 		return;
 	}
 
 	state = true;
+	confirmed = true;
 	publish(true);
 }
 
@@ -231,6 +250,7 @@ export async function exitBorderlessFullscreen(): Promise<void> {
 	await restoreTitlebarChrome(win);
 
 	state = false;
+	confirmed = true;
 	publish(false);
 }
 

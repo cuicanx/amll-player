@@ -489,6 +489,31 @@
 					"label": "Theme setting",
 					"light": "Light"
 				}
+			},
+			"contextMenu": {
+				"subtitle": "Right-click menu",
+				"tip": "Choose which entries appear in the playback page's right-click menu. Disabled entries are hidden.",
+				"reset": "Reset to default",
+				"prevSong": "Previous song",
+				"prevSongDesc": "Show “Previous song” in the menu",
+				"playPause": "Play / Pause",
+				"playPauseDesc": "Show “Play / Pause” in the menu",
+				"nextSong": "Next song",
+				"nextSongDesc": "Show “Next song” in the menu",
+				"fullscreen": "Enter / Exit fullscreen",
+				"fullscreenDesc": "Show the fullscreen entry (requires F11 fullscreen in General)",
+				"alwaysOnTop": "Always on top",
+				"alwaysOnTopDesc": "Show “Always on top” in the menu",
+				"showLyrics": "Show lyrics",
+				"showLyricsDesc": "Show “Show lyrics” in the menu",
+				"editSongInfo": "Edit song override",
+				"editSongInfoDesc": "Show “Edit song override” in the menu",
+				"recordPanel": "Open capture panel",
+				"recordPanelDesc": "Show “Open capture panel” in the menu",
+				"screenshot": "Open screenshot tool",
+				"screenshotDesc": "Show “Open screenshot tool” in the menu",
+				"exitLyricPage": "Exit lyric page",
+				"exitLyricPageDesc": "Show “Exit lyric page” in the menu"
 			}
 		},
 		"song": {

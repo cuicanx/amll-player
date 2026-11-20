@@ -487,6 +487,31 @@
 					"label": "主题设置",
 					"light": "浅色"
 				}
+			},
+			"contextMenu": {
+				"subtitle": "Cài đặt menu chuột phải",
+				"tip": "Chọn các mục hiển thị trong menu chuột phải của trang phát nhạc. Mục đã tắt sẽ không xuất hiện.",
+				"reset": "Khôi phục mặc định",
+				"prevSong": "Bài trước",
+				"prevSongDesc": "Hiện “Bài trước” trong menu",
+				"playPause": "Phát / Tạm dừng",
+				"playPauseDesc": "Hiện “Phát / Tạm dừng” trong menu",
+				"nextSong": "Bài tiếp",
+				"nextSongDesc": "Hiện “Bài tiếp” trong menu",
+				"fullscreen": "Vào / Thoát toàn màn hình",
+				"fullscreenDesc": "Hiện mục toàn màn hình (cần bật F11 trong phần Chung)",
+				"alwaysOnTop": "Luôn trên cùng",
+				"alwaysOnTopDesc": "Hiện “Luôn trên cùng” trong menu",
+				"showLyrics": "Hiện lời bài hát",
+				"showLyricsDesc": "Hiện “Hiện lời bài hát” trong menu",
+				"editSongInfo": "Sửa thông tin ghi đè bài hát",
+				"editSongInfoDesc": "Hiện “Sửa thông tin ghi đè bài hát” trong menu",
+				"recordPanel": "Mở bảng ghi hình",
+				"recordPanelDesc": "Hiện “Mở bảng ghi hình” trong menu",
+				"screenshot": "Mở công cụ chụp màn hình",
+				"screenshotDesc": "Hiện “Mở công cụ chụp màn hình” trong menu",
+				"exitLyricPage": "Thoát trang lời bài hát",
+				"exitLyricPageDesc": "Hiện “Thoát trang lời bài hát” trong menu"
 			}
 		},
 		"song": {

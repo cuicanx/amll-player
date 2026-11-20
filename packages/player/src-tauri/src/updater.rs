@@ -1,4 +1,7 @@
+use base64::Engine;
+use minisign_verify::{PublicKey, Signature};
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use tauri::{Emitter, Manager};
 use tauri_plugin_updater::UpdaterExt;
 
@@ -6,18 +9,17 @@ use tauri_plugin_updater::UpdaterExt;
 const OFFICIAL_MANIFEST: &str =
     "https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest.json";
 
-/// Mirrored manifest: identical content, but every download URL inside it is
-/// already rewritten to a `gh-proxy.com` direct link. This matters because the
-/// official manifest points at `api.github.com/.../releases/assets/<id>`, which
-/// answers with a 302 to `release-assets.githubusercontent.com` - a host that
-/// is unreachable on plenty of mainland networks passed through a VPN split
-/// tunnel. That mismatch is what produced "the update is found but the download
-/// always fails".
+/// Mirrored manifest: identical signature, but download URLs rewritten to
+/// `gh-proxy.com` direct links.
 const MIRROR_MANIFEST: &str = "https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest-mirror.json";
 
-/// Official manifest fetched through the proxy (used when the mirrored
-/// manifest has not been published yet for the current build).
-const OFFICIAL_MANIFEST_VIA_MIRROR: &str = "https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest.json";
+const OFFICIAL_MANIFEST_VIA_MIRROR: &str =
+    "https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest.json";
+
+/// Must stay byte-for-byte identical to `plugins.updater.pubkey` in
+/// tauri.conf.json. Kept here as a constant so verification does not depend on
+/// plugin state - and asserted equal by tests/v2-audit.cjs.
+const UPDATER_PUBKEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDMUY4OTlDMUQ1N0JFNDgKUldSSXZsY2RuSWtmM0Vab0pzZGZPeVZhMXJISlJvZlp5T1BhejFSTHNaQzdKbFQ0SzN5OU5Ka3IK";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,8 +28,6 @@ pub struct UpdateCheckResult {
     current_version: String,
     body: Option<String>,
     date: Option<String>,
-    /// Host actually used for the download, so the UI can show where it came
-    /// from when someone reports a slow or failed update.
     download_host: String,
 }
 
@@ -36,13 +36,11 @@ pub struct UpdateCheckResult {
 struct UpdateProgressPayload {
     downloaded: u64,
     total: Option<u64>,
+    /// Bytes per second, computed while streaming. The UI formats it as MB/s.
+    speed: Option<u64>,
 }
 
 fn endpoint_order(region: &str) -> Vec<&'static str> {
-    // `region` is decided in the frontend from the *egress* IP, so it stays
-    // correct behind a VPN: a tunnel whose exit node is outside mainland China
-    // gets the official download first (fast there, and it never depends on a
-    // third-party proxy), everything else prefers the mirror.
     if region == "global" {
         vec![
             OFFICIAL_MANIFEST,
@@ -74,7 +72,6 @@ fn build_updater(
         .map_err(|e| e.to_string())
 }
 
-/// Checks for an update against the region-appropriate endpoint list.
 #[tauri::command]
 pub async fn updater_check(
     app: tauri::AppHandle,
@@ -92,44 +89,110 @@ pub async fn updater_check(
     }))
 }
 
-/// One download-and-install attempt using a specific endpoint order.
-async fn attempt_install(app: &tauri::AppHandle, region: &str) -> Result<(), String> {
-    let updater = build_updater(app, region)?;
-    let update = updater
-        .check()
-        .await
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "no update available".to_string())?;
-
-    let app_for_progress = app.clone();
-    let mut downloaded: u64 = 0;
-    let _ = app.emit("updater://started", ());
-
-    update
-        .download_and_install(
-            move |chunk, total| {
-                downloaded += chunk as u64;
-                let _ = app_for_progress.emit(
-                    "updater://progress",
-                    UpdateProgressPayload { downloaded, total },
-                );
-            },
-            || {},
-        )
-        .await
-        .map_err(|e| e.to_string())
+/// Decode a minisign base64 wrapper ("untrusted comment\n<sig>\n...") into the
+/// raw key/signature bytes, using the same two-step base64 decoding the
+/// updater plugin applies.
+fn decode_minisign(encoded: &str) -> Result<String, String> {
+    let decoded = base64::engine::general_purpose::STANDARD
+        .decode(encoded.trim())
+        .map_err(|e| format!("minisign base64 解码失败: {e}"))?;
+    let text = String::from_utf8(decoded)
+        .map_err(|e| format!("minisign 内容不是 UTF-8: {e}"))?;
+    Ok(text)
 }
 
-/// Failures that are worth retrying over the other transport.
+/// Verify downloaded bytes against the manifest signature with OUR public key.
 ///
-/// The installer bytes and the manifest are published separately, so a mirror
-/// can hand back a body that does not match the signature the manifest
-/// announces: a transparent proxy that kept an older copy of the same file
-/// name (re-runs of one commit produce the same `0.0.<commitCount>` name), a
-/// truncated stream, or an HTML error page served with status 200. All of them
-/// surface as "signature verification failed" and are not deterministic - the
-/// same retry a second later usually succeeds, especially through the other
-/// source. Network-ish errors are retried for the same reason.
+/// This is deliberately independent of the updater plugin's internal check: a
+/// proxy/CDN can hand back a stale or truncated body with HTTP 200, and the
+/// plugin then reports only "signature verification failed". Doing it here lets
+/// us reject a bad source and try the next one instead of failing the whole
+/// update. A bad copy is NEVER passed to `install()`.
+fn verify_download(data: &[u8], release_signature: &str) -> Result<(), String> {
+    let pubkey_text = decode_minisign(UPDATER_PUBKEY)?;
+    let public_key = PublicKey::decode(&pubkey_text)
+        .map_err(|e| format!("更新公钥解析失败: {e}"))?;
+
+    let signature_text = decode_minisign(release_signature)?;
+    let signature = Signature::decode(&signature_text)
+        .map_err(|e| format!("更新签名解析失败: {e}"))?;
+
+    public_key
+        .verify(data, &signature, true)
+        .map_err(|e| format!("签名校验失败: {e}"))?;
+    Ok(())
+}
+
+/// Stream a download into memory, emitting progress with a live speed figure.
+/// `no_proxy` matters: the mirror is meant to be reached directly, and routing
+/// it through a system VPN proxy is what produced stale/corrupted bodies.
+async fn download_bytes(
+    app: &tauri::AppHandle,
+    url: &str,
+    no_proxy: bool,
+) -> Result<(Vec<u8>, String), String> {
+    let mut builder = reqwest::Client::builder()
+        .user_agent("amll-player-updater")
+        .timeout(std::time::Duration::from_secs(180));
+    if no_proxy {
+        builder = builder.no_proxy();
+    }
+    let client = builder
+        .build()
+        .map_err(|e| format!("创建下载客户端失败: {e}"))?;
+
+    let response = client
+        .get(url)
+        .header("Accept", "application/octet-stream")
+        .send()
+        .await
+        .map_err(|e| format!("下载请求失败: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("下载失败，HTTP {}", response.status()));
+    }
+
+    let total: Option<u64> = response
+        .headers()
+        .get("content-length")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse().ok());
+
+    let app_progress = app.clone();
+    let mut buffer = Vec::with_capacity(total.unwrap_or(0) as usize);
+    let mut stream = response.bytes_stream();
+    let mut last_report = std::time::Instant::now();
+    let mut bytes_since_report: u64 = 0;
+
+    use futures::StreamExt;
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("下载中断: {e}"))?;
+        buffer.extend_from_slice(&chunk);
+        bytes_since_report += chunk.len() as u64;
+
+        let now = std::time::Instant::now();
+        let elapsed = now.duration_since(last_report).as_secs_f64();
+        if elapsed >= 0.5 {
+            let speed = (bytes_since_report as f64 / elapsed) as u64;
+            let _ = app_progress.emit(
+                "updater://progress",
+                UpdateProgressPayload {
+                    downloaded: buffer.len() as u64,
+                    total,
+                    speed: Some(speed),
+                },
+            );
+            last_report = now;
+            bytes_since_report = 0;
+        }
+    }
+
+    let digest = format!("{:x}", Sha256::digest(&buffer));
+    Ok((buffer, digest))
+}
+
+/// A failed attempt is worth retrying over a different source when it looks
+/// like a bad body rather than a rejected signature from our own key.
 fn is_retryable_install_error(message: &str) -> bool {
     let text = message.to_lowercase();
     [
@@ -137,6 +200,7 @@ fn is_retryable_install_error(message: &str) -> bool {
         "verify",
         "verification",
         "decode",
+        "non-utf-8",
         "corrupt",
         "incomplete",
         "unexpected eof",
@@ -147,44 +211,101 @@ fn is_retryable_install_error(message: &str) -> bool {
         "reset by peer",
         "broken pipe",
         "failed to download",
+        "下载请求失败",
+        "下载中断",
+        "下载失败",
     ]
     .iter()
     .any(|needle| text.contains(needle))
 }
 
-/// Downloads and installs the pending update, emitting `updater://progress`.
+/// Install the pending update.
 ///
-/// Doing this in Rust (instead of the JS plugin) is what makes the endpoint
-/// choice above apply to the download as well as to the check: the plugin's JS
-/// `downloadAndInstall` always uses the manifest configured at build time,
-/// while here the manifest - and therefore the download host - is the one we
-/// picked for this machine's region.
+/// The transfer is performed here, in Rust, for two reasons:
+///   1. endpoint selection (region-aware) applies to the download as well as
+///      to the check - the JS plugin always uses the build-time manifest;
+///   2. every source is verified with our public key before a single byte is
+///      handed to the OS installer, so a stale proxy response can never turn
+///      into "the update downloaded but verification failed".
 ///
-/// A failed attempt is retried once through the *other* transport. Verification
-/// happens inside `download_and_install` (it downloads, verifies, then runs the
-/// installer), so a bad copy never reaches the system; retrying elsewhere is
-/// therefore safe and fixes the most common "sometimes signature fails" case.
+/// Progress/speed arrive as `updater://progress`; `updater://started` resets
+/// the UI and `updater://retrying` marks a source switch.
 #[tauri::command]
 pub async fn updater_install(app: tauri::AppHandle, region: String) -> Result<(), String> {
-    let primary = if region == "global" { "global" } else { "cn" };
-    let secondary = if primary == "global" { "cn" } else { "global" };
+    let updater = build_updater(&app, &region)?;
+    let update = updater
+        .check()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "no update available".to_string())?;
 
-    match attempt_install(&app, primary).await {
-        Ok(()) => Ok(()),
-        Err(first) => {
-            if !is_retryable_install_error(&first) {
-                return Err(first);
+    let signature = update.signature.clone();
+    let official_url = update.download_url.to_string();
+
+    // Build the source list. The mirror is a gh-proxy wrapper of the same
+    // release asset; deriving it from the official URL keeps it in lockstep
+    // with whatever version the manifest announces.
+    let mirror_url = official_url
+        .strip_prefix("https://api.github.com/")
+        .map(|path| {
+            format!(
+                "https://gh-proxy.com/https://api.github.com/{path}",
+                path = path
+            )
+        })
+        .unwrap_or_else(|| official_url.clone());
+
+    let mut sources: Vec<(&str, bool)> = if region == "global" {
+        // Overseas / VPN exit: official first, mirror as fallback.
+        vec![("official", false), ("mirror", true)]
+    } else {
+        // Mainland / non-overseas VPS: mirror first (direct, no system proxy),
+        // official second (may need the system proxy).
+        vec![("mirror", true), ("official", false)]
+    };
+    // `mirror` may equal `official` if the manifest already points at a proxy;
+    // keep one entry per distinct physical URL.
+    if mirror_url == official_url {
+        sources.retain(|(name, _)| *name == "official");
+    }
+
+    let mut last_error = String::from("no source attempted");
+    for (name, no_proxy) in sources {
+        let url = if name == "mirror" {
+            &mirror_url
+        } else {
+            &official_url
+        };
+
+        let _ = app.emit("updater://started", ());
+        tracing::info!(source = name, url = %url, "downloading update");
+
+        match download_bytes(&app, url, no_proxy).await {
+            Ok((bytes, digest)) => {
+                tracing::info!(source = name, bytes = bytes.len(), sha256 = %digest, "download complete, verifying");
+                match verify_download(&bytes, &signature) {
+                    Ok(()) => {
+                        return update.install(bytes).map_err(|e| e.to_string());
+                    }
+                    Err(err) => {
+                        tracing::warn!(source = name, sha256 = %digest, "source rejected: {err}");
+                        last_error = format!("{name}: {err}");
+                        let _ = app.emit("updater://retrying", ());
+                    }
+                }
             }
-            tracing::warn!(
-                "update install failed via {primary}, retrying via {secondary}: {first}"
-            );
-            let _ = app.emit("updater://retrying", ());
-            match attempt_install(&app, secondary).await {
-                Ok(()) => Ok(()),
-                Err(second) => Err(format!(
-                    "{first}（已自动换源重试，仍失败：{second}）"
-                )),
+            Err(err) => {
+                tracing::warn!(source = name, "download failed: {err}");
+                last_error = format!("{name}: {err}");
+                let _ = app.emit("updater://retrying", ());
             }
         }
     }
+
+    if !is_retryable_install_error(&last_error) {
+        return Err(last_error);
+    }
+    Err(format!(
+        "{last_error}（已尝试全部可用更新源，请打开发布页手动安装）"
+    ))
 }

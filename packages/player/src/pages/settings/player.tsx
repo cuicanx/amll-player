@@ -82,6 +82,9 @@ import {
 	BottomLyricDisplayMode,
 	bottomLyricDisplayModeAtom,
 	DarkMode,
+	contextMenuVisibilityAtom,
+	DEFAULT_CONTEXT_MENU_VISIBILITY,
+	type ContextMenuVisibility,
 	darkModeAtom,
 	enableAlwaysOnTopAtom,
 	enableF11FullscreenAtom,
@@ -1075,6 +1078,61 @@ const OthersSettings = () => {
 	);
 };
 
+/**
+ * Per-entry visibility for the playback page's right-click menu. Each switch
+ * writes one key of the stored object; defaults are all on so the menu looks
+ * unchanged until the user opts out of an item.
+ */
+const ContextMenuSettings = () => {
+	const { t } = useTranslation();
+	const [visibility, setVisibility] = useAtom(contextMenuVisibilityAtom);
+
+	const items: { key: keyof ContextMenuVisibility; label: string; description: string }[] = [
+		{ key: "prevSong", label: t("page.settings.contextMenu.prevSong", "上一首"), description: t("page.settings.contextMenu.prevSongDesc", "在右键菜单中显示「上一首」") },
+		{ key: "playPause", label: t("page.settings.contextMenu.playPause", "暂停 / 继续"), description: t("page.settings.contextMenu.playPauseDesc", "在右键菜单中显示「暂停 / 继续」") },
+		{ key: "nextSong", label: t("page.settings.contextMenu.nextSong", "下一首"), description: t("page.settings.contextMenu.nextSongDesc", "在右键菜单中显示「下一首」") },
+		{ key: "fullscreen", label: t("page.settings.contextMenu.fullscreen", "进入 / 退出全屏"), description: t("page.settings.contextMenu.fullscreenDesc", "在右键菜单中显示全屏项（需先在常规中启用 F11 全屏）") },
+		{ key: "alwaysOnTop", label: t("page.settings.contextMenu.alwaysOnTop", "窗口置顶"), description: t("page.settings.contextMenu.alwaysOnTopDesc", "在右键菜单中显示「窗口置顶」") },
+		{ key: "showLyrics", label: t("page.settings.contextMenu.showLyrics", "显示歌词"), description: t("page.settings.contextMenu.showLyricsDesc", "在右键菜单中显示「显示歌词」") },
+		{ key: "editSongInfo", label: t("page.settings.contextMenu.editSongInfo", "编辑歌曲覆盖信息"), description: t("page.settings.contextMenu.editSongInfoDesc", "在右键菜单中显示「编辑歌曲覆盖信息」") },
+		{ key: "recordPanel", label: t("page.settings.contextMenu.recordPanel", "打开捕获面板"), description: t("page.settings.contextMenu.recordPanelDesc", "在右键菜单中显示「打开捕获面板」") },
+		{ key: "screenshot", label: t("page.settings.contextMenu.screenshot", "打开截图工具"), description: t("page.settings.contextMenu.screenshotDesc", "在右键菜单中显示「打开截图工具」") },
+		{ key: "exitLyricPage", label: t("page.settings.contextMenu.exitLyricPage", "退出歌词页面"), description: t("page.settings.contextMenu.exitLyricPageDesc", "在右键菜单中显示「退出歌词页面」") },
+	];
+
+	return (
+		<>
+			<SubTitle>
+				<Trans i18nKey="page.settings.contextMenu.subtitle">鼠标右键菜单设置</Trans>
+			</SubTitle>
+			<Text as="div" color="gray" size="2" mb="3">
+				<Trans i18nKey="page.settings.contextMenu.tip">
+					选择歌曲播放页右键菜单中要显示的选项。关闭的选项不会出现在菜单中。
+				</Trans>
+			</Text>
+			{items.map((item) => (
+				<SwitchSettings
+					key={item.key}
+					label={item.label}
+					description={item.description}
+					configAtom={atom(
+						(get) => visibility[item.key],
+						(_get, set, value: boolean) =>
+							setVisibility({ ...visibility, [item.key]: value }),
+					)}
+				/>
+			))}
+			<Button
+				my="3"
+				variant="soft"
+				onClick={() => setVisibility({ ...DEFAULT_CONTEXT_MENU_VISIBILITY })}
+			>
+				<Trans i18nKey="page.settings.contextMenu.reset">恢复默认</Trans>
+			</Button>
+		</>
+	);
+};
+
 const TaskbarLyricSettings = () => {
 	const { t } = useTranslation();
 	const [enabled, setEnabled] = useAtom(enableTaskbarLyricAtom);
@@ -1235,6 +1293,35 @@ const REPOSITORY_URL = "https://github.com/cuicanx/amll-player";
 const CONTRIBUTORS_API =
 	"https://api.github.com/repos/cuicanx/amll-player/contributors?per_page=100&anon=true";
 
+/** Cached contributor list: show instantly on the About page, refresh behind. */
+const CONTRIBUTORS_CACHE_KEY = "amll-player.contributors";
+const CONTRIBUTORS_CACHE_TTL = 6 * 60 * 60 * 1000;
+
+function readContributorCache(): Contributor[] | null {
+	try {
+		const raw = localStorage.getItem(CONTRIBUTORS_CACHE_KEY);
+		if (!raw) return null;
+		const parsed = JSON.parse(raw) as { at: number; items: Contributor[] };
+		if (!Array.isArray(parsed.items) || Date.now() - parsed.at > CONTRIBUTORS_CACHE_TTL) {
+			return null;
+		}
+		return parsed.items;
+	} catch {
+		return null;
+	}
+}
+
+function writeContributorCache(items: Contributor[]): void {
+	try {
+		localStorage.setItem(
+			CONTRIBUTORS_CACHE_KEY,
+			JSON.stringify({ at: Date.now(), items }),
+		);
+	} catch {
+		/* storage unavailable - caching is best-effort */
+	}
+}
+
 /**
  * Fetch the contributor list from the region-appropriate transport.
  *
@@ -1296,7 +1383,6 @@ const ContributorAvatar: FC<{ item: Contributor }> = ({ item }) => {
 					className={about.avatarImage}
 					src={avatarFor(item.avatar)}
 					alt=""
-					loading="lazy"
 					onError={() => setFailed(true)}
 				/>
 			) : (
@@ -1310,8 +1396,11 @@ const ContributorAvatar: FC<{ item: Contributor }> = ({ item }) => {
 
 const ContributorsSection: FC = () => {
 	const { t } = useTranslation();
-	const [contributors, setContributors] = useState<Contributor[]>([]);
-	const [loading, setLoading] = useState(true);
+	// Seeded from cache so the About page never shows an empty list on open.
+	const [contributors, setContributors] = useState<Contributor[]>(
+		() => readContributorCache() ?? [],
+	);
+	const [loading, setLoading] = useState(() => readContributorCache() === null);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -1334,6 +1423,7 @@ const ContributorsSection: FC = () => {
 							url: item.html_url || `https://github.com/${item.login}`,
 						}));
 					setContributors(list);
+					writeContributorCache(list);
 				}
 			} catch (error) {
 				console.error("Failed to fetch contributors:", error);
@@ -1637,6 +1727,8 @@ export const PlayerSettingsTab: FC<{ category: string }> = ({ category }) => {
 			return <LyricBackgroundSettings />;
 		case "others":
 			return <OthersSettings />;
+		case "contextMenu":
+			return <ContextMenuSettings />;
 		case "taskbarLyric":
 			return <TaskbarLyricSettings />;
 		case "about":

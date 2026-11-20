@@ -81,6 +81,45 @@ export const enableF11FullscreenAtom = atomWithStorage(
 );
 
 /**
+ * Visibility of each entry in the playback page's right-click menu.
+ *
+ * Keys are the stable menu item ids (see `MENU_ITEMS` in AMLLContextMenu).
+ * Defaults are all `true` so existing users see exactly the same menu until
+ * they change something. Stored as one object so adding an item never leaves
+ * an older install with an undefined value.
+ */
+export interface ContextMenuVisibility {
+	prevSong: boolean;
+	playPause: boolean;
+	nextSong: boolean;
+	fullscreen: boolean;
+	alwaysOnTop: boolean;
+	showLyrics: boolean;
+	editSongInfo: boolean;
+	recordPanel: boolean;
+	screenshot: boolean;
+	exitLyricPage: boolean;
+}
+
+export const DEFAULT_CONTEXT_MENU_VISIBILITY: ContextMenuVisibility = {
+	prevSong: true,
+	playPause: true,
+	nextSong: true,
+	fullscreen: true,
+	alwaysOnTop: true,
+	showLyrics: true,
+	editSongInfo: true,
+	recordPanel: true,
+	screenshot: true,
+	exitLyricPage: true,
+};
+
+export const contextMenuVisibilityAtom = atomWithStorage<ContextMenuVisibility>(
+	"amll-player.contextMenuVisibility",
+	DEFAULT_CONTEXT_MENU_VISIBILITY,
+);
+
+/**
  * Live borderless-fullscreen state, mirrored from the native window.
  *
  * This exists because the context menu component is mounted once with the app

@@ -60,61 +60,59 @@ export const AMLLWrapper: FC = () => {
 		return () => window.clearInterval(timer);
 	}, [setSuspended]);
 
-	// Return to the playing line once the pointer has left the lyric area.
+	// Manual scrolling hands control to the user; after they stop and move the
+	// pointer away we give it back. The player's own auto-align only re-centres
+	// when the current line changes while still inside its render range, so a
+	// long manual scroll can otherwise stay stranded forever. `resetScroll()` is
+	// the public "put the view back on the playing line" operation and produces
+	// the same result as seeking back to the current second.
 	//
-	// The player only re-aligns by itself when the current line *changes* and is
-	// still inside its render range, so scrolling far away left the view
-	// stranded. Its public `resetScroll()` is exactly the "put it back" call;
-	// we wait a moment first so a pointer that merely grazes the edge does not
-	// yank the lyrics, and we only do it while playing (with playback paused the
-	// user is usually reading a specific spot on purpose).
+	// The timer is deliberately 10s: a shorter delay yanked the lyrics away
+	// while the user was still reading the line they had scrolled to.
 	useEffect(() => {
 		if (!isLyricPageOpened) return;
 		const page = pageRef.current;
 		if (!page) return;
 
+		const AUTO_RETURN_DELAY = 10_000;
+		let hovering = false;
 		let timer = 0;
-		const onPointerLeave = () => {
-			if (!isPlaying) return;
+
+		const cancel = () => {
 			window.clearTimeout(timer);
+			timer = 0;
+		};
+		const schedule = () => {
+			cancel();
+			// Only while playing and only after the pointer has left: with the
+			// pointer still inside, the user is assumed to be reading.
+			if (!isPlaying || hovering) return;
 			timer = window.setTimeout(() => {
 				resetLyricScroll(document.getElementById("amll-lyric-player"));
-			}, 700);
+			}, AUTO_RETURN_DELAY);
 		};
-		const cancel = () => window.clearTimeout(timer);
 
-		page.addEventListener("pointerleave", onPointerLeave);
-		page.addEventListener("pointerenter", cancel);
-		return () => {
-			window.clearTimeout(timer);
-			page.removeEventListener("pointerleave", onPointerLeave);
-			page.removeEventListener("pointerenter", cancel);
+		const onPointerEnter = () => {
+			hovering = true;
+			cancel();
 		};
-	}, [isLyricPageOpened, isPlaying]);
-
-	// Same "go back to the playing line" guarantee for the case where the
-	// pointer never leaves the window: after the wheel has been idle for a
-	// moment we hand control back to the auto-align. The player itself only
-	// re-aligns when the current line changes *and* is still inside its render
-	// range, so a long manual scroll could otherwise stay stranded.
-	useEffect(() => {
-		if (!isLyricPageOpened) return;
-		const page = pageRef.current;
-		if (!page) return;
-
-		let idle = 0;
+		const onPointerLeave = () => {
+			hovering = false;
+			schedule();
+		};
+		// A wheel event means the user is still adjusting the view. Postpone the
+		// auto-return so the lyric cannot jump while they scroll.
 		const onWheel = () => {
-			window.clearTimeout(idle);
-			idle = window.setTimeout(() => {
-				if (isPlaying) {
-					resetLyricScroll(document.getElementById("amll-lyric-player"));
-				}
-			}, 1500);
+			schedule();
 		};
 
+		page.addEventListener("pointerenter", onPointerEnter);
+		page.addEventListener("pointerleave", onPointerLeave);
 		page.addEventListener("wheel", onWheel, { passive: true });
 		return () => {
-			window.clearTimeout(idle);
+			cancel();
+			page.removeEventListener("pointerenter", onPointerEnter);
+			page.removeEventListener("pointerleave", onPointerLeave);
 			page.removeEventListener("wheel", onWheel);
 		};
 	}, [isLyricPageOpened, isPlaying]);

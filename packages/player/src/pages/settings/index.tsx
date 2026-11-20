@@ -119,6 +119,11 @@ const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({
 				label: t("page.settings.others.subtitle"),
 				icon: <Component1Icon width={20} height={20} />,
 			},
+			{
+				id: "contextMenu",
+				label: t("page.settings.contextMenu.subtitle", "鼠标右键菜单设置"),
+				icon: <HamburgerMenuIcon width={20} height={20} />,
+			},
 		];
 
 		if (os === "windows") {

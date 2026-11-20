@@ -15,6 +15,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { router } from "../../router.tsx";
 import {
 	borderlessFullscreenAtom,
+	contextMenuVisibilityAtom,
 	enableAlwaysOnTopAtom,
 	enableF11FullscreenAtom,
 	recordPanelOpenedAtom,
@@ -60,6 +61,7 @@ export const AMLLContextMenu: FC<{
 	const onRequestNextSong = useAtomValue(onRequestNextSongAtom).onEmit;
 	const onPlayOrResume = useAtomValue(onPlayOrResumeAtom).onEmit;
 	const musicId = useAtomValue(musicIdAtom);
+	const menuVisibility = useAtomValue(contextMenuVisibilityAtom);
 
 	// Only mounted while open, so this runs once per opening: make sure the
 	// fullscreen entry reflects the real window state.
@@ -91,18 +93,24 @@ export const AMLLContextMenu: FC<{
 				/>
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content side="right" align="start" sideOffset={2}>
-				<DropdownMenu.Item onClick={onRequestPrevSong} shortcut="Ctrl Alt ←">
-					<Trans i18nKey="amll.contextMenu.rewindSong">上一首</Trans>
-				</DropdownMenu.Item>
-				<DropdownMenu.Item onClick={onPlayOrResume} shortcut="Ctrl Alt P">
-					<Trans i18nKey="amll.contextMenu.pauseOrResume">暂停 / 继续</Trans>
-				</DropdownMenu.Item>
-				<DropdownMenu.Item onClick={onRequestNextSong} shortcut="Ctrl Alt →">
-					<Trans i18nKey="amll.contextMenu.forwardSong">下一首</Trans>
-				</DropdownMenu.Item>
+				{menuVisibility.prevSong && (
+					<DropdownMenu.Item onClick={onRequestPrevSong} shortcut="Ctrl Alt ←">
+						<Trans i18nKey="amll.contextMenu.rewindSong">上一首</Trans>
+					</DropdownMenu.Item>
+				)}
+				{menuVisibility.playPause && (
+					<DropdownMenu.Item onClick={onPlayOrResume} shortcut="Ctrl Alt P">
+						<Trans i18nKey="amll.contextMenu.pauseOrResume">暂停 / 继续</Trans>
+					</DropdownMenu.Item>
+				)}
+				{menuVisibility.nextSong && (
+					<DropdownMenu.Item onClick={onRequestNextSong} shortcut="Ctrl Alt →">
+						<Trans i18nKey="amll.contextMenu.forwardSong">下一首</Trans>
+					</DropdownMenu.Item>
+				)}
 				<DropdownMenu.Separator />
 				{/* Only offered when the user opted into F11 borderless fullscreen. */}
-				{enableF11Fullscreen && (
+				{enableF11Fullscreen && menuVisibility.fullscreen && (
 					<DropdownMenu.Item onClick={() => void toggleBorderlessFullscreen()}>
 						{isFullscreen
 							? t("amll.contextMenu.exitFullscreen", "退出全屏")
@@ -111,6 +119,7 @@ export const AMLLContextMenu: FC<{
 				)}
 				{/* Check mark on the right: an unchecked row then has no empty left
 				   gutter, so every row starts on the same vertical line. */}
+				{menuVisibility.alwaysOnTop && (
 				<DropdownMenu.CheckboxItem
 					className={styles.item}
 					checked={alwaysOnTop}
@@ -121,7 +130,9 @@ export const AMLLContextMenu: FC<{
 					</span>
 					{alwaysOnTop && <CheckIcon className={styles.mark} />}
 				</DropdownMenu.CheckboxItem>
+				)}
 				<DropdownMenu.Separator />
+				{menuVisibility.showLyrics && (
 				<DropdownMenu.CheckboxItem
 					className={styles.item}
 					checked={!hideLyricView}
@@ -132,6 +143,8 @@ export const AMLLContextMenu: FC<{
 					</span>
 					{!hideLyricView && <CheckIcon className={styles.mark} />}
 				</DropdownMenu.CheckboxItem>
+				)}
+				{menuVisibility.editSongInfo && (
 				<DropdownMenu.Item
 					onClick={() => {
 						setLyricPageOpened(false);
@@ -142,31 +155,38 @@ export const AMLLContextMenu: FC<{
 						编辑歌曲覆盖信息
 					</Trans>
 				</DropdownMenu.Item>
+				)}
 				<DropdownMenu.Separator />
-				<DropdownMenu.Item
-					onClick={() => {
-						setRecordPanelOpened(true);
-					}}
-				>
-					<Trans i18nKey="amll.contextMenu.openRecorder">打开捕获面板</Trans>
-				</DropdownMenu.Item>
-				<DropdownMenu.Item
-					onClick={() => {
-						invoke("open_screenshot_window");
-					}}
-				>
-					<Trans i18nKey="amll.contextMenu.openScreenshotTool">
-						打开截图工具
-					</Trans>
-				</DropdownMenu.Item>
+				{menuVisibility.recordPanel && (
+					<DropdownMenu.Item
+						onClick={() => {
+							setRecordPanelOpened(true);
+						}}
+					>
+						<Trans i18nKey="amll.contextMenu.openRecorder">打开捕获面板</Trans>
+					</DropdownMenu.Item>
+				)}
+				{menuVisibility.screenshot && (
+					<DropdownMenu.Item
+						onClick={() => {
+							invoke("open_screenshot_window");
+						}}
+					>
+						<Trans i18nKey="amll.contextMenu.openScreenshotTool">
+							打开截图工具
+						</Trans>
+					</DropdownMenu.Item>
+				)}
 				<DropdownMenu.Separator />
-				<DropdownMenu.Item
-					onClick={() => {
-						setLyricPageOpened(false);
-					}}
-				>
-					<Trans i18nKey="amll.contextMenu.exitLyricPage">退出歌词页面</Trans>
-				</DropdownMenu.Item>
+				{menuVisibility.exitLyricPage && (
+					<DropdownMenu.Item
+						onClick={() => {
+							setLyricPageOpened(false);
+						}}
+					>
+						<Trans i18nKey="amll.contextMenu.exitLyricPage">退出歌词页面</Trans>
+					</DropdownMenu.Item>
+				)}
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>
 	);

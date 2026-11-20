@@ -489,6 +489,31 @@
 					"label": "主题设置",
 					"light": "浅色"
 				}
+			},
+			"contextMenu": {
+				"subtitle": "鼠标右键菜单设置",
+				"tip": "选择歌曲播放页右键菜单中要显示的选项。关闭的选项不会出现在菜单中。",
+				"reset": "恢复默认",
+				"prevSong": "上一首",
+				"prevSongDesc": "在右键菜单中显示「上一首」",
+				"playPause": "暂停 / 继续",
+				"playPauseDesc": "在右键菜单中显示「暂停 / 继续」",
+				"nextSong": "下一首",
+				"nextSongDesc": "在右键菜单中显示「下一首」",
+				"fullscreen": "进入 / 退出全屏",
+				"fullscreenDesc": "在右键菜单中显示全屏项（需先在常规中启用 F11 全屏）",
+				"alwaysOnTop": "窗口置顶",
+				"alwaysOnTopDesc": "在右键菜单中显示「窗口置顶」",
+				"showLyrics": "显示歌词",
+				"showLyricsDesc": "在右键菜单中显示「显示歌词」",
+				"editSongInfo": "编辑歌曲覆盖信息",
+				"editSongInfoDesc": "在右键菜单中显示「编辑歌曲覆盖信息」",
+				"recordPanel": "打开捕获面板",
+				"recordPanelDesc": "在右键菜单中显示「打开捕获面板」",
+				"screenshot": "打开截图工具",
+				"screenshotDesc": "在右键菜单中显示「打开截图工具」",
+				"exitLyricPage": "退出歌词页面",
+				"exitLyricPageDesc": "在右键菜单中显示「退出歌词页面」"
 			}
 		},
 		"song": {
