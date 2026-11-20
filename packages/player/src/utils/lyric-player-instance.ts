@@ -24,17 +24,6 @@ interface ResettableLyricPlayer {
 	getLyricLines: () => unknown;
 }
 
-/**
- * The library hands out a real player handle through the lyric-line callback
- * atoms. We capture it there (see AMLLWrapper) and prefer it over the DOM
- * fallback - a direct reference cannot break when React internals change.
- */
-let capturedPlayer: ResettableLyricPlayer | null = null;
-
-export function captureLyricPlayer(player: unknown): void {
-	if (isLyricPlayer(player)) capturedPlayer = player;
-}
-
 const FIBER_KEY_PREFIX = "__reactFiber$";
 const MAX_FIBER_HOPS = 60;
 const MAX_HOOK_STEPS = 60;
@@ -116,7 +105,7 @@ export function findLyricPlayer(
  * the current second.
  */
 export function resetLyricScroll(root: HTMLElement | null): boolean {
-	const player = capturedPlayer ?? findLyricPlayer(root);
+	const player = findLyricPlayer(root);
 	if (!player) return false;
 	try {
 		const now = player.getCurrentTime?.();
