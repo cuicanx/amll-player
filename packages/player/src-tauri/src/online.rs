@@ -113,12 +113,23 @@ pub async fn online_http(req: OnlineHttpRequest) -> Result<OnlineHttpResponse, S
 
     let client = make_client(false);
     let timeout = Duration::from_millis(req.timeout_ms.unwrap_or(20_000));
-    let resp = tokio::time::timeout(
+    let result = tokio::time::timeout(
         timeout,
         send_with_fallback(&client, &method, &req.url, &headers, body),
     )
-    .await
-    .map_err(|_| "请求超时".to_string())??;
+    .await;
+
+    let resp = match result {
+        Ok(Ok(resp)) => resp,
+        Ok(Err(err)) => {
+            tracing::warn!(target: "amll_player_lib::online", "online_http {method} {url} 失败: {err}", url = %req.url);
+            return Err(err);
+        }
+        Err(_) => {
+            tracing::warn!(target: "amll_player_lib::online", "online_http {method} {url} 超时", url = %req.url);
+            return Err("请求超时".to_string());
+        }
+    };
 
     let status = resp.status().as_u16();
     let headers = resp
@@ -442,7 +453,7 @@ pub async fn online_search(
     let mut songs = Vec::new();
     let mut errors = Vec::new();
 
-    for platform in platforms {
+    for platform in &platforms {
         let result = match platform.as_str() {
             "kw" => search_kuwo(&client, &keyword, limit).await,
             "kg" => search_kugou(&client, &keyword, limit).await,
@@ -456,8 +467,16 @@ pub async fn online_search(
     }
 
     if songs.is_empty() && !errors.is_empty() {
+        tracing::warn!(target: "amll_player_lib::online", "online_search {keyword:?} 全部失败: {}", errors.join("；"));
         return Err(errors.join("；"));
     }
+    tracing::info!(
+        target: "amll_player_lib::online",
+        "online_search {keyword:?} platforms={platforms:?} -> {count} 首",
+        keyword = keyword,
+        platforms = platforms,
+        count = songs.len()
+    );
     Ok(songs)
 }
 

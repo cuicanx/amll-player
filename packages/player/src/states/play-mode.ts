@@ -15,7 +15,18 @@ export const PLAY_MODE_STORAGE_KEY = "amll-player.playMode";
 
 function readBootMode(): PlayMode {
 	try {
-		return localStorage.getItem(PLAY_MODE_STORAGE_KEY) === "online" ? "online" : "local";
+		const raw = localStorage.getItem(PLAY_MODE_STORAGE_KEY);
+		if (!raw) return "local";
+		// atomWithStorage writes JSON, so the stored text is `"online"` with the
+		// quotes. Comparing the raw string against `online` never matched, which
+		// is why the switch looked like it never applied after a restart.
+		let value: unknown = raw;
+		try {
+			value = JSON.parse(raw);
+		} catch {
+			// Older builds stored a bare string - fall through with `raw`.
+		}
+		return value === "online" ? "online" : "local";
 	} catch {
 		return "local";
 	}

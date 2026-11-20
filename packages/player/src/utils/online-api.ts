@@ -75,10 +75,14 @@ function loadPersistedHealth(): Map<string, { ok: boolean; message: string }> | 
 
 function persistHealth(map: Map<string, { ok: boolean; message: string }>): void {
 	try {
-		localStorage.setItem(
-			HEALTH_KEY,
-			JSON.stringify({ at: Date.now(), items: Object.fromEntries(map) }),
-		);
+		// Only successes are cached. A source blocked by its own server (e.g.
+		// "block ip") recovers on its own, and caching that failure for a day
+		// would keep it marked broken long after it works again.
+		const items: Record<string, { ok: boolean; message: string }> = {};
+		for (const [id, value] of map) {
+			if (value.ok) items[id] = value;
+		}
+		localStorage.setItem(HEALTH_KEY, JSON.stringify({ at: Date.now(), items }));
 	} catch {
 		// Storage full or disabled - the in-memory result still works.
 	}

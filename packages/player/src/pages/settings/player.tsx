@@ -1481,7 +1481,12 @@ const OnlineSourceSettings: FC = () => {
 											</Badge>
 										) : null}
 									</Flex>
-									<Text size="1" color="gray" truncate>
+									<Text
+										size="1"
+										color="gray"
+										truncate
+										title={status && !status.ok ? status.message : source.description}
+									>
 										{status && !status.ok ? status.message : source.description || source.author}
 									</Text>
 								</Flex>
