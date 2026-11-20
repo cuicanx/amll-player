@@ -10,6 +10,7 @@
 //! state exists. No new crate features are required.
 
 use std::path::Path;
+use tauri::Manager;
 use tracing::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
