@@ -546,3 +546,270 @@ pub fn lx_sources_raw() -> Result<String, String> {
     }
     Err("没有找到洛雪音乐的音源数据，请确认已安装并导入过音源".into())
 }
+
+//#region offline cache
+
+use std::path::PathBuf;
+use tauri::Manager;
+
+/// Cache directory for downloaded online audio.
+///
+/// Streaming straight into the decoder made every play - and every song switch
+/// while a download was still running - wait on the network. Caching to disk
+/// turns repeat plays into a local file open.
+fn cache_dir(app: &tauri::AppHandle) -> PathBuf {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .unwrap_or_default()
+        .join("online-cache");
+    let _ = std::fs::create_dir_all(&dir);
+    dir
+}
+
+fn cache_key_name(key: &str) -> String {
+    format!("{:x}", md5::compute(key.as_bytes()))
+}
+
+fn pick_extension(url: &str) -> &'static str {
+    let no_query = url.split('?').next().unwrap_or(url);
+    let lower = no_query.to_lowercase();
+    for ext in ["mp3", "flac", "m4a", "aac", "ogg", "wav"] {
+        if lower.ends_with(ext) {
+            return match ext {
+                "mp3" => ".mp3",
+                "flac" => ".flac",
+                "m4a" => ".m4a",
+                "aac" => ".aac",
+                "ogg" => ".ogg",
+                _ => ".wav",
+            };
+        }
+    }
+    ".mp3"
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OnlineCacheUsage {
+    pub bytes: u64,
+    pub files: u64,
+}
+
+fn scan_cache(app: &tauri::AppHandle) -> OnlineCacheUsage {
+    let dir = cache_dir(app);
+    let mut bytes = 0u64;
+    let mut files = 0u64;
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            if let Ok(meta) = entry.metadata() {
+                if meta.is_file() {
+                    bytes += meta.len();
+                    files += 1;
+                }
+            }
+        }
+    }
+    OnlineCacheUsage { bytes, files }
+}
+
+/// Return the cached file for `key`, if it was already downloaded.
+#[tauri::command]
+pub fn online_cache_path(app: tauri::AppHandle, key: String) -> Option<String> {
+    let dir = cache_dir(&app);
+    let base = cache_key_name(&key);
+    let entries = std::fs::read_dir(&dir).ok()?;
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.starts_with(&base) && entry.metadata().map(|m| m.len() > 0).unwrap_or(false) {
+            return Some(entry.path().to_string_lossy().to_string());
+        }
+    }
+    None
+}
+
+/// Download `url` into the cache and return the local path.
+#[tauri::command]
+pub async fn online_cache_store(
+    app: tauri::AppHandle,
+    key: String,
+    url: String,
+) -> Result<String, String> {
+    if let Some(existing) = online_cache_path(app.clone(), key.clone()) {
+        return Ok(existing);
+    }
+
+    let client = make_client(true);
+    let resp = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("下载失败: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("下载失败: HTTP {}", resp.status()));
+    }
+    let bytes = resp.bytes().await.map_err(|e| format!("读取失败: {e}"))?;
+    if bytes.is_empty() {
+        return Err("下载失败: 空文件".into());
+    }
+
+    let dir = cache_dir(&app);
+    let file = dir.join(format!("{}{}", cache_key_name(&key), pick_extension(&url)));
+    let tmp = file.with_extension("part");
+    std::fs::write(&tmp, &bytes).map_err(|e| format!("写入缓存失败: {e}"))?;
+    std::fs::rename(&tmp, &file).map_err(|e| format!("缓存落盘失败: {e}"))?;
+    Ok(file.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn online_cache_usage(app: tauri::AppHandle) -> OnlineCacheUsage {
+    scan_cache(&app)
+}
+
+#[tauri::command]
+pub fn online_cache_clear(app: tauri::AppHandle) -> OnlineCacheUsage {
+    let dir = cache_dir(&app);
+    let before = scan_cache(&app);
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
+    tracing::info!(
+        target: "amll_player_lib::online",
+        "online cache cleared: {} files, {} bytes",
+        before.files,
+        before.bytes
+    );
+    OnlineCacheUsage {
+        bytes: 0,
+        files: 0,
+    }
+}
+
+//#endregion
+
+//#region lyric / cover
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OnlineLyric {
+    pub lyric: String,
+    pub translated: String,
+}
+
+fn format_lrc_time(seconds: f64) -> String {
+    let total = if seconds.is_finite() && seconds > 0.0 { seconds } else { 0.0 };
+    let minutes = (total / 60.0).floor() as u32;
+    let rest = total - (minutes as f64) * 60.0;
+    format!("{minutes:02}:{rest:05.2}")
+}
+
+/// Lyrics for the built-in platforms, mirroring LX's `musicSdk/kw/lyric.js`.
+#[tauri::command]
+pub async fn online_lyric(platform: String, id: String) -> Result<OnlineLyric, String> {
+    if platform != "kw" {
+        return Err(format!("内置歌词暂不支持平台 {platform}"));
+    }
+    let client = make_client(true);
+    let url = format!("http://m.kuwo.cn/newh5/singles/songinfoandlrc?musicId={id}");
+    let resp = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+
+    let list = json
+        .get("data")
+        .and_then(|d| d.get("lrclist"))
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    if list.is_empty() {
+        return Err("该歌曲没有歌词".into());
+    }
+
+    // Kuwo puts a translation line at the same timestamp as the original.
+    let mut main_lines: Vec<(String, String)> = Vec::new();
+    let mut trans_lines: Vec<(String, String)> = Vec::new();
+    for item in list {
+        let time = item
+            .get("time")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(0.0);
+        let text = decode_entities(
+            item.get("lineLyric")
+                .or_else(|| item.get("lineLyric"))
+                .and_then(|v| v.as_str())
+                .unwrap_or_default(),
+        );
+        if text.trim().is_empty() {
+            continue;
+        }
+        let stamp = format_lrc_time(time);
+        if main_lines.last().map(|(t, _)| t == &stamp).unwrap_or(false) {
+            trans_lines.push((stamp, text));
+        } else {
+            main_lines.push((stamp, text));
+        }
+    }
+
+    let render = |lines: &[(String, String)]| {
+        lines
+            .iter()
+            .map(|(t, text)| format!("[{t}]{text}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    let song = json.get("data").and_then(|d| d.get("songinfo"));
+    let title = song
+        .and_then(|s| s.get("songName"))
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    let artist = song
+        .and_then(|s| s.get("artist"))
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    let album = song
+        .and_then(|s| s.get("album"))
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+
+    let header = format!("[ti:{title}]\n[ar:{artist}]\n[al:{album}]\n[by:]\n[offset:0]\n");
+    Ok(OnlineLyric {
+        lyric: format!("{header}{}", render(&main_lines)),
+        translated: if trans_lines.is_empty() {
+            String::new()
+        } else {
+            render(&trans_lines)
+        },
+    })
+}
+
+/// Cover URL for the built-in platforms, mirroring LX's `musicSdk/kw/pic.js`.
+#[tauri::command]
+pub async fn online_pic(platform: String, id: String) -> Result<String, String> {
+    if platform != "kw" {
+        return Err(format!("内置封面暂不支持平台 {platform}"));
+    }
+    let client = make_client(true);
+    let url = format!(
+        "http://artistpicserver.kuwo.cn/pic.web?corp=kuwo&type=rid_pic&pictype=500&size=500&rid={id}"
+    );
+    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let body = resp.text().await.map_err(|e| e.to_string())?;
+    let body = body.trim();
+    if body.starts_with("http") {
+        Ok(body.to_string())
+    } else {
+        Err("该歌曲没有封面".into())
+    }
+}
+
+//#endregion

@@ -335,3 +335,85 @@ export async function resolveOnlinePath(filePath: string): Promise<string> {
 }
 
 //#endregion
+
+//#region offline cache + metadata
+
+export interface OnlineCacheUsage {
+	bytes: number;
+	files: number;
+}
+
+export async function getOnlineCacheUsage(): Promise<OnlineCacheUsage> {
+	return invoke<OnlineCacheUsage>("online_cache_usage");
+}
+
+export async function clearOnlineCache(): Promise<void> {
+	await invoke("online_cache_clear");
+}
+
+/** Stable identity of an online song, usable as a cache key. */
+function cacheKeyOf(song: OnlineSong): string {
+	return `online://${song.source}/${song.id}`;
+}
+
+/**
+ * Play a song from a local file, downloading it once.
+ *
+ * Streaming straight into the decoder blocked the audio thread for the whole
+ * download, so switching songs (even to a local file) had to wait behind it.
+ * Downloading first turns every later play into a plain file open.
+ */
+export async function prepareOnlineSong(song: OnlineSong): Promise<string> {
+	const key = cacheKeyOf(song);
+	const cached = await invoke<string | null>("online_cache_path", { key });
+	if (cached) return cached;
+	const url = await resolvePlayUrl(song);
+	return invoke<string>("online_cache_store", { key, url });
+}
+
+/** Normalise whatever the queue holds into a path the decoder can open. */
+export async function preparePlaybackPath(filePath: string): Promise<string> {
+	if (isOnlinePath(filePath)) {
+		const song = parseOnlinePath(filePath);
+		if (!song) throw new Error("在线歌曲信息已损坏，请重新收藏");
+		return prepareOnlineSong(song);
+	}
+	if (/^https?:\/\//.test(filePath)) {
+		const key = `url://${filePath}`;
+		const cached = await invoke<string | null>("online_cache_path", { key });
+		if (cached) return cached;
+		return invoke<string>("online_cache_store", { key, url: filePath });
+	}
+	return filePath;
+}
+
+/** Lyrics + cover for a built-in platform song. Missing pieces stay empty. */
+export async function fetchOnlineMeta(
+	song: OnlineSong,
+): Promise<{ lyric: string; translated: string; cover: string }> {
+	const id = song.songmid || song.id;
+	let lyric = "";
+	let translated = "";
+	let cover = "";
+
+	try {
+		const res = await invoke<{ lyric: string; translated: string }>("online_lyric", {
+			platform: song.source,
+			id,
+		});
+		lyric = res.lyric;
+		translated = res.translated;
+	} catch {
+		// No lyric for this song - keep playing without it.
+	}
+
+	try {
+		cover = await invoke<string>("online_pic", { platform: song.source, id });
+	} catch {
+		cover = song.coverUrl || "";
+	}
+
+	return { lyric, translated, cover };
+}
+
+//#endregion

@@ -26,8 +26,9 @@ import { queueManagerAtom } from "../../states/appAtoms.ts";
 import { db, type Playlist, type Song } from "../../utils/db-client.ts";
 import {
 	type OnlineSong,
+	fetchOnlineMeta,
 	onlineSearch,
-	resolvePlayUrl,
+	prepareOnlineSong,
 	toOnlinePath,
 } from "../../utils/online-api.ts";
 
@@ -98,20 +99,27 @@ export const OnlineSearchPage: FC = () => {
 			setResolving(song.id);
 			setMessage("");
 			try {
-				const url = await resolvePlayUrl(song);
+				// Download once into the local cache, and grab lyrics/cover in
+				// parallel so the player has something to show.
+				const [path, meta] = await Promise.all([
+					prepareOnlineSong(song),
+					fetchOnlineMeta(song),
+				]);
 				const playable: Song = {
 					id: `online-${song.source}-${song.id}`,
-					filePath: url,
+					filePath: path,
 					songName: song.name,
 					songArtists: song.singer,
 					songAlbum: song.albumName,
 					duration: song.interval,
 					lyricFormat: "lrc",
-					lyric: "",
-					translatedLrc: null,
+					lyric: meta.lyric,
+					translatedLrc: meta.translated || null,
 					romanLrc: null,
-					coverPath: song.coverUrl || null,
+					coverPath: meta.cover || null,
 				};
+				// The player reads lyrics back by song id, so keep a row for it.
+				await db.songs.upsert([playable]).catch(() => {});
 				queueManager.replaceQueueAndPlay(playable);
 			} catch (err) {
 				setMessage(
@@ -129,6 +137,7 @@ export const OnlineSearchPage: FC = () => {
 	const saveTo = useCallback(
 		async (song: OnlineSong, playlistId: number) => {
 			try {
+				const meta = await fetchOnlineMeta(song);
 				const stored: Song = {
 					id: `online-${song.source}-${song.id}`,
 					filePath: toOnlinePath(song),
@@ -137,10 +146,10 @@ export const OnlineSearchPage: FC = () => {
 					songAlbum: song.albumName,
 					duration: song.interval,
 					lyricFormat: "lrc",
-					lyric: "",
-					translatedLrc: null,
+					lyric: meta.lyric,
+					translatedLrc: meta.translated || null,
 					romanLrc: null,
-					coverPath: song.coverUrl || null,
+					coverPath: meta.cover || null,
 				};
 				await db.songs.upsert([stored]);
 				await db.playlists.addSongs(playlistId, [stored.id]);

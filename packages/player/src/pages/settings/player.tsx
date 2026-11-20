@@ -123,8 +123,11 @@ import {
 	type StorageUsage,
 } from "../../utils/storage-api.ts";
 import {
+	clearOnlineCache,
 	ensureSourceHealth,
 	fetchSourceFromUrl,
+	getOnlineCacheUsage,
+	type OnlineCacheUsage,
 	resetOnlineRuntimeCache,
 } from "../../utils/online-api.ts";
 import {
@@ -1183,6 +1186,7 @@ const LogLevelSetting: FC = () => {
 const StorageSettings: FC = () => {
 	const { t } = useTranslation();
 	const [usage, setUsage] = useState<StorageUsage | null>(null);
+	const [cache, setCache] = useState<OnlineCacheUsage | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [cleaning, setCleaning] = useState(false);
 	const [message, setMessage] = useState("");
@@ -1193,6 +1197,9 @@ const StorageSettings: FC = () => {
 			.then(setUsage)
 			.catch((e) => setMessage(String(e)))
 			.finally(() => setLoading(false));
+		getOnlineCacheUsage()
+			.then(setCache)
+			.catch(() => setCache(null));
 	};
 
 	useEffect(() => {
@@ -1217,6 +1224,25 @@ const StorageSettings: FC = () => {
 			if (result.errors.length) {
 				setMessage((prev) => `${prev}（${result.errors.join("; ")}）`);
 			}
+			refresh();
+		} catch (e) {
+			setMessage(String(e));
+		} finally {
+			setCleaning(false);
+		}
+	};
+
+	const cleanOnlineCacheNow = async () => {
+		setCleaning(true);
+		setMessage("");
+		try {
+			const before = cache?.bytes ?? 0;
+			await clearOnlineCache();
+			setMessage(
+				t("page.settings.storage.onlineCacheCleaned", "已清理在线缓存，释放 {size}", {
+					size: formatBytes(before),
+				}),
+			);
 			refresh();
 		} catch (e) {
 			setMessage(String(e));
@@ -1250,6 +1276,22 @@ const StorageSettings: FC = () => {
 							<Text size="2" weight="bold">{loading ? "…" : row.value}</Text>
 						</Flex>
 					))}
+					<Flex justify="between" align="center">
+						<Text size="2">
+							<Trans i18nKey="page.settings.storage.onlineCache">
+								在线歌曲缓存（下载的音频）
+							</Trans>
+						</Text>
+						<Text size="2" weight="bold">
+							{loading ? "…" : formatBytes(cache?.bytes ?? 0)}
+							{cache && cache.files > 0 ? (
+								<Text size="1" color="gray">
+									{" "}
+									· {cache.files}
+								</Text>
+							) : null}
+						</Text>
+					</Flex>
 				</Flex>
 			</Card>
 			<Flex gap="2" wrap="wrap" mt="3">
@@ -1261,6 +1303,9 @@ const StorageSettings: FC = () => {
 				</Button>
 				<Button variant="soft" disabled={cleaning} onClick={() => void clean("logs")}>
 					<Trans i18nKey="page.settings.storage.cleanLogs">清理日志</Trans>
+				</Button>
+				<Button variant="soft" disabled={cleaning} onClick={() => void cleanOnlineCacheNow()}>
+					<Trans i18nKey="page.settings.storage.cleanOnlineCache">清理在线缓存</Trans>
 				</Button>
 				<Button variant="soft" disabled={cleaning} onClick={refresh}>
 					<Trans i18nKey="page.settings.storage.refresh">刷新</Trans>

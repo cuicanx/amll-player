@@ -51,6 +51,7 @@ import {
 	shouldRecoverEmbeddedLyric,
 } from "../../utils/lyric-recovery.ts";
 import { SyncStatus, syncLyrics } from "../../utils/lyric-db-api.ts";
+import { preparePlaybackPath } from "../../utils/online-api.ts";
 import { PlayQueueManager } from "../../utils/play-queue-manager.ts";
 import {
 	type AudioQuality,
@@ -489,15 +490,25 @@ export const LocalMusicContext: FC = () => {
 		store.set(queueManagerAtom, queueManager);
 
 		// 恢复上次的队列信息
-		queueManager.restore().then(({ restored, position }) => {
+		queueManager.restore().then(async ({ restored, position }) => {
 			if (restored) {
 				const currentSong = queueManager.getCurrentSong();
 				if (currentSong) {
+					// Restoring a saved online song used to hand the pseudo path
+					// `online://...` straight to the decoder, which failed with
+					// os error 123. Prepare a real local file first.
+					let playPath = currentSong.filePath;
+					try {
+						playPath = await preparePlaybackPath(playPath);
+						currentSong.filePath = playPath;
+					} catch (err) {
+						console.error("[LocalMusicContext] 恢复在线歌曲失败:", err);
+					}
 					// 恢复播放进度
 					emitAudioThread("playAudio", {
 						song: {
 							songId: currentSong.id,
-							filePath: currentSong.filePath,
+							filePath: playPath,
 						},
 					});
 					emitAudioThread("pauseAudio");
