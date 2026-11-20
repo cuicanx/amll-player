@@ -122,11 +122,22 @@ pub async fn online_http(req: OnlineHttpRequest) -> Result<OnlineHttpResponse, S
     let resp = match result {
         Ok(Ok(resp)) => resp,
         Ok(Err(err)) => {
-            tracing::warn!(target: "amll_player_lib::online", "online_http {method} {url} 失败: {err}", url = %req.url);
+            tracing::warn!(
+                target: "amll_player_lib::online",
+                "online_http {} {} 失败: {}",
+                method,
+                req.url,
+                err
+            );
             return Err(err);
         }
         Err(_) => {
-            tracing::warn!(target: "amll_player_lib::online", "online_http {method} {url} 超时", url = %req.url);
+            tracing::warn!(
+                target: "amll_player_lib::online",
+                "online_http {} {} 超时",
+                method,
+                req.url
+            );
             return Err("请求超时".to_string());
         }
     };
@@ -467,15 +478,20 @@ pub async fn online_search(
     }
 
     if songs.is_empty() && !errors.is_empty() {
-        tracing::warn!(target: "amll_player_lib::online", "online_search {keyword:?} 全部失败: {}", errors.join("；"));
+        tracing::warn!(
+            target: "amll_player_lib::online",
+            "online_search {:?} 全部失败: {}",
+            keyword,
+            errors.join("；")
+        );
         return Err(errors.join("；"));
     }
     tracing::info!(
         target: "amll_player_lib::online",
-        "online_search {keyword:?} platforms={platforms:?} -> {count} 首",
-        keyword = keyword,
-        platforms = platforms,
-        count = songs.len()
+        "online_search {:?} platforms={:?} -> {} 首",
+        keyword,
+        platforms,
+        songs.len()
     );
     Ok(songs)
 }
