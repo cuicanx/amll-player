@@ -334,8 +334,10 @@ async fn resolve_kuwo(client: &reqwest::Client, info: &Value, _quality: &str) ->
 //#region kugou
 
 async fn search_kugou(client: &reqwest::Client, keyword: &str, limit: u32) -> Result<Vec<OnlineSong>, String> {
+    // Kugou's mobile CDN only answers over plain HTTP: the TLS handshake on
+    // this host fails outright, which silently produced zero results before.
     let url = format!(
-        "https://mobilecdn.kugou.com/api/v3/search/song?format=json&keyword={}&page=1&pagesize={}&showtype=1",
+        "http://mobilecdn.kugou.com/api/v3/search/song?format=json&keyword={}&page=1&pagesize={}&showtype=1",
         urlencoding::encode(keyword),
         limit
     );
@@ -448,6 +450,126 @@ async fn search_netease(client: &reqwest::Client, keyword: &str, limit: u32) -> 
 
 //#endregion
 
+//#region migu
+
+const MIGU_DEVICE_ID: &str = "963B7AA0D21511ED807EE5846EC87D20";
+const MIGU_SIGN_SALT: &str = "6cdc72a439cef99a3418d2a78aa28c73";
+const MIGU_APP_KEY: &str = "yyapp2d16148780a1dcc7408e06336b98cfd50";
+
+/// Migu signs the keyword with a fixed salt plus a millisecond timestamp,
+/// exactly like LX's `musicSdk/mg/musicSearch.js`.
+async fn search_migu(client: &reqwest::Client, keyword: &str, limit: u32) -> Result<Vec<OnlineSong>, String> {
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0)
+        .to_string();
+    let sign = format!(
+        "{:x}",
+        md5::compute(format!(
+            "{keyword}{MIGU_SIGN_SALT}{MIGU_APP_KEY}{MIGU_DEVICE_ID}{timestamp}"
+        ))
+    );
+
+    let url = format!(
+        "https://jadeite.migu.cn/music_search/v3/search/searchAll?isCorrect=0&isCopyright=1&searchSwitch=%7B%22song%22%3A1%2C%22album%22%3A0%2C%22singer%22%3A0%2C%22tagSong%22%3A1%2C%22mvSong%22%3A0%2C%22bestShow%22%3A1%2C%22songlist%22%3A0%2C%22lyricSong%22%3A0%7D&pageSize={limit}&text={}&pageNo=1&sort=0&sid=USS",
+        urlencoding::encode(keyword)
+    );
+
+    let resp = client
+        .get(&url)
+        .header("uiVersion", "A_music_3.6.1")
+        .header("deviceId", MIGU_DEVICE_ID)
+        .header("timestamp", &timestamp)
+        .header("sign", &sign)
+        .header("channel", "0146921")
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Linux; U; Android 11.0.0; zh-cn; MI 11 Build/OPR1.170623.032) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
+        )
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+    if json.get("code").and_then(|v| v.as_str()) != Some("000000") {
+        return Err(format!(
+            "咪咕返回错误: {}",
+            json.get("info").and_then(|v| v.as_str()).unwrap_or("未知")
+        ));
+    }
+
+    let groups = json
+        .get("songResultData")
+        .and_then(|d| d.get("resultList"))
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let mut seen = std::collections::HashSet::new();
+    let mut songs = Vec::new();
+    for group in groups {
+        let Some(items) = group.as_array() else { continue };
+        for item in items {
+            let Some(song_id) = item.get("songId").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            let copyright = item
+                .get("copyrightId")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
+            if song_id.is_empty() || copyright.is_empty() || !seen.insert(copyright.clone()) {
+                continue;
+            }
+
+            let mut song = OnlineSong::new("mg", song_id.to_string());
+            song.songmid = song_id.to_string();
+            song.name = decode_entities(item.get("name").and_then(|v| v.as_str()).unwrap_or_default());
+            song.singer = item
+                .get("singerList")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|a| a.get("name").and_then(|v| v.as_str()))
+                        .collect::<Vec<_>>()
+                        .join(" / ")
+                })
+                .unwrap_or_default();
+            song.album_name = item
+                .get("album")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
+            song.album_id = item
+                .get("albumId")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
+            song.interval = item
+                .get("duration")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as u32;
+            song.cover_url = item
+                .get("img")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
+
+            let mut extra = item.clone();
+            if let Some(map) = extra.as_object_mut() {
+                map.insert("copyrightId".into(), Value::String(copyright));
+                map.insert("songId".into(), Value::String(song_id.to_string()));
+            }
+            song.extra = extra;
+            songs.push(song);
+        }
+    }
+    Ok(songs)
+}
+
+//#endregion
+
 #[tauri::command]
 pub async fn online_search(
     keyword: String,
@@ -469,6 +591,7 @@ pub async fn online_search(
             "kw" => search_kuwo(&client, &keyword, limit).await,
             "kg" => search_kugou(&client, &keyword, limit).await,
             "wy" => search_netease(&client, &keyword, limit).await,
+            "mg" => search_migu(&client, &keyword, limit).await,
             other => Err(format!("暂不支持平台 {other}")),
         };
         match result {

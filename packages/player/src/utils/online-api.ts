@@ -34,7 +34,7 @@ export interface OnlineSong {
 const BUILTIN_PLATFORMS: OnlinePlatform[] = ["kw"];
 
 /** Platforms the Rust backend knows how to search. */
-const SEARCHABLE: OnlinePlatform[] = ["kw", "kg", "wy"];
+const SEARCHABLE: OnlinePlatform[] = ["kw", "kg", "wy", "mg"];
 
 /** A song everyone has, used to check whether a source really works. */
 const PROBE_SONG: OnlineSong = {
@@ -246,6 +246,14 @@ function qualitiesFor(runtime: LxSourceRuntime, platform: string): string[] {
 	return usable.length > 0 ? usable : ["128k"];
 }
 
+/** Which source actually resolved the last song - shown in the UI. */
+type ResolveObserver = (via: string) => void;
+let resolveObserver: ResolveObserver | null = null;
+
+export function setResolveObserver(observer: ResolveObserver | null): void {
+	resolveObserver = observer;
+}
+
 /** Resolve a playable URL, custom sources first, built-in resolver last. */
 export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
 	const errors: string[] = [];
@@ -256,15 +264,20 @@ export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
 		// be fine again, and trying it costs one request at most.
 		const runtime = runtimeFor(source);
 		try {
-			if (!runtime.sources[song.source]) continue;
+			// Initialise FIRST: `runtime.sources` is empty until the script has
+			// sent its `inited` event, so checking it before init made every
+			// source look unsupported and silently fell back to the built-in.
 			if (!(await ensureRuntimeReady(source))) {
 				errors.push(`${source.name}: 初始化失败`);
 				continue;
 			}
+			if (!runtime.sources[song.source]) continue;
 			const info = toMusicInfo(song);
 			for (const quality of qualitiesFor(runtime, song.source)) {
 				try {
-					return await runtime.musicUrl(song.source, info, quality);
+					const url = await runtime.musicUrl(song.source, info, quality);
+					resolveObserver?.(source.name);
+					return url;
 				} catch (err) {
 					errors.push(`${source.name}/${quality}: ${(err as Error)?.message ?? err}`);
 				}
@@ -275,11 +288,13 @@ export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
 	}
 
 	try {
-		return await invoke<string>("online_resolve", {
+		const url = await invoke<string>("online_resolve", {
 			platform: song.source,
 			info: toMusicInfo(song),
 			quality: "320k",
 		});
+		resolveObserver?.("内置音源");
+		return url;
 	} catch (err) {
 		const detail = errors.length > 0 ? `（音源尝试：${errors.slice(0, 3).join("；")}）` : "";
 		throw new Error(`${(err as Error)?.message ?? err}${detail}`);

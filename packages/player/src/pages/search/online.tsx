@@ -29,6 +29,7 @@ import {
 	fetchOnlineMeta,
 	onlineSearch,
 	prepareOnlineSong,
+	setResolveObserver,
 	toOnlinePath,
 } from "../../utils/online-api.ts";
 
@@ -65,6 +66,15 @@ export const OnlineSearchPage: FC = () => {
 		inputRef.current?.focus();
 		db.playlists.getAll().then(setPlaylists).catch(() => {});
 	}, []);
+
+	// Show which source actually resolved the song, so it is obvious whether a
+	// custom source is being used or the built-in fallback kicked in.
+	useEffect(() => {
+		setResolveObserver((via) => {
+			setMessage(t("page.online.via", "已通过「{via}」解析", { via }));
+		});
+		return () => setResolveObserver(null);
+	}, [t]);
 
 	const runSearch = useCallback(async (text: string) => {
 		const trimmed = text.trim();
