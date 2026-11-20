@@ -133,6 +133,7 @@ export function resetOnlineRuntimeCache(): void {
 	runtimes.clear();
 	health.clear();
 	ready.clear();
+	resolveFailures.clear();
 	try {
 		localStorage.removeItem("amll-player.sourceHealth");
 	} catch {
@@ -281,12 +282,19 @@ export function setResolveObserver(observer: ResolveObserver | null): void {
 	resolveObserver = observer;
 }
 
+/** Consecutive resolve failures per source, used to stop hammering dead ones. */
+const resolveFailures = new Map<string, number>();
+const MAX_RESOLVE_FAILURES = 2;
+
 /** Resolve a playable URL, custom sources first, built-in resolver last. */
 export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
 	const errors: string[] = [];
 
 	for (const source of loadSources()) {
 		if (!source.enabled) continue;
+		// An unreachable source (e.g. a dead API host) fails every time; after a
+		// couple of tries stop paying for its round-trips in this session.
+		if ((resolveFailures.get(source.id) ?? 0) >= MAX_RESOLVE_FAILURES) continue;
 		// No health gating here: a source marked unavailable earlier may already
 		// be fine again, and trying it costs one request at most.
 		const runtime = runtimeFor(source);
@@ -304,6 +312,7 @@ export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
 				try {
 					const url = await runtime.musicUrl(song.source, info, quality);
 					devLog(`resolve ${song.source}/${song.id} ok via ${source.name}/${quality}`);
+					resolveFailures.delete(source.id);
 					resolveObserver?.(source.name);
 					return url;
 				} catch (err) {
@@ -312,9 +321,11 @@ export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
 					devLog(`resolve ${song.source}/${song.id} fail via ${source.name}/${quality}: ${message}`);
 				}
 			}
+			resolveFailures.set(source.id, (resolveFailures.get(source.id) ?? 0) + 1);
 		} catch (err) {
 			const message = (err as Error)?.message ?? String(err);
 			errors.push(`${source.name}: ${message}`);
+			resolveFailures.set(source.id, (resolveFailures.get(source.id) ?? 0) + 1);
 			devLog(`resolve ${song.source}/${song.id} source ${source.name} threw: ${message}`);
 		}
 	}
