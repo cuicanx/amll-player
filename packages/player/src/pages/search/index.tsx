@@ -13,11 +13,13 @@ import {
 	Text,
 	TextField,
 } from "@radix-ui/themes";
-import { atom, useAtom } from "jotai";
+import { atom, useAtom, useAtomValue } from "jotai";
 import { type ButtonHTMLAttributes, type FC, useCallback, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AppContainer } from "../../components/AppContainer/index.tsx";
 import { PlaylistCard } from "../../components/PlaylistCard/index.tsx";
+import { isOnlineModeAtom } from "../../states/play-mode.ts";
+import { OnlineSearchPage } from "./online.tsx";
 import { SongCard } from "../../components/SongCard/index.tsx";
 import { db } from "../../utils/db-client.ts";
 import { useDbQuery } from "../../utils/use-db-query.ts";
@@ -44,7 +46,7 @@ interface Filter {
 const filtersAtom = atom([] as Filter[]);
 const keywordAtom = atom("");
 
-export const Component: FC = () => {
+export const LocalSearchPage: FC = () => {
 	const [filters, setFilters] = useAtom(filtersAtom);
 	const [keyword, setKeyword] = useAtom(keywordAtom);
 	const trimmedKeyword = keyword.trim();
@@ -343,6 +345,15 @@ export const Component: FC = () => {
 			</Container>
 		</AppContainer>
 	);
+};
+
+/**
+ * The search page serves both modes: online mode swaps in the streaming search
+ * while the local filter UI keeps its previous behaviour untouched.
+ */
+export const Component: FC = () => {
+	const onlineMode = useAtomValue(isOnlineModeAtom);
+	return onlineMode ? <OnlineSearchPage /> : <LocalSearchPage />;
 };
 
 Component.displayName = "SearchPage";

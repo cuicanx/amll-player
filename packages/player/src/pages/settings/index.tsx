@@ -3,6 +3,7 @@ import {
 	Component1Icon,
 	DesktopIcon,
 	GearIcon,
+	GlobeIcon,
 	HamburgerMenuIcon,
 	InfoCircledIcon,
 	MagicWandIcon,
@@ -93,6 +94,11 @@ const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({
 				id: "general",
 				label: t("page.settings.general.subtitle"),
 				icon: <GearIcon width={20} height={20} />,
+			},
+			{
+				id: "online",
+				label: t("page.settings.online.subtitle", "在线音源"),
+				icon: <GlobeIcon width={20} height={20} />,
 			},
 			{
 				id: "lyricContent",

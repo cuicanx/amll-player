@@ -18,6 +18,7 @@ use crate::server::AMLLWebSocketServerWrapper;
 mod db;
 mod db_events;
 mod log_level;
+mod online;
 mod storage;
 #[cfg(target_os = "linux")]
 mod linux_graphics;
@@ -279,6 +280,9 @@ pub fn run() {
             storage::storage_usage,
             storage::storage_clean,
             log_level::set_log_level,
+            online::online_http,
+            online::online_search,
+            online::online_resolve,
             updater::updater_check,
             updater::updater_install,
             db::commands::update_song,

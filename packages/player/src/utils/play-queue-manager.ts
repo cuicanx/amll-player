@@ -8,6 +8,7 @@ import { atom, type createStore, type PrimitiveAtom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import type { Song } from "./db-client.ts";
 import { db } from "./db-client.ts";
+import { isOnlinePath, resolveOnlinePath } from "./online-api.ts";
 import { emitAudioThread } from "./player.ts";
 
 type JotaiStore = ReturnType<typeof createStore>;
@@ -152,6 +153,23 @@ export class PlayQueueManager {
 		this.currentIndex = index;
 		this.syncToAtoms();
 		const song = this.playList[index];
+
+		// Songs saved from the online search keep a pseudo path: the real URL is
+		// signed and expires, so it is resolved again on every playback. Local
+		// files never enter this branch.
+		if (isOnlinePath(song.filePath)) {
+			void resolveOnlinePath(song.filePath)
+				.then((url) => {
+					emitAudioThread("playAudio", {
+						song: { songId: song.id, filePath: url },
+					});
+				})
+				.catch((err) => {
+					console.error("[PlayQueueManager] 在线歌曲解析失败:", err);
+				});
+			return;
+		}
+
 		emitAudioThread("playAudio", {
 			song: {
 				songId: song.id,

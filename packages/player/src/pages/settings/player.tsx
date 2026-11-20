@@ -35,6 +35,7 @@ import {
 } from "@applemusic-like-lyrics/react-full";
 import {
 	Avatar,
+	Badge,
 	Box,
 	Button,
 	Card,
@@ -52,6 +53,8 @@ import {
 } from "@radix-ui/themes";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
+import { readTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { platform } from "@tauri-apps/plugin-os";
 import { atom, useAtom, useAtomValue, useSetAtom, type WritableAtom } from "jotai";
@@ -68,6 +71,7 @@ import React, {
 	type PropsWithChildren,
 	type ReactNode,
 	Suspense,
+	useCallback,
 	useEffect,
 	useLayoutEffect,
 	useMemo,
@@ -118,7 +122,20 @@ import {
 	setLogLevel,
 	type StorageUsage,
 } from "../../utils/storage-api.ts";
-import about from "./about.module.css";
+import {
+	ensureSourceHealth,
+	fetchSourceFromUrl,
+	resetOnlineRuntimeCache,
+} from "../../utils/online-api.ts";
+import {
+	importSource,
+	loadSources,
+	removeSource,
+	restoreBuiltinSources,
+	type StoredSource,
+	updateSource,
+} from "../../utils/online-sources.ts";
+import { BOOT_PLAY_MODE, type PlayMode, savedPlayModeAtom } from "../../states/play-mode.ts";import about from "./about.module.css";
 import styles from "./index.module.css";
 
 const SettingEntry: FC<
@@ -334,6 +351,60 @@ function SliderSettings<T extends number | number[]>({
 	);
 }
 
+/**
+ * Local / online switch.
+ *
+ * The effective mode is frozen at boot (`BOOT_PLAY_MODE`), so picking a new
+ * value only stores it for the next launch - exactly what the label promises -
+ * and offers a restart button for convenience.
+ */
+const PlayModeSetting: FC = () => {
+	const { t } = useTranslation();
+	const [saved, setSaved] = useAtom(savedPlayModeAtom);
+	const pending = saved !== BOOT_PLAY_MODE;
+	const options: { value: PlayMode; label: string }[] = [
+		{ value: "local", label: t("page.settings.general.playMode.local", "本地模式") },
+		{ value: "online", label: t("page.settings.general.playMode.online", "在线模式") },
+	];
+
+	return (
+		<SettingEntry
+			label={t("page.settings.general.playMode.label", "播放模式")}
+			description={t(
+				"page.settings.general.playMode.description",
+				"本地模式只播放电脑里的歌曲；在线模式在搜索页联网搜索并直接播放。切换后于下次启动生效。",
+			)}
+		>
+			<Flex direction="column" align="end" gap="2">
+				<Flex gap="1">
+					{options.map((option) => (
+						<Button
+							key={option.value}
+							size="2"
+							variant={saved === option.value ? "solid" : "soft"}
+							onClick={() => setSaved(option.value)}
+						>
+							{option.label}
+						</Button>
+					))}
+				</Flex>
+				{pending ? (
+					<Flex gap="2" align="center">
+						<Text size="1" color="gray">
+							<Trans i18nKey="page.settings.general.playMode.pending">
+								已保存，重启后生效
+							</Trans>
+						</Text>
+						<Button size="1" variant="soft" onClick={() => void restartApp()}>
+							<Trans i18nKey="page.settings.general.playMode.restart">立即重启</Trans>
+						</Button>
+					</Flex>
+				) : null}
+			</Flex>
+		</SettingEntry>
+	);
+};
+
 const GeneralSettings = () => {
 	const { t } = useTranslation();
 	const [mode, setMode] = useAtom(darkModeAtom);
@@ -367,6 +438,7 @@ const GeneralSettings = () => {
 			<SubTitle>
 				<Trans i18nKey="page.settings.general.subtitle">常规</Trans>
 			</SubTitle>
+			<PlayModeSetting />
 			<SettingEntry
 				label={t("page.settings.general.displayLanguage.label", "显示语言")}
 			>
@@ -1198,6 +1270,213 @@ const StorageSettings: FC = () => {
 	);
 };
 
+/**
+ * Custom source manager, compatible with lx-music-desktop 自定义源 scripts.
+ *
+ * Sources are only a way to *resolve* a playable URL; searching is done by the
+ * app itself. A source that cannot resolve anything is shown as unavailable and
+ * is skipped at playback time, so a broken third-party source never blocks the
+ * built-in direct resolver.
+ */
+const OnlineSourceSettings: FC = () => {
+	const { t } = useTranslation();
+	const [sources, setSources] = useState<StoredSource[]>([]);
+	const [health, setHealth] = useState<Record<string, { ok: boolean; message: string }>>({});
+	const [busy, setBusy] = useState("");
+	const [message, setMessage] = useState("");
+	const [url, setUrl] = useState("");
+
+	const refresh = useCallback(() => setSources(loadSources()), []);
+
+	useEffect(() => {
+		refresh();
+	}, [refresh]);
+
+	const check = async () => {
+		setBusy("check");
+		setMessage("");
+		try {
+			const map = await ensureSourceHealth(true);
+			const next: Record<string, { ok: boolean; message: string }> = {};
+			map.forEach((value, key) => {
+				next[key] = value;
+			});
+			setHealth(next);
+			setMessage(t("page.settings.online.checked", "检测完成，可用状态已更新"));
+		} catch (err) {
+			setMessage((err as Error)?.message ?? String(err));
+		} finally {
+			setBusy("");
+		}
+	};
+
+	const importFromFile = async () => {
+		setBusy("file");
+		setMessage("");
+		try {
+			const picked = await open({
+				multiple: false,
+				filters: [{ name: "洛雪音源", extensions: ["js"] }],
+			});
+			if (!picked || typeof picked !== "string") return;
+			const raw = await readTextFile(picked);
+			const source = importSource(raw);
+			resetOnlineRuntimeCache();
+			refresh();
+			setMessage(
+				t("page.settings.online.imported", "已导入「{name}」", { name: source.name }),
+			);
+		} catch (err) {
+			setMessage(
+				t("page.settings.online.importFailed", "导入失败：{error}", {
+					error: (err as Error)?.message ?? String(err),
+				}),
+			);
+		} finally {
+			setBusy("");
+		}
+	};
+
+	const importFromUrl = async () => {
+		if (!url.trim()) return;
+		setBusy("url");
+		setMessage("");
+		try {
+			const raw = await fetchSourceFromUrl(url.trim());
+			const source = importSource(raw);
+			resetOnlineRuntimeCache();
+			refresh();
+			setUrl("");
+			setMessage(
+				t("page.settings.online.imported", "已导入「{name}」", { name: source.name }),
+			);
+		} catch (err) {
+			setMessage(
+				t("page.settings.online.importFailed", "导入失败：{error}", {
+					error: (err as Error)?.message ?? String(err),
+				}),
+			);
+		} finally {
+			setBusy("");
+		}
+	};
+
+	const toggle = (source: StoredSource) => {
+		updateSource(source.id, { enabled: !source.enabled });
+		resetOnlineRuntimeCache();
+		refresh();
+	};
+
+	const remove = (source: StoredSource) => {
+		removeSource(source.id);
+		resetOnlineRuntimeCache();
+		refresh();
+	};
+
+	const restore = () => {
+		restoreBuiltinSources();
+		resetOnlineRuntimeCache();
+		refresh();
+		setMessage(t("page.settings.online.restored", "已恢复内置音源"));
+	};
+
+	return (
+		<>
+			<SubTitle>
+				<Trans i18nKey="page.settings.online.subtitle">在线音源</Trans>
+			</SubTitle>
+			<Text as="div" color="gray" size="2" mb="3">
+				<Trans i18nKey="page.settings.online.tip">
+					这里管理兼容洛雪音乐的自定义音源。音源负责把歌曲解析成可播放地址，搜索由软件自身完成；音源不可用时会自动改用内置直连。
+				</Trans>
+			</Text>
+
+			<Flex gap="2" wrap="wrap" align="center">
+				<Button variant="solid" disabled={busy !== ""} onClick={() => void importFromFile()}>
+					<Trans i18nKey="page.settings.online.importFile">导入文件</Trans>
+				</Button>
+				<Button variant="soft" disabled={busy !== ""} onClick={() => void check()}>
+					<Trans i18nKey="page.settings.online.check">检测可用性</Trans>
+				</Button>
+				<Button variant="soft" onClick={restore}>
+					<Trans i18nKey="page.settings.online.restore">恢复内置音源</Trans>
+				</Button>
+			</Flex>
+
+			<Flex gap="2" mt="2" align="center">
+				<TextField.Root
+					placeholder={t("page.settings.online.urlPlaceholder", "粘贴音源 js 链接")}
+					value={url}
+					onChange={(evt) => setUrl(evt.target.value)}
+					style={{ flexGrow: 1 }}
+				/>
+				<Button variant="soft" disabled={busy !== "" || !url.trim()} onClick={() => void importFromUrl()}>
+					<Trans i18nKey="page.settings.online.importUrl">从链接导入</Trans>
+				</Button>
+			</Flex>
+
+			{message ? (
+				<Text as="div" size="2" color="gray" mt="2">
+					{message}
+				</Text>
+			) : null}
+
+			<Flex direction="column" gap="2" mt="3">
+				{sources.map((source) => {
+					const status = health[source.id];
+					return (
+						<Card key={source.id}>
+							<Flex align="center" gap="3" wrap="wrap">
+								<Flex direction="column" flexGrow="1" style={{ minWidth: 0 }}>
+									<Flex align="center" gap="2" wrap="wrap">
+										<Text weight="bold">{source.name}</Text>
+										{source.version ? (
+											<Text size="1" color="gray">
+												v{source.version}
+											</Text>
+										) : null}
+										{source.builtin ? (
+											<Badge size="1" variant="soft">
+												<Trans i18nKey="page.settings.online.builtin">内置</Trans>
+											</Badge>
+										) : null}
+										{!source.enabled ? (
+											<Badge size="1" color="gray" variant="soft">
+												<Trans i18nKey="page.settings.online.disabled">已停用</Trans>
+											</Badge>
+										) : status ? (
+											<Badge size="1" color={status.ok ? "grass" : "red"} variant="soft">
+												{status.ok
+													? t("page.settings.online.available", "可用")
+													: t("page.settings.online.unavailable", "不可用")}
+											</Badge>
+										) : null}
+									</Flex>
+									<Text size="1" color="gray" truncate>
+										{status && !status.ok ? status.message : source.description || source.author}
+									</Text>
+								</Flex>
+								<Flex gap="2">
+									<Button size="1" variant="soft" onClick={() => toggle(source)}>
+										{source.enabled ? (
+											<Trans i18nKey="page.settings.online.disable">停用</Trans>
+										) : (
+											<Trans i18nKey="page.settings.online.enable">启用</Trans>
+										)}
+									</Button>
+									<Button size="1" variant="soft" color="red" onClick={() => remove(source)}>
+										<Trans i18nKey="page.settings.online.remove">删除</Trans>
+									</Button>
+								</Flex>
+							</Flex>
+						</Card>
+					);
+				})}
+			</Flex>
+		</>
+	);
+};
+
 const OthersSettings = () => {
 	const { t } = useTranslation();
 	return (
@@ -1899,6 +2178,8 @@ export const PlayerSettingsTab: FC<{ category: string }> = ({ category }) => {
 			return <ContextMenuSettings />;
 		case "storage":
 			return <StorageSettings />;
+		case "online":
+			return <OnlineSourceSettings />;
 		case "taskbarLyric":
 			return <TaskbarLyricSettings />;
 		case "about":
