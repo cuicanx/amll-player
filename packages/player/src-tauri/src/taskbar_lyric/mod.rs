@@ -118,6 +118,12 @@ pub fn open_taskbar_lyric(app: tauri::AppHandle) {
         let url = tauri::WebviewUrl::App("taskbar-lyric.html".into());
 
         let win_builder = tauri::WebviewWindowBuilder::new(&app_clone, "taskbar-lyric", url)
+            // Never show Tauri's default "Tauri App" title if the window is
+            // briefly visible before the taskbar embed finishes.
+            .title("")
+            // Start at 1x1: even a stray frame has nothing to paint. The layout
+            // callback resizes it to the real taskbar slot after embedding.
+            .inner_size(1.0, 1.0)
             // No native decorations: a transparent window WITH decorations
             // painted a titlebar frame for one frame before the embed.
             .decorations(false)
@@ -139,15 +145,6 @@ pub fn open_taskbar_lyric(app: tauri::AppHandle) {
             .visible(false);
 
         if let Ok(win) = win_builder.build() {
-            {
-                let win_for_fallback = win.clone();
-                tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
-                    if let Ok(false) = win_for_fallback.is_visible() {
-                        let _ = win_for_fallback.show();
-                    }
-                });
-            }
             if let Ok(hwnd) = win.hwnd() {
                 let hwnd_ptr = hwnd.0 as usize;
                 let top_hwnd = HWND(hwnd.0.cast());
@@ -231,7 +228,7 @@ pub fn open_taskbar_lyric(app: tauri::AppHandle) {
                 // disappears" flash.
                 let win_show = win.clone();
                 tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_millis(180)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(400)).await;
                     let _ = win_show.show();
                 });
             } else {

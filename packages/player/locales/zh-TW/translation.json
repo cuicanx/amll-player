@@ -512,6 +512,29 @@
 				"screenshotDesc": "在右鍵選單中顯示「開啟截圖工具」",
 				"exitLyricPage": "退出歌詞頁面",
 				"exitLyricPageDesc": "在右鍵選單中顯示「退出歌詞頁面」"
+			},
+			"storage": {
+				"subtitle": "儲存空間管理",
+				"tip": "顯示軟體佔用的磁碟空間。清理只會刪除可再生的快取與舊日誌，不會刪除曲庫、歌單、歌詞庫或擴充。",
+				"total": "軟體目前佔用",
+				"cache": "快取佔用（封面）",
+				"logs": "日誌佔用",
+				"musicCache": "音訊快取佔用",
+				"cleanAll": "一鍵清理",
+				"cleanCache": "清理快取",
+				"cleanLogs": "清理日誌",
+				"refresh": "重新整理",
+				"cleaned": "已清理 {count} 個檔案，釋放 {size}"
+			},
+			"logLevel": {
+				"label": "啟動除錯 LOG 等級",
+				"description": "選擇下次啟動時記錄的詳細程度。更改後需重新啟動程式生效。",
+				"debug": "除錯",
+				"normal": "正常",
+				"off": "關閉",
+				"debugHint": "記錄最詳細的資訊，用於排查問題；日誌增長較快。",
+				"normalHint": "預設檔位，只記錄運作狀況與重要警告。",
+				"offHint": "不寫日誌；節省磁碟佔用，出問題時無記錄可查。"
 			}
 		},
 		"song": {

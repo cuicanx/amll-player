@@ -514,6 +514,29 @@
 				"screenshotDesc": "在右键菜单中显示「打开截图工具」",
 				"exitLyricPage": "退出歌词页面",
 				"exitLyricPageDesc": "在右键菜单中显示「退出歌词页面」"
+			},
+			"storage": {
+				"subtitle": "存储空间管理",
+				"tip": "显示软件占用的磁盘空间。清理只会删除可再生的缓存与旧日志，不会删除曲库、歌单、歌词库或扩展。",
+				"total": "软件当前占用",
+				"cache": "缓存占用（封面）",
+				"logs": "日志占用",
+				"musicCache": "音频缓存占用",
+				"cleanAll": "一键清理",
+				"cleanCache": "清理缓存",
+				"cleanLogs": "清理日志",
+				"refresh": "刷新",
+				"cleaned": "已清理 {count} 个文件，释放 {size}"
+			},
+			"logLevel": {
+				"label": "启动调试 LOG 等级",
+				"description": "选择下次启动时记录的详细程度。更改后需重启程序生效。",
+				"debug": "调试",
+				"normal": "正常",
+				"off": "关闭",
+				"debugHint": "记录最详细的信息，用于排查问题；日志增长较快。",
+				"normalHint": "默认档位，只记录运行状况与重要警告。",
+				"offHint": "不写日志；节省磁盘占用，出问题时无记录可查。"
 			}
 		},
 		"song": {

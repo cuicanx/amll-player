@@ -110,6 +110,14 @@ import {
 	UPDATE_RELEASE_PAGE,
 } from "../../states/updater.ts";
 import { restartApp } from "../../utils/player.ts";
+import {
+	cleanStorage,
+	formatBytes,
+	getStorageUsage,
+	type LogLevel,
+	setLogLevel,
+	type StorageUsage,
+} from "../../utils/storage-api.ts";
 import about from "./about.module.css";
 import styles from "./index.module.css";
 
@@ -1031,6 +1039,165 @@ const LyricBackgroundSettings = () => {
 	);
 };
 
+
+/** Button-group selector for the startup log level. Takes effect next launch. */
+const LogLevelSetting: FC = () => {
+	const { t } = useTranslation();
+	const [level, setLevel] = useState<LogLevel>(() => {
+		try {
+			const raw = localStorage.getItem("amll-player.logLevel") as LogLevel | null;
+			return raw === "debug" || raw === "off" ? raw : "normal";
+		} catch {
+			return "normal";
+		}
+	});
+	const [busy, setBusy] = useState(false);
+
+	const options: { value: LogLevel; label: string; hint: string }[] = [
+		{
+			value: "debug",
+			label: t("page.settings.logLevel.debug", "调试"),
+			hint: t("page.settings.logLevel.debugHint", "记录最详细的信息，用于排查问题；日志增长较快。"),
+		},
+		{
+			value: "normal",
+			label: t("page.settings.logLevel.normal", "正常"),
+			hint: t("page.settings.logLevel.normalHint", "默认档位，只记录运行状况与重要警告。"),
+		},
+		{
+			value: "off",
+			label: t("page.settings.logLevel.off", "关闭"),
+			hint: t("page.settings.logLevel.offHint", "不写日志；节省磁盘占用，出问题时无记录可查。"),
+		},
+	];
+
+	const choose = async (next: LogLevel) => {
+		if (busy || next === level) return;
+		setBusy(true);
+		try {
+			await setLogLevel(next);
+			localStorage.setItem("amll-player.logLevel", next);
+			setLevel(next);
+		} finally {
+			setBusy(false);
+		}
+	};
+
+	return (
+		<SettingEntry
+			label={t("page.settings.logLevel.label", "启动调试 LOG 等级")}
+			description={t("page.settings.logLevel.description", "选择下次启动时记录的详细程度。更改后需重启程序生效。")}
+		>
+			<Flex gap="1" wrap="wrap">
+				{options.map((option) => (
+					<Button
+						key={option.value}
+						size="2"
+						variant={level === option.value ? "solid" : "soft"}
+						disabled={busy}
+						title={option.hint}
+						onClick={() => void choose(option.value)}
+					>
+						{option.label}
+					</Button>
+				))}
+			</Flex>
+		</SettingEntry>
+	);
+};
+
+/** Storage manager: shows real folder sizes and cleans only disposable data. */
+const StorageSettings: FC = () => {
+	const { t } = useTranslation();
+	const [usage, setUsage] = useState<StorageUsage | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [cleaning, setCleaning] = useState(false);
+	const [message, setMessage] = useState("");
+
+	const refresh = () => {
+		setLoading(true);
+		getStorageUsage()
+			.then(setUsage)
+			.catch((e) => setMessage(String(e)))
+			.finally(() => setLoading(false));
+	};
+
+	useEffect(() => {
+		refresh();
+	}, []);
+
+	const clean = async (which: "covers" | "logs" | "music" | "all") => {
+		setCleaning(true);
+		setMessage("");
+		try {
+			const result = await cleanStorage({
+				cleanCovers: which === "covers" || which === "all",
+				cleanLogs: which === "logs" || which === "all",
+				cleanMusicCache: which === "music" || which === "all",
+			});
+			setMessage(
+				t("page.settings.storage.cleaned", "已清理 {count} 个文件，释放 {size}", {
+					count: result.deletedFiles,
+					size: formatBytes(result.freedBytes),
+				}),
+			);
+			if (result.errors.length) {
+				setMessage((prev) => `${prev}（${result.errors.join("; ")}）`);
+			}
+			refresh();
+		} catch (e) {
+			setMessage(String(e));
+		} finally {
+			setCleaning(false);
+		}
+	};
+
+	const rows: { key: keyof StorageUsage | "total"; label: string; value: string }[] = [
+		{ key: "total", label: t("page.settings.storage.total", "软件当前占用"), value: formatBytes(usage?.totalBytes ?? 0) },
+		{ key: "cacheBytes", label: t("page.settings.storage.cache", "缓存占用（封面）"), value: formatBytes(usage?.cacheBytes ?? 0) },
+		{ key: "logBytes", label: t("page.settings.storage.logs", "日志占用"), value: formatBytes(usage?.logBytes ?? 0) },
+		{ key: "musicCacheBytes", label: t("page.settings.storage.musicCache", "音频缓存占用"), value: formatBytes(usage?.musicCacheBytes ?? 0) },
+	];
+
+	return (
+		<>
+			<SubTitle>
+				<Trans i18nKey="page.settings.storage.subtitle">存储空间管理</Trans>
+			</SubTitle>
+			<Text as="div" color="gray" size="2" mb="3">
+				<Trans i18nKey="page.settings.storage.tip">
+					显示软件占用的磁盘空间。清理只会删除可再生的缓存与旧日志，不会删除曲库、歌单、歌词库或扩展。
+				</Trans>
+			</Text>
+			<Card mt="2">
+				<Flex direction="column" gap="2">
+					{rows.map((row) => (
+						<Flex key={row.key} justify="between" align="center">
+							<Text size="2">{row.label}</Text>
+							<Text size="2" weight="bold">{loading ? "…" : row.value}</Text>
+						</Flex>
+					))}
+				</Flex>
+			</Card>
+			<Flex gap="2" wrap="wrap" mt="3">
+				<Button variant="solid" disabled={cleaning} onClick={() => void clean("all")}>
+					<Trans i18nKey="page.settings.storage.cleanAll">一键清理</Trans>
+				</Button>
+				<Button variant="soft" disabled={cleaning} onClick={() => void clean("covers")}>
+					<Trans i18nKey="page.settings.storage.cleanCache">清理缓存</Trans>
+				</Button>
+				<Button variant="soft" disabled={cleaning} onClick={() => void clean("logs")}>
+					<Trans i18nKey="page.settings.storage.cleanLogs">清理日志</Trans>
+				</Button>
+				<Button variant="soft" disabled={cleaning} onClick={refresh}>
+					<Trans i18nKey="page.settings.storage.refresh">刷新</Trans>
+				</Button>
+			</Flex>
+			{message ? <Text as="div" size="2" color="gray" mt="2">{message}</Text> : null}
+		</>
+	);
+};
+
 const OthersSettings = () => {
 	const { t } = useTranslation();
 	return (
@@ -1038,6 +1205,7 @@ const OthersSettings = () => {
 			<SubTitle>
 				<Trans i18nKey="page.settings.others.subtitle">杂项</Trans>
 			</SubTitle>
+			<LogLevelSetting />
 			<SwitchSettings
 				label={t(
 					"page.settings.others.showStatJSFrame.label",
@@ -1729,6 +1897,8 @@ export const PlayerSettingsTab: FC<{ category: string }> = ({ category }) => {
 			return <OthersSettings />;
 		case "contextMenu":
 			return <ContextMenuSettings />;
+		case "storage":
+			return <StorageSettings />;
 		case "taskbarLyric":
 			return <TaskbarLyricSettings />;
 		case "about":

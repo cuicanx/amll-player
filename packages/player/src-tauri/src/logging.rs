@@ -6,7 +6,7 @@ use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberI
 #[expect(dead_code)]
 pub struct LogGuard(tracing_appender::non_blocking::WorkerGuard);
 
-pub fn init_logging(log_dir: &Path) -> LogGuard {
+pub fn init_logging(log_dir: &Path, directive: &str) -> LogGuard {
     let _ = std::fs::create_dir_all(log_dir);
 
     let file_appender = RollingFileAppender::builder()
@@ -19,11 +19,10 @@ pub fn init_logging(log_dir: &Path) -> LogGuard {
 
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        EnvFilter::new(
-            "amll_player=trace,wry=info,taskbar_lyric=warn,now_playing_controls=warn,ffmpeg=warn",
-        )
-    });
+    // The stored level wins; RUST_LOG from the environment can still override
+    // it for one-off diagnostics by an advanced user.
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(directive));
 
     let file_layer = fmt::layer()
         .with_writer(non_blocking)

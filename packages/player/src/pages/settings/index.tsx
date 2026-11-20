@@ -124,6 +124,11 @@ const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({
 				label: t("page.settings.contextMenu.subtitle", "右键菜单设置"),
 				icon: <HamburgerMenuIcon width={20} height={20} />,
 			},
+			{
+				id: "storage",
+				label: t("page.settings.storage.subtitle", "存储空间管理"),
+				icon: <Component1Icon width={20} height={20} />,
+			},
 		];
 
 		if (os === "windows") {

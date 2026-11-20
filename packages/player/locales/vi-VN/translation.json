@@ -512,6 +512,29 @@
 				"screenshotDesc": "Hiện “Mở công cụ chụp màn hình” trong menu",
 				"exitLyricPage": "Thoát trang lời bài hát",
 				"exitLyricPageDesc": "Hiện “Thoát trang lời bài hát” trong menu"
+			},
+			"storage": {
+				"subtitle": "Quản lý bộ nhớ",
+				"tip": "Hiển thị dung lượng ứng dụng đang dùng. Dọn dẹp chỉ xóa bộ nhớ đệm và nhật ký cũ; thư viện, danh sách phát, cơ sở dữ liệu lời bài hát và tiện ích không bị ảnh hưởng.",
+				"total": "Tổng đang dùng",
+				"cache": "Bộ nhớ đệm (bìa)",
+				"logs": "Nhật ký",
+				"musicCache": "Bộ nhớ đệm âm thanh",
+				"cleanAll": "Dọn tất cả",
+				"cleanCache": "Dọn bộ nhớ đệm",
+				"cleanLogs": "Dọn nhật ký",
+				"refresh": "Làm mới",
+				"cleaned": "Đã xóa {count} tệp, giải phóng {size}"
+			},
+			"logLevel": {
+				"label": "Mức LOG khi khởi động",
+				"description": "Chọn mức chi tiết ghi lại ở lần khởi động tiếp theo. Cần khởi động lại để áp dụng.",
+				"debug": "Debug",
+				"normal": "Bình thường",
+				"off": "Tắt",
+				"debugHint": "Chi tiết nhất, dùng để chẩn đoán; nhật ký tăng nhanh.",
+				"normalHint": "Mặc định; chỉ ghi hoạt động bình thường và cảnh báo quan trọng.",
+				"offHint": "Không ghi nhật ký; tiết kiệm dung lượng nhưng không có bản ghi khi có sự cố."
 			}
 		},
 		"song": {

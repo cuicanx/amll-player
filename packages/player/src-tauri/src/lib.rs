@@ -17,6 +17,8 @@ use crate::server::AMLLWebSocketServerWrapper;
 
 mod db;
 mod db_events;
+mod log_level;
+mod storage;
 #[cfg(target_os = "linux")]
 mod linux_graphics;
 mod logging;
@@ -48,7 +50,9 @@ fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .path()
         .resolve("logs", BaseDirectory::AppData)
         .expect("failed to resolve app data dir");
-    let log_guard = logging::init_logging(&log_dir);
+    let app_data = app.handle().path().app_data_dir().unwrap_or_else(|_| log_dir.clone());
+    let log_directive = log_level::startup_filter(&app_data);
+    let log_guard = logging::init_logging(&log_dir, log_directive);
     app.manage(log_guard);
     info!("AMLL Player is starting!");
 
@@ -272,6 +276,9 @@ pub fn run() {
             db::commands::get_song,
             db::commands::get_songs_by_ids,
             db::commands::get_playlist_cover_paths,
+            storage::storage_usage,
+            storage::storage_clean,
+            log_level::set_log_level,
             updater::updater_check,
             updater::updater_install,
             db::commands::update_song,

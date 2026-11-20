@@ -514,6 +514,29 @@
 				"screenshotDesc": "Show “Open screenshot tool” in the menu",
 				"exitLyricPage": "Exit lyric page",
 				"exitLyricPageDesc": "Show “Exit lyric page” in the menu"
+			},
+			"storage": {
+				"subtitle": "Storage manager",
+				"tip": "Shows the disk space used by the app. Cleaning removes only disposable caches and old logs - your library, playlists, lyric database and extensions are never touched.",
+				"total": "Total used",
+				"cache": "Cache (covers)",
+				"logs": "Logs",
+				"musicCache": "Audio cache",
+				"cleanAll": "Clean all",
+				"cleanCache": "Clean cache",
+				"cleanLogs": "Clean logs",
+				"refresh": "Refresh",
+				"cleaned": "Removed {count} files, freed {size}"
+			},
+			"logLevel": {
+				"label": "Startup log level",
+				"description": "Choose how much detail to record on the next launch. Restart the app to apply.",
+				"debug": "Debug",
+				"normal": "Normal",
+				"off": "Off",
+				"debugHint": "Most verbose, for diagnosing problems; logs grow quickly.",
+				"normalHint": "Default; records normal operation and important warnings.",
+				"offHint": "No logging; saves disk space but leaves no records when something goes wrong."
 			}
 		},
 		"song": {
