@@ -65,11 +65,24 @@ fn build_updater(
         .map(|url| tauri::Url::parse(url).map_err(|e| format!("invalid updater endpoint: {e}")))
         .collect::<Result<Vec<_>, String>>()?;
 
-    app.updater_builder()
+    let mut builder = app
+        .updater_builder()
         .endpoints(endpoints)
-        .map_err(|e| e.to_string())?
-        .build()
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    // The check uses the plugin's own HTTP client, which reads the SYSTEM proxy.
+    // On a machine with a VPN client installed but not connected (or with a
+    // split-tunnel rule that leaves github.com behind a dead local proxy), every
+    // check fails even though the mirror is directly reachable - this is the
+    // "no update shows up without VPN" case. For mainland users the first
+    // endpoint is a mirror meant for direct access, so ignore the system proxy
+    // exactly as we already do for the download. Overseas/VPN users keep the
+    // system proxy so the official source remains reachable.
+    if region != "global" {
+        builder = builder.no_proxy();
+    }
+
+    builder.build().map_err(|e| e.to_string())
 }
 
 #[tauri::command]

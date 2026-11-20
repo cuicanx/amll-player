@@ -111,23 +111,10 @@ function reducer(state: AppState, action: Action): AppState {
 	switch (action.type) {
 		case "SYNC_METADATA": {
 			const data = action.payload;
-			const artists = data.musicArtists.map((a) => a.name).join(" / ");
-			// The bridge re-sends metadata on any atom change (and once on the first
-			// frame). Treat an identical payload as a no-op: resetting the lyric
-			// index there made the taskbar control jump back and forth.
-			if (
-				state.musicName === data.musicName &&
-				state.musicArtists === artists &&
-				state.musicCover === data.musicCover &&
-				state.musicCoverIsVideo === data.musicCoverIsVideo &&
-				state.lyricLines === data.lyricLines
-			) {
-				return state;
-			}
 			return {
 				...state,
 				musicName: data.musicName,
-				musicArtists: artists,
+				musicArtists: data.musicArtists.map((a) => a.name).join(" / "),
 				musicCover: data.musicCover,
 				musicCoverIsVideo: data.musicCoverIsVideo,
 				lyricLines: data.lyricLines,
@@ -558,24 +545,28 @@ export const TaskbarLyricApp = () => {
 						{musicCover ? (
 							musicCoverIsVideo ? (
 								<motion.video
-									key="cover-video"
+									key={musicCover}
 									className={styles.cover}
 									src={musicCover}
 									autoPlay
 									loop
 									muted
 									playsInline
-									initial={false}
+									initial={{ opacity: 0 }}
 									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									transition={{ duration: 0.3, ease: "easeInOut" }}
 								/>
 							) : (
 								<motion.img
-									key="cover-image"
+									key={musicCover}
 									className={styles.cover}
 									src={musicCover}
 									alt="Cover"
-									initial={false}
+									initial={{ opacity: 0 }}
 									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									transition={{ duration: 0.3, ease: "easeInOut" }}
 								/>
 							)
 						) : (

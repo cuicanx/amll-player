@@ -19,7 +19,7 @@
 export type UpdateRegion = "cn" | "global";
 
 const CACHE_KEY = "amll-player.updateRegion";
-const CACHE_TTL = 6 * 60 * 60 * 1000;
+const CACHE_TTL = 10 * 60 * 1000;
 const PROBE_TIMEOUT = 2600;
 
 interface CachedRegion {
@@ -107,7 +107,8 @@ export function peekUpdateRegion(): UpdateRegion {
 }
 
 /**
- * Detect the current egress region. Cached for six hours; pass `force` after
+ * Detect the current egress region. Cached for ten minutes so switching a VPN
+ * on/off is corrected quickly; pass `force` after
  * the user clearly changed networks (e.g. retrying a failed download).
  */
 export async function detectUpdateRegion(force = false): Promise<UpdateRegion> {

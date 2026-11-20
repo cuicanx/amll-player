@@ -14,7 +14,6 @@ import { type FC } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { router } from "../../router.tsx";
 import {
-	borderlessFullscreenAtom,
 	contextMenuVisibilityAtom,
 	enableAlwaysOnTopAtom,
 	enableF11FullscreenAtom,
@@ -51,7 +50,6 @@ export const AMLLContextMenu: FC<{
 	const [hideLyricView, setHideLyricView] = useAtom(hideLyricViewAtom);
 	const [alwaysOnTop, setAlwaysOnTop] = useAtom(enableAlwaysOnTopAtom);
 	const enableF11Fullscreen = useAtomValue(enableF11FullscreenAtom);
-	const isFullscreen = useAtomValue(borderlessFullscreenAtom);
 	const setLyricPageOpened = useSetAtom(isLyricPageOpenedAtom);
 	const setRecordPanelOpened = useSetAtom(recordPanelOpenedAtom);
 	const onRequestPrevSong = useAtomValue(onRequestPrevSongAtom).onEmit;
@@ -103,9 +101,7 @@ export const AMLLContextMenu: FC<{
 				{/* Only offered when the user opted into F11 borderless fullscreen. */}
 				{enableF11Fullscreen && menuVisibility.fullscreen && (
 					<DropdownMenu.Item onClick={() => void toggleBorderlessFullscreen()}>
-						{isFullscreen
-							? t("amll.contextMenu.exitFullscreen", "退出全屏")
-							: t("amll.contextMenu.enterFullscreen", "进入全屏")}
+						{t("amll.contextMenu.toggleFullscreen", "全屏 / 取消全屏")}
 					</DropdownMenu.Item>
 				)}
 				{/* Check mark on the right: an unchecked row then has no empty left

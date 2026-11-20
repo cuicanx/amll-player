@@ -12,7 +12,6 @@ import {
 	lyricPageSuspendedAtom,
 } from "../../states/appAtoms.ts";
 import { syncBorderlessFullscreenState } from "../../utils/borderless-fullscreen.ts";
-import { resetLyricScroll } from "../../utils/lyric-player-instance.ts";
 import { useCursorAutoHide } from "../../utils/useCursorAutoHide.ts";
 import { useTitlebarAutoHide } from "../../utils/useTitlebarAutoHide.ts";
 import {
@@ -59,65 +58,6 @@ export const AMLLWrapper: FC = () => {
 		}, 30_000);
 		return () => window.clearInterval(timer);
 	}, [setSuspended]);
-
-	// Manual scrolling hands control to the user; after they stop and move the
-	// pointer away we give it back. The player's own auto-align only re-centres
-	// when the current line changes while still inside its render range, so a
-	// long manual scroll can otherwise stay stranded forever. `resetScroll()` is
-	// the public "put the view back on the playing line" operation and produces
-	// the same result as seeking back to the current second.
-	//
-	// The timer is deliberately 10s: a shorter delay yanked the lyrics away
-	// while the user was still reading the line they had scrolled to.
-	useEffect(() => {
-		if (!isLyricPageOpened) return;
-		const page = pageRef.current;
-		if (!page) return;
-
-		const AUTO_RETURN_DELAY = 10_000;
-		let hovering = false;
-		let timer = 0;
-
-		const cancel = () => {
-			window.clearTimeout(timer);
-			timer = 0;
-		};
-		const schedule = () => {
-			cancel();
-			// Only while playing and only after the pointer has left: with the
-			// pointer still inside, the user is assumed to be reading.
-			if (!isPlaying || hovering) return;
-			timer = window.setTimeout(() => {
-				resetLyricScroll(
-					document.getElementById("amll-lyric-player") ?? pageRef.current,
-				);
-			}, AUTO_RETURN_DELAY);
-		};
-
-		const onPointerEnter = () => {
-			hovering = true;
-			cancel();
-		};
-		const onPointerLeave = () => {
-			hovering = false;
-			schedule();
-		};
-		// A wheel event means the user is still adjusting the view. Postpone the
-		// auto-return so the lyric cannot jump while they scroll.
-		const onWheel = () => {
-			schedule();
-		};
-
-		page.addEventListener("pointerenter", onPointerEnter);
-		page.addEventListener("pointerleave", onPointerLeave);
-		page.addEventListener("wheel", onWheel, { passive: true });
-		return () => {
-			cancel();
-			page.removeEventListener("pointerenter", onPointerEnter);
-			page.removeEventListener("pointerleave", onPointerLeave);
-			page.removeEventListener("wheel", onWheel);
-		};
-	}, [isLyricPageOpened, isPlaying]);
 
 	// Publish the native fullscreen state once at startup so the menu label is
 	// correct even before the first toggle (the atom defaults to false).
