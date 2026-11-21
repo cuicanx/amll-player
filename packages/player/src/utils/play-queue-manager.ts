@@ -111,6 +111,9 @@ export class PlayQueueManager {
 	private playlistId: number | null = null;
 	/** Identifies the latest user selection so stale async results are ignored. */
 	private playGeneration = 0;
+	/** The next online song is prefetched only once, in the last 15 seconds. */
+	private nextPrefetched = false;
+	private static readonly PREFETCH_TAIL_MS = 15_000;
 
 	constructor(store: JotaiStore) {
 		this.store = store;
@@ -163,6 +166,7 @@ export class PlayQueueManager {
 	private playSongAt(index: number): void {
 		if (index < 0 || index >= this.playList.length) return;
 		const generation = ++this.playGeneration;
+		this.nextPrefetched = false;
 		this.currentIndex = index;
 		const song = this.playList[index];
 
@@ -200,7 +204,6 @@ export class PlayQueueManager {
 					emitAudioThread("playAudio", {
 						song: { songId: song.id, filePath: path },
 					});
-					this.prefetchNextOnlineSong(index, generation);
 				})
 				.catch((err) => {
 					if (generation !== this.playGeneration) {
@@ -224,22 +227,24 @@ export class PlayQueueManager {
 				filePath: song.filePath,
 			},
 		});
-		this.prefetchNextOnlineSong(index, generation);
 	}
 
 	/**
-	 * Warm the next online song while the current one plays. Cached songs are
-	 * skipped by the prefetch helper, and the work is delayed so it never
-	 * competes with the song the user just started.
+	 * Prefetch the next online song only when the current one is about to end
+	 * (last 15 seconds), and only once per song. Called from the progress loop
+	 * with the authoritative position/duration; hover no longer triggers any
+	 * download.
 	 */
-	private prefetchNextOnlineSong(index: number, generation: number): void {
+	maybePrefetchNextOnline(positionMs: number, durationMs: number): void {
+		if (this.nextPrefetched) return;
+		if (durationMs <= 0 || positionMs <= 0) return;
+		if (durationMs - positionMs > PlayQueueManager.PREFETCH_TAIL_MS) return;
 		if (this.playList.length < 2) return;
-		const next = this.playList[(index + 1) % this.playList.length];
-		if (!next || next.id === this.playList[index]?.id) return;
+		const next = this.playList[(this.currentIndex + 1) % this.playList.length];
+		if (!next || next.id === this.playList[this.currentIndex]?.id) return;
 		if (!isOnlinePath(next.filePath) && !/^https?:\/\//.test(next.filePath)) return;
-		window.setTimeout(() => {
-			if (generation === this.playGeneration) prefetchPlaybackPath(next.filePath);
-		}, 1500);
+		this.nextPrefetched = true;
+		prefetchPlaybackPath(next.filePath);
 	}
 
 	/** 在 playList 中查找 songId 的索引 */

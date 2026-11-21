@@ -14,6 +14,8 @@ use crate::db::{DbConnection, utils};
 pub struct CoverGcResult {
     pub total_scanned: u32,
     pub deleted: u32,
+    /// Bytes actually reclaimed by deleting orphaned covers.
+    pub freed_bytes: u64,
     pub errors: Vec<String>,
 }
 
@@ -59,6 +61,7 @@ pub async fn run_cover_gc(
         return Ok(CoverGcResult {
             total_scanned: 0,
             deleted: 0,
+            freed_bytes: 0,
             errors: Vec::new(),
         });
     }
@@ -67,6 +70,7 @@ pub async fn run_cover_gc(
 
     let mut total_scanned = 0u32;
     let mut deleted = 0u32;
+    let mut freed_bytes = 0u64;
     let mut errors = Vec::new();
 
     let entries = std::fs::read_dir(&covers_dir)
@@ -98,10 +102,12 @@ pub async fn run_cover_gc(
 
         if !referenced.contains(&file_name) {
             let path = entry.path();
+            let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
             match std::fs::remove_file(&path) {
                 Ok(()) => {
                     info!("[CoverGC] Deleted orphaned cover: {}", path.display());
                     deleted += 1;
+                    freed_bytes += size;
                 }
                 Err(e) => {
                     warn!("[CoverGC] Failed to delete {}: {e}", path.display());
@@ -111,11 +117,12 @@ pub async fn run_cover_gc(
         }
     }
 
-    info!("[CoverGC] Completed: scanned {total_scanned}, deleted {deleted} orphaned covers",);
+    info!("[CoverGC] Completed: scanned {total_scanned}, deleted {deleted} orphaned covers ({freed_bytes} bytes)",);
 
     Ok(CoverGcResult {
         total_scanned,
         deleted,
+        freed_bytes,
         errors,
     })
 }

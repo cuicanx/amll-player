@@ -9,7 +9,9 @@
  * failure.
  */
 import { invoke } from "@tauri-apps/api/core";
-import { LxSourceRuntime } from "./lx-source-runtime.ts";
+import { getDefaultStore } from "jotai";
+import { preferredQualityAtom } from "../states/appAtoms.ts";
+import { LxSourceRuntime, type LxUpdateAlert } from "./lx-source-runtime.ts";
 import { loadSources, type StoredSource } from "./online-sources.ts";
 
 export type OnlinePlatform = "kw" | "kg" | "wy" | "tx" | "mg";
@@ -34,15 +36,12 @@ export interface OnlineSong {
 const BUILTIN_PLATFORMS: OnlinePlatform[] = ["kw"];
 
 /**
- * Platforms we search by default.
- *
- * Only platforms that can actually be played are listed: netease needs a VIP
- * account and migu needs a paid endpoint, so both resolve to "get music url
- * failed" with the community sources - showing them would just produce rows
- * that cannot play. The Rust side still implements their searches, so enabling
- * them later is a one-line change.
+ * Platforms we search, matching LX's built-in musicSdk list (kw, kg, tx, wy,
+ * mg). Playback no longer hides a platform just because one free source cannot
+ * resolve a VIP/paid track: `prepareOnlineSong` already falls through to other
+ * qualities, sources and the same track on other platforms.
  */
-const SEARCHABLE: OnlinePlatform[] = ["kw", "kg"];
+const SEARCHABLE: OnlinePlatform[] = ["kw", "kg", "tx", "wy", "mg"];
 
 /** A song everyone has, used to check whether a source really works. */
 const PROBE_SONG: OnlineSong = {
@@ -272,9 +271,15 @@ export function toMusicInfo(song: OnlineSong): Record<string, unknown> {
 
 function qualitiesFor(runtime: LxSourceRuntime, platform: string): string[] {
 	const declared = runtime.sources[platform]?.qualitys ?? [];
-	// Prefer 320k, then 128k. Lossless tiers fail on most free sources, so
-	// trying them first would only add failed round-trips.
-	const order = ["320k", "128k", "flac", "flac24bit"];
+	// Lossless tiers fail on most free sources, so the historical default is
+	// 320k first. If the user picked a preferred quality, try it first whenever
+	// the source declares it, then fall back to the safe order.
+	const base = ["320k", "128k", "flac", "flac24bit"];
+	let order = base;
+	const pref = getDefaultStore().get(preferredQualityAtom);
+	if (pref !== "auto") {
+		order = [pref, ...base.filter((q) => q !== pref)];
+	}
 	const usable = order.filter((q) => declared.includes(q));
 	return usable.length > 0 ? usable : ["128k"];
 }
@@ -446,8 +451,8 @@ export async function getOnlineCacheUsage(): Promise<OnlineCacheUsage> {
 	return invoke<OnlineCacheUsage>("online_cache_usage");
 }
 
-export async function clearOnlineCache(): Promise<void> {
-	await invoke("online_cache_clear");
+export async function clearOnlineCache(): Promise<OnlineCacheUsage> {
+	return invoke<OnlineCacheUsage>("online_cache_clear");
 }
 
 /** Stable identity of an online song, usable as a cache key. */
@@ -698,15 +703,110 @@ export async function fetchOnlineMeta(
 	}
 
 	try {
-		cover = await invoke<string>("online_pic", {
+		const rawUrl = await invoke<string>("online_pic", {
 			platform: song.source,
 			id: song.songmid || song.id,
 		});
+		// Download the http cover into a local cache file - WebView blocks plain
+		// http images as mixed content, which made every online cover black.
+		if (rawUrl.startsWith("http")) {
+			try {
+				cover = await invoke<string>("online_cover_cache", { url: rawUrl });
+			} catch {
+				cover = rawUrl.replace(/^http:\/\//, "https://");
+			}
+		} else {
+			cover = rawUrl;
+		}
 	} catch {
+		// Fall back to the cover returned by search (already downloaded below).
 		cover = song.coverUrl || "";
+	}
+	if (cover.startsWith("http")) {
+		try {
+			cover = await invoke<string>("online_cover_cache", { url: cover });
+		} catch {
+			// Keep the URL; the image component has an onError fallback.
+		}
 	}
 
 	return { lyric, translated, cover };
 }
 
 //#endregion
+
+//#region source update announcements
+
+export interface SourceAnnouncement {
+	sourceId: string;
+	log: string;
+	updateUrl: string;
+}
+
+const ANNOUNCEMENT_KEY = "amll-player.sourceAnnouncements.v1";
+const ANNOUNCEMENT_DAY_KEY = "amll-player.sourceAnnouncementsDay.v1";
+
+function todayStamp(): string {
+	return new Date().toDateString();
+}
+
+/** Announcements cached from the last daily check (survives restarts). */
+export function loadSourceAnnouncements(): Record<string, SourceAnnouncement> {
+	try {
+		const raw = localStorage.getItem(ANNOUNCEMENT_KEY);
+		return raw ? (JSON.parse(raw) as Record<string, SourceAnnouncement>) : {};
+	} catch {
+		return {};
+	}
+}
+
+function saveSourceAnnouncements(map: Record<string, SourceAnnouncement>): void {
+	try {
+		localStorage.setItem(ANNOUNCEMENT_KEY, JSON.stringify(map));
+	} catch {
+		// ignore
+	}
+}
+
+/**
+ * Check every enabled source for an `updateAlert` announcement, at most once
+ * per calendar day (unless `force`). The script pushes the announcement during
+ * initialisation, so this reuses the cached runtime. Never throws to callers.
+ */
+export async function checkSourceAnnouncements(
+	force = false,
+): Promise<Record<string, SourceAnnouncement>> {
+	const today = todayStamp();
+	if (!force) {
+		try {
+			if (localStorage.getItem(ANNOUNCEMENT_DAY_KEY) === today) {
+				return loadSourceAnnouncements();
+			}
+		} catch {
+			// ignore
+		}
+	}
+
+	const result: Record<string, SourceAnnouncement> = {};
+	for (const source of loadSources()) {
+		if (!source.enabled) continue;
+		try {
+			if (!(await ensureRuntimeReady(source))) continue;
+			const alert: LxUpdateAlert | null = runtimeFor(source).updateAlertInfo;
+			const log = (alert?.log ?? "").toString().trim();
+			const updateUrl = (alert?.updateUrl ?? "").toString().trim();
+			if (log || updateUrl) {
+				result[source.id] = { sourceId: source.id, log, updateUrl };
+			}
+		} catch {
+			// A broken source simply has no announcement.
+		}
+	}
+	saveSourceAnnouncements(result);
+	try {
+		localStorage.setItem(ANNOUNCEMENT_DAY_KEY, today);
+	} catch {
+		// ignore
+	}
+	return result;
+}

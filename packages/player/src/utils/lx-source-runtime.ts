@@ -22,6 +22,13 @@ export interface LxSourceInfo {
 	rawScript: string;
 }
 
+/** A `updateAlert` message pushed by a source script while it initialises. */
+export interface LxUpdateAlert {
+	log?: string;
+	updateUrl?: string;
+	[key: string]: unknown;
+}
+
 export interface LxSourceDecl {
 	name?: string;
 	type?: string;
@@ -242,6 +249,7 @@ export class LxSourceRuntime {
 	private inited: LxInitedPayload | null = null;
 	private resolveInited: ((payload: LxInitedPayload) => void) | null = null;
 	private started = false;
+	private updateAlert: LxUpdateAlert | null = null;
 	/** What the source sees as `this` inside its request handler, as in LX. */
 	private lxContext: unknown = null;
 
@@ -251,6 +259,11 @@ export class LxSourceRuntime {
 
 	get sourceKeys(): string[] {
 		return Object.keys(this.sources);
+	}
+
+	/** Update announcement pushed by the script, if any. */
+	get updateAlertInfo(): LxUpdateAlert | null {
+		return this.updateAlert;
 	}
 
 	async init(timeoutMs = 10_000): Promise<LxInitedPayload> {
@@ -309,16 +322,20 @@ export class LxSourceRuntime {
 				updateAlert: EVENT_UPDATE_ALERT,
 			},
 			on(event: string, handler: (payload: Record<string, unknown>) => unknown) {
-				if (event !== EVENT_REQUEST) {
+				if (event !== EVENT_REQUEST && event !== EVENT_UPDATE_ALERT) {
 					return Promise.reject(new Error(`不支持的事件: ${event}`));
 				}
 				runtime.handlers.set(event, handler);
 				return Promise.resolve();
 			},
-			send(event: string, data: LxInitedPayload) {
+			send(event: string, data: LxInitedPayload | LxUpdateAlert) {
 				if (event === EVENT_INITED) {
-					runtime.inited = data;
-					runtime.resolveInited?.(data);
+					runtime.inited = data as LxInitedPayload;
+					runtime.resolveInited?.(data as LxInitedPayload);
+					return Promise.resolve();
+				}
+				if (event === EVENT_UPDATE_ALERT) {
+					runtime.updateAlert = data as LxUpdateAlert;
 					return Promise.resolve();
 				}
 				return Promise.resolve();

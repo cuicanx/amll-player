@@ -325,6 +325,12 @@ async fn search_kuwo(client: &reqwest::Client, keyword: &str, limit: u32) -> Res
                 .unwrap_or("0")
                 .parse()
                 .unwrap_or(0);
+            // Kuwo search returns the cover in htqpic / pic / MP3R106.
+            song.cover_url = ["htqpic", "pic", "MP3R106"]
+                .iter()
+                .find_map(|k| item.get(*k).and_then(|v| v.as_str()).filter(|s| s.starts_with("http")))
+                .unwrap_or_default()
+                .to_string();
             song.extra = item;
             Some(song)
         })
@@ -397,6 +403,12 @@ async fn search_kugou(client: &reqwest::Client, keyword: &str, limit: u32) -> Re
                 .map(|v| v.to_string().trim_matches('"').to_string())
                 .unwrap_or_default();
             song.interval = item.get("duration").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            // Kugou's search API returns album cover in album_img / imgUrl.
+            song.cover_url = ["album_img", "imgUrl", "cover"]
+                .iter()
+                .find_map(|k| item.get(*k).and_then(|v| v.as_str()).filter(|s| s.starts_with("http")))
+                .map(|s| s.replace("{size}", "300"))
+                .unwrap_or_default();
             song.extra = item;
             Some(song)
         })
@@ -459,12 +471,97 @@ async fn search_netease(client: &reqwest::Client, keyword: &str, limit: u32) -> 
                     .and_then(|v| v.as_u64())
                     .map(|v| v.to_string())
                     .unwrap_or_default();
+                song.cover_url = album
+                    .get("picUrl")
+                    .and_then(|v| v.as_str())
+                    .filter(|s| s.starts_with("http"))
+                    .map(|s| s.replace("http://", "https://"))
+                    .unwrap_or_default();
             }
             song.interval = item
                 .get("duration")
                 .and_then(|v| v.as_u64())
                 .map(|ms| (ms / 1000) as u32)
                 .unwrap_or(0);
+            song.extra = item;
+            Some(song)
+        })
+        .collect())
+}
+
+//#endregion
+
+//#region tencent (QQ)
+
+/// QQ Music search. The public `client_search_cp` endpoint still answers with
+/// `new_json=1` and needs only a Referer header; no login/VIP is required to
+/// list results (actual playback is delegated to the custom source).
+async fn search_tencent(
+    client: &reqwest::Client,
+    keyword: &str,
+    limit: u32,
+) -> Result<Vec<OnlineSong>, String> {
+    let url = format!(
+        "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?p=1&n={}&w={}&format=json&new_json=1",
+        limit,
+        urlencoding::encode(keyword)
+    );
+    let resp = client
+        .get(&url)
+        .header("Referer", "https://y.qq.com/")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+
+    let list = json
+        .get("data")
+        .and_then(|d| d.get("song"))
+        .and_then(|s| s.get("list"))
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    Ok(list
+        .into_iter()
+        .filter_map(|item| {
+            let mid = item.get("mid").and_then(|v| v.as_str()).unwrap_or_default();
+            if mid.is_empty() {
+                return None;
+            }
+            let mut song = OnlineSong::new("tx", mid.to_string());
+            song.songmid = mid.to_string();
+            song.name = decode_entities(item.get("name").and_then(|v| v.as_str()).unwrap_or_default());
+            song.singer = item
+                .get("singer")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|a| a.get("name").and_then(|v| v.as_str()))
+                        .collect::<Vec<_>>()
+                        .join(" / ")
+                })
+                .unwrap_or_default();
+            if let Some(album) = item.get("album") {
+                song.album_name = album
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                song.album_id = album
+                    .get("mid")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+            }
+            song.interval = item.get("interval").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            song.cover_url = item
+                .get("album")
+                .and_then(|a| a.get("mid"))
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(|mid| format!("https://y.qq.com/music/photo_new/T002R300x300M000{mid}.jpg"))
+                .unwrap_or_default();
             song.extra = item;
             Some(song)
         })
@@ -630,6 +727,7 @@ pub async fn online_search(
             "kg" => search_kugou(&client, &keyword, limit).await,
             "wy" => search_netease(&client, &keyword, limit).await,
             "mg" => search_migu(&client, &keyword, limit).await,
+            "tx" => search_tencent(&client, &keyword, limit).await,
             other => Err(format!("暂不支持平台 {other}")),
         };
         match result {
@@ -806,21 +904,41 @@ pub struct OnlineCacheUsage {
     pub files: u64,
 }
 
-fn scan_cache(app: &tauri::AppHandle) -> OnlineCacheUsage {
-    let dir = cache_dir(app);
-    let mut bytes = 0u64;
-    let mut files = 0u64;
-    if let Ok(entries) = std::fs::read_dir(&dir) {
-        for entry in entries.flatten() {
-            if let Ok(meta) = entry.metadata() {
-                if meta.is_file() {
-                    bytes += meta.len();
-                    files += 1;
+fn scan_dir_usage(dir: &std::path::Path) -> OnlineCacheUsage {
+    let mut usage = OnlineCacheUsage { bytes: 0, files: 0 };
+    fn walk(path: &std::path::Path, usage: &mut OnlineCacheUsage) {
+        if let Ok(entries) = std::fs::read_dir(path) {
+            for entry in entries.flatten() {
+                if let Ok(meta) = entry.metadata() {
+                    if meta.is_dir() {
+                        walk(&entry.path(), usage);
+                    } else if meta.is_file() {
+                        usage.bytes += meta.len();
+                        usage.files += 1;
+                    }
                 }
             }
         }
     }
-    OnlineCacheUsage { bytes, files }
+    walk(dir, &mut usage);
+    usage
+}
+
+fn scan_cache(app: &tauri::AppHandle) -> OnlineCacheUsage {
+    scan_dir_usage(&cache_dir(app))
+}
+
+/// Directory where downloaded online-song covers are stored (local files, so
+/// the WebView never has to load an http image - which was blocked as mixed
+/// content and showed a black cover for every online song).
+fn cover_cache_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .unwrap_or_default()
+        .join("online-cover-cache");
+    let _ = std::fs::create_dir_all(&dir);
+    dir
 }
 
 /// Return the cached file for `key`, if it was already downloaded.
@@ -906,9 +1024,22 @@ pub fn online_cache_usage(app: tauri::AppHandle) -> OnlineCacheUsage {
 
 #[tauri::command]
 pub fn online_cache_clear(app: tauri::AppHandle) -> OnlineCacheUsage {
-    let dir = cache_dir(&app);
     let before = scan_cache(&app);
-    if let Ok(entries) = std::fs::read_dir(&dir) {
+    clear_usage_dir(&cache_dir(&app));
+    clear_usage_dir(&cover_cache_dir(&app));
+    tracing::info!(
+        target: "amll_player_lib::online",
+        "online cache cleared: {} files, {} bytes",
+        before.files,
+        before.bytes
+    );
+    // Report what was actually removed, so the UI can show a truthful
+    // "freed N files / X MB" instead of always "0 个文件 / 0 B".
+    before
+}
+
+fn clear_usage_dir(dir: &std::path::Path) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_file() {
@@ -916,16 +1047,37 @@ pub fn online_cache_clear(app: tauri::AppHandle) -> OnlineCacheUsage {
             }
         }
     }
-    tracing::info!(
-        target: "amll_player_lib::online",
-        "online cache cleared: {} files, {} bytes",
-        before.files,
-        before.bytes
-    );
-    OnlineCacheUsage {
-        bytes: 0,
-        files: 0,
+}
+
+/// Download a cover image to a local cache file and return a path the WebView
+/// can display. Online cover URLs are plain http and get blocked as mixed
+/// content, which made every online song show a black cover.
+#[tauri::command]
+pub async fn online_cover_cache(app: tauri::AppHandle, url: String) -> Result<String, String> {
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err("封面地址无效".into());
     }
+    let dir = cover_cache_dir(&app);
+    let file = dir.join(format!("{}.jpg", cache_key_name(&url)));
+    if file.exists() && file.metadata().map(|m| m.len() > 0).unwrap_or(false) {
+        return Ok(file.to_string_lossy().to_string());
+    }
+    let client = make_client(true);
+    let resp = client
+        .get(&url)
+        .header("Referer", "https://music.163.com/")
+        .send()
+        .await
+        .map_err(|e| format!("封面下载失败: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("封面下载失败: HTTP {}", resp.status()));
+    }
+    let bytes = resp.bytes().await.map_err(|e| format!("封面读取失败: {e}"))?;
+    if bytes.is_empty() {
+        return Err("封面为空".into());
+    }
+    std::fs::write(&file, &bytes).map_err(|e| format!("封面写入失败: {e}"))?;
+    Ok(file.to_string_lossy().to_string())
 }
 
 //#endregion
@@ -1187,8 +1339,89 @@ pub async fn online_lyric(
             duration.unwrap_or(0),
         )
         .await,
+        "wy" => lyric_netease(&client, &id).await,
+        "tx" => lyric_tencent(&client, &id).await,
+        // Migu lyrics come from the same v3 search detail API; not shipped to
+        // avoid a paid endpoint, other platforms still cover the same track.
         other => Err(format!("歌词暂不支持平台 {other}")),
     }
+}
+
+/// NetEase lyric API (plain text LRC, no decryption needed).
+async fn lyric_netease(client: &reqwest::Client, id: &str) -> Result<OnlineLyric, String> {
+    let url = format!("https://music.163.com/api/song/lyric?id={id}&lv=1&kv=1&tv=-1");
+    let resp = client
+        .get(&url)
+        .header("Referer", "https://music.163.com/")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+    let lyric = json
+        .get("lrc")
+        .and_then(|v| v.get("lyric"))
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let translated = json
+        .get("tlyric")
+        .and_then(|v| v.get("lyric"))
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    if !lyric.contains('[') {
+        return Err("歌词内容为空".into());
+    }
+    Ok(OnlineLyric { lyric, translated })
+}
+
+/// QQ Music lyric via the public `qlrc` endpoint (base64-encoded LRC).
+async fn lyric_tencent(client: &reqwest::Client, mid: &str) -> Result<OnlineLyric, String> {
+    let url = format!(
+        "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid={mid}&format=json&nobase64=1"
+    );
+    let resp = client
+        .get(&url)
+        .header("Referer", "https://y.qq.com/")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+    let raw = json
+        .get("lyric")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let lyric = if raw.contains('[') {
+        raw
+    } else if !raw.is_empty() {
+        String::from_utf8_lossy(
+            &base64::engine::general_purpose::STANDARD
+                .decode(&raw)
+                .map_err(|e| e.to_string())?,
+        )
+        .to_string()
+    } else {
+        String::new()
+    };
+    if !lyric.contains('[') {
+        return Err("歌词内容为空".into());
+    }
+    let translated = json
+        .get("trans")
+        .and_then(|v| v.as_str())
+        .map(|s| {
+            if s.contains('[') {
+                s.to_string()
+            } else {
+                String::from_utf8_lossy(
+                    &base64::engine::general_purpose::STANDARD.decode(s).unwrap_or_default(),
+                )
+                .to_string()
+            }
+        })
+        .unwrap_or_default();
+    Ok(OnlineLyric { lyric, translated })
 }
 
 /// Cover URL for the built-in platforms, mirroring LX's `musicSdk/kw/pic.js`.

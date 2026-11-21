@@ -39,6 +39,7 @@ import {
 	Box,
 	Button,
 	Card,
+	Dialog,
 	Flex,
 	Grid,
 	Select,
@@ -97,6 +98,8 @@ import {
 	installAttemptsAtom,
 	isInstallingUpdateAtom,
 	languageAtom,
+	preferredQualityAtom,
+	type PreferredQuality,
 	showStatJSFrameAtom,
 	taskbarLyricAlignSettingAtom,
 	taskbarLyricModeSettingAtom,
@@ -123,11 +126,13 @@ import {
 	type StorageUsage,
 } from "../../utils/storage-api.ts";
 import {
+	checkSourceAnnouncements,
 	clearOnlineCache,
 	ensureSourceHealth,
 	fetchSourceFromUrl,
 	getOnlineCacheUsage,
 	type OnlineCacheUsage,
+	type SourceAnnouncement,
 	resetOnlineRuntimeCache,
 } from "../../utils/online-api.ts";
 import {
@@ -413,8 +418,20 @@ const GeneralSettings = () => {
 	const { t } = useTranslation();
 	const [mode, setMode] = useAtom(darkModeAtom);
 	const [language, setLanguage] = useAtom(languageAtom);
+	const [preferredQuality, setPreferredQuality] = useAtom(preferredQualityAtom);
 	const supportedLanguages = useAtomValue(availableLanguagesAtom);
 	const [os, setOs] = useState<string | null>(null);
+
+	const qualityMenu = useMemo(
+		() => [
+			{ label: t("page.settings.general.quality.auto", "自动（320k 优先）"), value: "auto" },
+			{ label: "FLAC 24bit（Hi-Res）", value: "flac24bit" },
+			{ label: "FLAC（无损）", value: "flac" },
+			{ label: "320k（高品质）", value: "320k" },
+			{ label: "128k（标准）", value: "128k" },
+		],
+		[t],
+	);
 
 	useEffect(() => {
 		setOs(platform());
@@ -443,6 +460,29 @@ const GeneralSettings = () => {
 				<Trans i18nKey="page.settings.general.subtitle">常规</Trans>
 			</SubTitle>
 			<PlayModeSetting />
+			{BOOT_PLAY_MODE === "online" ? (
+				<SettingEntry
+					label={t("page.settings.general.quality.label", "在线音乐优先下载音质")}
+					description={t(
+						"page.settings.general.quality.description",
+						"播放联网歌曲时优先尝试该音质，音源不支持时自动回退",
+					)}
+				>
+					<Select.Root
+						value={preferredQuality}
+						onValueChange={(v) => setPreferredQuality(v as PreferredQuality)}
+					>
+						<Select.Trigger />
+						<Select.Content>
+							{qualityMenu.map((item) => (
+								<Select.Item key={item.value} value={item.value}>
+									{item.label}
+								</Select.Item>
+							))}
+						</Select.Content>
+					</Select.Root>
+				</SettingEntry>
+			) : null}
 			<SettingEntry
 				label={t("page.settings.general.displayLanguage.label", "显示语言")}
 			>
@@ -1206,14 +1246,18 @@ const StorageSettings: FC = () => {
 		refresh();
 	}, []);
 
-	const clean = async (which: "covers" | "logs" | "music" | "all") => {
+	const clean = async (which: "covers" | "logs" | "music" | "online" | "all") => {
 		setCleaning(true);
 		setMessage("");
 		try {
+			const isOnline = which === "online";
 			const result = await cleanStorage({
 				cleanCovers: which === "covers" || which === "all",
 				cleanLogs: which === "logs" || which === "all",
 				cleanMusicCache: which === "music" || which === "all",
+				// "all" uses the categorised API too; the dedicated online button
+				// calls clearOnlineCache with a truthful freed-byte result below.
+				cleanOnlineCache: which === "all",
 			});
 			setMessage(
 				t("page.settings.storage.cleaned", "已清理 {count} 个文件，释放 {size}", {
@@ -1224,7 +1268,8 @@ const StorageSettings: FC = () => {
 			if (result.errors.length) {
 				setMessage((prev) => `${prev}（${result.errors.join("; ")}）`);
 			}
-			refresh();
+			if (isOnline) await cleanOnlineCacheNow();
+			else refresh();
 		} catch (e) {
 			setMessage(String(e));
 		} finally {
@@ -1236,11 +1281,13 @@ const StorageSettings: FC = () => {
 		setCleaning(true);
 		setMessage("");
 		try {
-			const before = cache?.bytes ?? 0;
-			await clearOnlineCache();
+			// Use the truthful count returned by Rust instead of a stale React
+			// state value that was always 0 on first open.
+			const freed = await clearOnlineCache();
 			setMessage(
-				t("page.settings.storage.onlineCacheCleaned", "已清理在线缓存，释放 {size}", {
-					size: formatBytes(before),
+				t("page.settings.storage.onlineCacheCleaned", "已清理在线缓存 {count} 个文件，释放 {size}", {
+					count: freed.files,
+					size: formatBytes(freed.bytes),
 				}),
 			);
 			refresh();
@@ -1251,12 +1298,45 @@ const StorageSettings: FC = () => {
 		}
 	};
 
-	const rows: { key: keyof StorageUsage | "total"; label: string; value: string }[] = [
-		{ key: "total", label: t("page.settings.storage.total", "软件当前占用"), value: formatBytes(usage?.totalBytes ?? 0) },
-		{ key: "cacheBytes", label: t("page.settings.storage.cache", "缓存占用（封面）"), value: formatBytes(usage?.cacheBytes ?? 0) },
-		{ key: "logBytes", label: t("page.settings.storage.logs", "日志占用"), value: formatBytes(usage?.logBytes ?? 0) },
-		{ key: "musicCacheBytes", label: t("page.settings.storage.musicCache", "音频缓存占用"), value: formatBytes(usage?.musicCacheBytes ?? 0) },
-	];
+	const categories = useMemo(() => {
+		const bytesOf = (v: number | undefined) => (loading ? 0 : v ?? 0);
+		const total = bytesOf(usage?.totalBytes) || 1;
+		const pct = (v: number) => Math.min(100, Math.round((v / total) * 100));
+		return [
+			{
+				key: "online",
+				label: t("page.settings.storage.onlineCache", "在线歌曲缓存"),
+				detail: t("page.settings.storage.onlineCacheDetail", "下载的联网歌曲音频与封面"),
+				bytes: bytesOf(usage?.onlineCacheBytes) + bytesOf(usage?.onlineCoverBytes) || bytesOf(cache?.bytes),
+				percent: pct(bytesOf(usage?.onlineCacheBytes) + bytesOf(usage?.onlineCoverBytes)),
+				color: "iris" as const,
+			},
+			{
+				key: "covers",
+				label: t("page.settings.storage.cache", "封面缓存"),
+				detail: t("page.settings.storage.cacheDetail", "本地歌曲的专辑封面"),
+				bytes: bytesOf(usage?.cacheBytes),
+				percent: pct(bytesOf(usage?.cacheBytes)),
+				color: "grass" as const,
+			},
+			{
+				key: "music",
+				label: t("page.settings.storage.musicCache", "音频副本缓存"),
+				detail: t("page.settings.storage.musicCacheDetail", "本地导入的音频临时副本"),
+				bytes: bytesOf(usage?.musicCacheBytes),
+				percent: pct(bytesOf(usage?.musicCacheBytes)),
+				color: "blue" as const,
+			},
+			{
+				key: "logs",
+				label: t("page.settings.storage.logs", "运行日志"),
+				detail: t("page.settings.storage.logsDetail", "诊断用的历史日志文件"),
+				bytes: bytesOf(usage?.logBytes),
+				percent: pct(bytesOf(usage?.logBytes)),
+				color: "amber" as const,
+			},
+		];
+	}, [usage, cache, loading, t]);
 
 	return (
 		<>
@@ -1268,44 +1348,83 @@ const StorageSettings: FC = () => {
 					显示软件占用的磁盘空间。清理只会删除可再生的缓存与旧日志，不会删除曲库、歌单、歌词库或扩展。
 				</Trans>
 			</Text>
-			<Card mt="2">
-				<Flex direction="column" gap="2">
-					{rows.map((row) => (
-						<Flex key={row.key} justify="between" align="center">
-							<Text size="2">{row.label}</Text>
-							<Text size="2" weight="bold">{loading ? "…" : row.value}</Text>
-						</Flex>
-					))}
-					<Flex justify="between" align="center">
-						<Text size="2">
-							<Trans i18nKey="page.settings.storage.onlineCache">
-								在线歌曲缓存（下载的音频）
-							</Trans>
+
+			{/* Summary hero card */}
+			<Card mt="2" style={{ background: "var(--accent-a2)" }}>
+				<Flex align="center" justify="between" gap="3" wrap="wrap">
+					<Flex direction="column" gap="1">
+						<Text size="2" color="gray">
+							<Trans i18nKey="page.settings.storage.total">软件当前占用</Trans>
 						</Text>
-						<Text size="2" weight="bold">
-							{loading ? "…" : formatBytes(cache?.bytes ?? 0)}
-							{cache && cache.files > 0 ? (
-								<Text size="1" color="gray">
-									{" "}
-									· {cache.files}
-								</Text>
-							) : null}
+						<Text size="7" weight="bold" style={{ letterSpacing: "-0.02em" }}>
+							{loading ? "…" : formatBytes(usage?.totalBytes ?? 0)}
 						</Text>
 					</Flex>
+					<Badge size="2" color="gray" radius="full" variant="soft">
+						{loading ? "…" : (usage?.fileCount ?? 0)} 个文件
+					</Badge>
 				</Flex>
 			</Card>
-			<Flex gap="2" wrap="wrap" mt="3">
+
+			{/* Detailed categories */}
+			<Flex direction="column" gap="2" mt="3">
+				{categories.map((cat) => (
+					<Card key={cat.key}>
+						<Flex direction="column" gap="2">
+							<Flex align="center" justify="between" gap="2">
+								<Flex direction="column" gap="1">
+									<Flex align="center" gap="2">
+										<Box
+											style={{
+												width: 8,
+												height: 8,
+												borderRadius: 4,
+												background: `var(--${cat.color}-9)`,
+											}}
+										/>
+										<Text size="2" weight="medium">{cat.label}</Text>
+									</Flex>
+									<Text size="1" color="gray">{cat.detail}</Text>
+								</Flex>
+								<Text size="2" weight="bold">{loading ? "…" : formatBytes(cat.bytes)}</Text>
+							</Flex>
+							<Box
+								style={{
+									height: 4,
+									borderRadius: 2,
+									background: "var(--gray-a4)",
+									overflow: "hidden",
+								}}
+							>
+								<Box
+									style={{
+										height: "100%",
+										width: `${cat.percent}%`,
+										background: `var(--${cat.color}-9)`,
+										transition: "width 0.3s ease",
+									}}
+								/>
+							</Box>
+						</Flex>
+					</Card>
+				))}
+			</Flex>
+
+			<Flex gap="2" wrap="wrap" mt="4">
 				<Button variant="solid" disabled={cleaning} onClick={() => void clean("all")}>
 					<Trans i18nKey="page.settings.storage.cleanAll">一键清理</Trans>
 				</Button>
+				<Button variant="soft" disabled={cleaning} onClick={() => void clean("online")}>
+					<Trans i18nKey="page.settings.storage.cleanOnlineCache">清理在线缓存</Trans>
+				</Button>
 				<Button variant="soft" disabled={cleaning} onClick={() => void clean("covers")}>
-					<Trans i18nKey="page.settings.storage.cleanCache">清理缓存</Trans>
+					<Trans i18nKey="page.settings.storage.cleanCache">清理封面缓存</Trans>
+				</Button>
+				<Button variant="soft" disabled={cleaning} onClick={() => void clean("music")}>
+					<Trans i18nKey="page.settings.storage.cleanMusicCache">清理音频副本</Trans>
 				</Button>
 				<Button variant="soft" disabled={cleaning} onClick={() => void clean("logs")}>
 					<Trans i18nKey="page.settings.storage.cleanLogs">清理日志</Trans>
-				</Button>
-				<Button variant="soft" disabled={cleaning} onClick={() => void cleanOnlineCacheNow()}>
-					<Trans i18nKey="page.settings.storage.cleanOnlineCache">清理在线缓存</Trans>
 				</Button>
 				<Button variant="soft" disabled={cleaning} onClick={refresh}>
 					<Trans i18nKey="page.settings.storage.refresh">刷新</Trans>
@@ -1331,11 +1450,20 @@ const OnlineSourceSettings: FC = () => {
 	const [busy, setBusy] = useState("");
 	const [message, setMessage] = useState("");
 	const [url, setUrl] = useState("");
+	const [announcements, setAnnouncements] = useState<Record<string, SourceAnnouncement>>({});
+	const [announcementSource, setAnnouncementSource] = useState<StoredSource | null>(null);
 
 	const refresh = useCallback(() => setSources(loadSources()), []);
 
 	useEffect(() => {
 		refresh();
+		// Announcements are checked at most once per calendar day; the cached
+		// result is shown instantly while the background check runs.
+		import("../../utils/online-api.ts").then(async (m) => {
+			setAnnouncements(m.loadSourceAnnouncements());
+			const fresh = await m.checkSourceAnnouncements();
+			setAnnouncements(fresh);
+		}).catch(() => {});
 		// Show the real state as soon as the page opens instead of a stale badge
 		// left over from an earlier session.
 		void ensureSourceHealth()
@@ -1509,16 +1637,30 @@ const OnlineSourceSettings: FC = () => {
 			<Flex direction="column" gap="2" mt="3">
 				{sources.map((source) => {
 					const status = health[source.id];
+					const announcement = announcements[source.id];
+					const hasUpdate = !!(announcement?.log || announcement?.updateUrl);
 					return (
 						<Card key={source.id}>
 							<Flex align="center" gap="3" wrap="wrap">
-								<Flex direction="column" flexGrow="1" style={{ minWidth: 0 }}>
+								<Flex
+									direction="column"
+									flexGrow="1"
+									style={{ minWidth: 0, cursor: hasUpdate ? "pointer" : undefined }}
+									onClick={() => {
+										if (hasUpdate) setAnnouncementSource(source);
+									}}
+								>
 									<Flex align="center" gap="2" wrap="wrap">
 										<Text weight="bold">{source.name}</Text>
 										{source.version ? (
 											<Text size="1" color="gray">
 												v{source.version}
 											</Text>
+										) : null}
+										{hasUpdate ? (
+											<Badge size="1" color="orange" variant="solid" radius="full">
+												<Trans i18nKey="page.settings.online.hasUpdate">有更新公告</Trans>
+											</Badge>
 										) : null}
 										{source.builtin ? (
 											<Badge size="1" variant="soft">
@@ -1563,6 +1705,60 @@ const OnlineSourceSettings: FC = () => {
 					);
 				})}
 			</Flex>
+
+			<Dialog.Root
+				open={announcementSource !== null}
+				onOpenChange={(open) => {
+					if (!open) setAnnouncementSource(null);
+				}}
+			>
+				<Dialog.Content maxWidth="460px">
+					<Dialog.Title>
+						{t("page.settings.online.updateTitle", "音源更新公告")}
+						{announcementSource ? ` · ${announcementSource.name}` : ""}
+					</Dialog.Title>
+					<Dialog.Description size="2" color="gray" mb="3">
+						<Trans i18nKey="page.settings.online.updateTip">
+							该音源推送了更新信息，内容由音源作者提供。
+						</Trans>
+					</Dialog.Description>
+					<Box
+						style={{
+							whiteSpace: "pre-wrap",
+							wordBreak: "break-word",
+							maxHeight: 300,
+							overflow: "auto",
+							padding: 12,
+							borderRadius: 6,
+							background: "var(--gray-a2)",
+						}}
+					>
+						<Text size="2">
+							{announcementSource
+								? announcements[announcementSource.id]?.log ||
+									t("page.settings.online.updateNoLog", "该音源提供了新的更新链接")
+								: ""}
+						</Text>
+					</Box>
+					<Flex gap="3" mt="4" justify="end">
+						<Dialog.Close>
+							<Button variant="soft" color="gray">
+								<Trans i18nKey="common.close">关闭</Trans>
+							</Button>
+						</Dialog.Close>
+						{announcementSource && announcements[announcementSource.id]?.updateUrl ? (
+							<Button
+								onClick={() => {
+									const u = announcements[announcementSource.id]?.updateUrl;
+									if (u) void openUrl(u);
+								}}
+							>
+								<Trans i18nKey="page.settings.online.openUpdateUrl">查看更新详情</Trans>
+							</Button>
+						) : null}
+					</Flex>
+				</Dialog.Content>
+			</Dialog.Root>
 		</>
 	);
 };

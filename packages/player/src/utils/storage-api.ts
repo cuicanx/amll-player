@@ -5,6 +5,8 @@ export interface StorageUsage {
 	cacheBytes: number;
 	logBytes: number;
 	musicCacheBytes: number;
+	onlineCacheBytes: number;
+	onlineCoverBytes: number;
 	fileCount: number;
 }
 
@@ -22,6 +24,7 @@ export function cleanStorage(options: {
 	cleanCovers: boolean;
 	cleanLogs: boolean;
 	cleanMusicCache: boolean;
+	cleanOnlineCache: boolean;
 }): Promise<StorageCleanResult> {
 	return invoke("storage_clean", options);
 }

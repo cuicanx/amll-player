@@ -288,6 +288,7 @@ pub fn run() {
             online::online_cache_store,
             online::online_cache_usage,
             online::online_cache_clear,
+            online::online_cover_cache,
             online::online_lyric,
             online::online_pic,
             online::dev_log,

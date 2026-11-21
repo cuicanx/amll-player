@@ -1,4 +1,5 @@
 import {
+	ArchiveIcon,
 	ArrowLeftIcon,
 	Component1Icon,
 	DesktopIcon,
@@ -34,6 +35,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { loadedExtensionAtom } from "../../states/extensionsAtoms.ts";
+import { BOOT_PLAY_MODE } from "../../states/play-mode.ts";
 import { ExtensionTab } from "./extension.tsx";
 import styles from "./index.module.css";
 import { PlayerSettingsTab } from "./player.tsx";
@@ -95,11 +97,17 @@ const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({
 				label: t("page.settings.general.subtitle"),
 				icon: <GearIcon width={20} height={20} />,
 			},
-			{
-				id: "online",
-				label: t("page.settings.online.subtitle", "在线音源"),
-				icon: <GlobeIcon width={20} height={20} />,
-			},
+			// Online sources only exist in online mode - hide the entry entirely
+			// when running in local mode.
+			...(BOOT_PLAY_MODE === "online"
+				? [
+						{
+							id: "online",
+							label: t("page.settings.online.subtitle", "在线音源"),
+							icon: <GlobeIcon width={20} height={20} />,
+						},
+					]
+				: []),
 			{
 				id: "lyricContent",
 				label: t("page.settings.lyricContent.subtitle"),
@@ -133,7 +141,7 @@ const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({
 			{
 				id: "storage",
 				label: t("page.settings.storage.subtitle", "存储空间管理"),
-				icon: <Component1Icon width={20} height={20} />,
+				icon: <ArchiveIcon width={20} height={20} />,
 			},
 		];
 

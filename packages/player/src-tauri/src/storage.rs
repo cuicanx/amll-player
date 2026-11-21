@@ -21,6 +21,10 @@ pub struct StorageUsage {
     pub log_bytes: u64,
     /// Cached audio copies.
     pub music_cache_bytes: u64,
+    /// Downloaded online songs (online-cache/).
+    pub online_cache_bytes: u64,
+    /// Downloaded online-song covers (online-cover-cache/).
+    pub online_cover_bytes: u64,
     /// Number of files counted.
     pub file_count: u64,
 }
@@ -63,14 +67,29 @@ pub fn storage_usage(app: AppHandle) -> StorageUsage {
     let app_data = app.path().app_data_dir().unwrap_or_default();
     let mut count = 0u64;
     let total = dir_size(&app_data, &mut count);
-    let cache = dir_size(&resolve(&app, "covers"), &mut 0);
-    let logs = dir_size(&resolve(&app, "logs"), &mut 0);
-    let music = dir_size(&resolve(&app, "music_cache"), &mut 0);
+    // Count files for each category too, so the UI never shows a bare "0B"
+    // with no explanation - categories with files always report their count.
+    let mut cover_count = 0u64;
+    let mut log_count = 0u64;
+    let mut music_count = 0u64;
+    let mut online_count = 0u64;
+    let mut online_cover_count = 0u64;
+    let cache = dir_size(&resolve(&app, "covers"), &mut cover_count);
+    let logs = dir_size(&resolve(&app, "logs"), &mut log_count);
+    let music = dir_size(&resolve(&app, "music_cache"), &mut music_count);
+    let online = dir_size(&resolve(&app, "online-cache"), &mut online_count);
+    let online_cover = dir_size(&resolve(&app, "online-cover-cache"), &mut online_cover_count);
+    info!(
+        "storage_usage: total={total} covers={cache}/{cover_count} logs={logs}/{log_count} music={music}/{music_count} online={online}/{online_count} onlineCover={online_cover}/{online_cover_count}"
+    );
     StorageUsage {
         total_bytes: total,
         cache_bytes: cache,
         log_bytes: logs,
         music_cache_bytes: music,
+        online_cache_bytes: online,
+        online_cover_bytes: online_cover,
+        // file_count stays the recursive AppData total for compatibility.
         file_count: count,
     }
 }
@@ -118,6 +137,7 @@ pub async fn storage_clean(
     clean_covers: bool,
     clean_logs: bool,
     clean_music_cache: bool,
+    clean_online_cache: bool,
 ) -> Result<StorageCleanResult, String> {
     let mut result = StorageCleanResult {
         deleted_files: 0,
@@ -132,8 +152,9 @@ pub async fn storage_clean(
         match crate::db::cleanup::run_cover_gc(&*db_state, &app).await {
             Ok(gc) => {
                 result.deleted_files += gc.deleted;
+                result.freed_bytes += gc.freed_bytes;
                 result.errors.extend(gc.errors);
-                info!("storage_clean: removed {} orphaned covers", gc.deleted);
+                info!("storage_clean: removed {} orphaned covers ({} bytes)", gc.deleted, gc.freed_bytes);
             }
             Err(e) => {
                 warn!("storage_clean: cover GC failed: {e}");
@@ -156,6 +177,15 @@ pub async fn storage_clean(
         result.deleted_files += n;
         result.freed_bytes += b;
         result.errors.extend(errs);
+    }
+
+    if clean_online_cache {
+        let (n1, b1, e1) = clear_dir(&resolve(&app, "online-cache"), None);
+        let (n2, b2, e2) = clear_dir(&resolve(&app, "online-cover-cache"), None);
+        result.deleted_files += n1 + n2;
+        result.freed_bytes += b1 + b2;
+        result.errors.extend(e1);
+        result.errors.extend(e2);
     }
 
     Ok(result)

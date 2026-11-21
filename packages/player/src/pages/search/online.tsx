@@ -1,9 +1,12 @@
 /**
  * Online search view.
  *
- * Layout mirrors LX's online search: a platform tab row, then one table per
- * platform with # / name / artist / album / duration columns and a quality
- * badge next to the title. The aggregate tab shows every platform section.
+ * Layout mirrors LX's online search: a platform tab row and ONE flat result
+ * table. The aggregate tab merges every platform into a single list (with a
+ * source badge per row) instead of one section per platform - that is exactly
+ * what LX's `all` tab does. Ranking uses LX's `similar()` edit-distance score
+ * plus a stable insertion sort, so the same keyword on the same platform yields
+ * the same content in the same order.
  */
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import {
@@ -35,7 +38,6 @@ import {
 	type OnlineSong,
 	fetchOnlineMeta,
 	onlineSearch,
-	prefetchOnlineSong,
 	prepareOnlineSong,
 	setPrepareObserver,
 	setResolveObserver,
@@ -45,14 +47,15 @@ import {
 const COLUMNS = "36px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) 64px";
 
 const PLATFORM_LABEL: Record<string, string> = {
-	kg: "酷狗",
 	kw: "酷我",
-	wy: "网易",
+	kg: "酷狗",
 	tx: "QQ",
+	wy: "网易",
 	mg: "咪咕",
 };
 
-const PLATFORM_ORDER = ["kg", "kw", "wy", "mg", "tx"];
+/** LX's musicSdk order: kw, kg, tx, wy, mg (bd/xm are disabled). */
+const PLATFORM_ORDER = ["kw", "kg", "tx", "wy", "mg"];
 
 function formatDuration(seconds: number): string {
 	if (!seconds || seconds < 0) return "--:--";
@@ -61,34 +64,48 @@ function formatDuration(seconds: number): string {
 	return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-/** Same normalisation idea as LX's filterStr: ignore case, spaces and punctuation. */
-function normalizeText(value: string): string {
-	return value
-		.toLowerCase()
-		.replace(/[\s'.,，&"、()（）`~|<>\/\[\]!！-]/g, "");
+/**
+ * LX's `similar()`: 1 - Levenshtein(a, b) / max(len(a), len(b)).
+ * Copied verbatim from `src/common/utils/common.ts` so ranking matches LX.
+ */
+function similar(a: string, b: string): number {
+	if (!a || !b) return 0;
+	if (a.length > b.length) {
+		const tmp = a;
+		a = b;
+		b = tmp;
+	}
+	const al = a.length;
+	const bl = b.length;
+	let mp = new Array<number>(bl + 1);
+	for (let i = 0; i <= bl; i++) mp[i] = i;
+	for (let i = 1; i <= al; i++) {
+		const ai = a.charAt(i - 1);
+		let lt = mp[0];
+		mp[0] = mp[0] + 1;
+		for (let j = 1; j <= bl; j++) {
+			const tmp = Math.min(
+				mp[j] + 1,
+				mp[j - 1] + 1,
+				lt + (ai === b.charAt(j - 1) ? 0 : 1),
+			);
+			lt = mp[j];
+			mp[j] = tmp;
+		}
+	}
+	return bl === 0 ? 0 : 1 - mp[bl] / bl;
 }
 
-/** Exact match first, then prefix, then containment - LX's rough ordering. */
-function relevance(song: OnlineSong, keyword: string): number {
-	const key = normalizeText(keyword);
-	if (!key) return 0;
-	const name = normalizeText(song.name);
-	const singer = normalizeText(song.singer);
-	let score = 0;
-	if (name === key) score = 100;
-	else if (name.startsWith(key)) score = 85;
-	else if (name.includes(key)) score = 70;
-	else if (singer === key) score = 60;
-	else if (singer.includes(key)) score = 45;
-	else if (normalizeText(`${song.name}${song.singer}`).includes(key)) score = 30;
-	// LX searches with "name singer". Score the individual words too, so a
-	// title-only hit does not outrank an exact title+artist hit.
-	for (const token of keyword.trim().split(/\s+/).map(normalizeText)) {
-		if (!token || token === key) continue;
-		if (name.includes(token)) score += 20;
-		if (singer.includes(token)) score += 20;
+/** LX's `sortInsert`: stable insertion into an ascending-by-num array. */
+function sortInsert<T>(arr: { num: number; data: T }[], data: { num: number; data: T }): void {
+	let left = 0;
+	let right = arr.length;
+	while (left < right) {
+		const mid = (left + right) >> 1;
+		if (arr[mid].num < data.num) left = mid + 1;
+		else right = mid;
 	}
-	return score;
+	arr.splice(left, 0, data);
 }
 
 const QUALITY_RANK: Record<string, number> = {
@@ -128,6 +145,10 @@ export const OnlineSearchPage: FC = () => {
 	const [playlists, setPlaylists] = useState<Playlist[]>([]);
 	const queueManager = useAtomValue(queueManagerAtom);
 	const inputRef = useRef<HTMLInputElement>(null);
+	// Synchronous guards: React state updates are async, so a fast double-click
+	// can otherwise start two plays and leave the loading text stuck forever.
+	const resolvingRef = useRef("");
+	const playSeqRef = useRef(0);
 
 	useEffect(() => {
 		inputRef.current?.focus();
@@ -137,9 +158,15 @@ export const OnlineSearchPage: FC = () => {
 	// Show which source actually resolved the song, and what step it is on.
 	useEffect(() => {
 		setResolveObserver((via) => {
-			setMessage(t("page.online.via", "已通过「{via}」解析", { via }));
+			// Never overwrite a settled UI with a late observer callback from a
+			// previous play - that was one cause of the stuck "正在准备播放".
+			if (resolvingRef.current) {
+				setMessage(t("page.online.via", "已通过「{via}」解析", { via }));
+			}
 		});
-		setPrepareObserver((phase) => setMessage(phase));
+		setPrepareObserver((phase) => {
+			if (resolvingRef.current) setMessage(phase);
+		});
 		return () => {
 			setResolveObserver(null);
 			setPrepareObserver(null);
@@ -171,45 +198,40 @@ export const OnlineSearchPage: FC = () => {
 		}
 	}, [t]);
 
-	const grouped = useMemo(() => {
-		const map = new Map<string, OnlineSong[]>();
-		for (const song of songs) {
-			const list = map.get(song.source) ?? [];
-			list.push(song);
-			map.set(song.source, list);
+	/**
+	 * LX's aggregate: dedupe by song id, then rank the WHOLE list by
+	 * similar(keyword, name + ' ' + singer) using a stable ascending insertion
+	 * followed by a reverse - no per-platform grouping.
+	 */
+	const visibleSongs = useMemo(() => {
+		const seen = new Set<string>();
+		const unique = songs.filter((song) => {
+			if (seen.has(song.id)) return false;
+			seen.add(song.id);
+			return true;
+		});
+		const ranked: { num: number; data: OnlineSong }[] = [];
+		for (const song of unique) {
+			const num = similar(searched, `${song.name} ${song.singer}`);
+			sortInsert(ranked, { num, data: song });
 		}
-		for (const [source, list] of map) {
-			const seen = new Set<string>();
-			map.set(
-				source,
-				[...list]
-					.sort(
-						(a, b) =>
-							relevance(b, searched) - relevance(a, searched) ||
-							a.name.localeCompare(b.name),
-					)
-					.filter((song) => {
-						const key = `${normalizeText(song.name)}|${normalizeText(song.singer)}`;
-						if (seen.has(key)) return false;
-						seen.add(key);
-						return true;
-					}),
-			);
-		}
-		return map;
+		return ranked.reverse().map((item) => item.data);
 	}, [songs, searched]);
 
-	const visibleSources = useMemo(
+	const shownSongs = useMemo(
 		() =>
-			PLATFORM_ORDER.filter((source) => grouped.has(source)).concat(
-				[...grouped.keys()].filter((source) => !PLATFORM_ORDER.includes(source)),
-			),
-		[grouped],
+			platformFilter === "all"
+				? visibleSongs
+				: visibleSongs.filter((song) => song.source === platformFilter),
+		[visibleSongs, platformFilter],
 	);
-	const shownSources =
-		platformFilter === "all"
-			? visibleSources
-			: visibleSources.filter((source) => source === platformFilter);
+
+	const visibleSources = useMemo(() => {
+		const present = new Set<string>(visibleSongs.map((song) => song.source));
+		const ordered = PLATFORM_ORDER.filter((source) => present.has(source));
+		const extra = [...present].filter((source) => !PLATFORM_ORDER.includes(source));
+		return [...ordered, ...extra];
+	}, [visibleSongs]);
 
 	const play = useCallback(
 		async (song: OnlineSong) => {
@@ -218,17 +240,24 @@ export const OnlineSearchPage: FC = () => {
 				return;
 			}
 			const key = songKeyOf(song);
-			if (resolving) return;
+			// Synchronous mutex: a second double-click on a song already being
+			// prepared (or already playing from cache) must not spawn another
+			// preparation, which previously left the loading text stuck.
+			if (resolvingRef.current) return;
+			resolvingRef.current = key;
+			const seq = ++playSeqRef.current;
 			setResolving(key);
 			setMessage(t("page.online.loading", "正在准备播放…"));
 			try {
-				// Audio first: lyrics and cover are fetched after playback starts
-				// and written back through the db-row-changed event, so a slow
-				// lyric server can no longer delay the first note.
 				const path = await prepareOnlineSong(song);
+				// A faster click on another song wins; ignore this stale result.
+				if (seq !== playSeqRef.current) return;
 				const playable: Song = {
 					id: `online-${song.source}-${song.id}`,
-					filePath: path,
+					// Keep the resolvable pseudo path in the DB. Writing the real
+					// cache path here broke favourites after the cache was cleared:
+					// they were treated as local files and silently failed to load.
+					filePath: toOnlinePath(song),
 					songName: song.name,
 					songArtists: song.singer,
 					songAlbum: song.albumName,
@@ -237,10 +266,13 @@ export const OnlineSearchPage: FC = () => {
 					lyric: "",
 					translatedLrc: null,
 					romanLrc: null,
-					coverPath: song.coverUrl || null,
+					// Leave cover empty on the first write. fetchOnlineMeta
+					// downloads the http cover into a local file and writes it
+					// back, which the player picks up via db-row-changed.
+					coverPath: null,
 				};
 				await db.songs.upsert([playable]).catch(() => {});
-				queueManager.replaceQueueAndPlay(playable);
+				queueManager.replaceQueueAndPlay({ ...playable, filePath: path });
 
 				void fetchOnlineMeta(song)
 					.then((meta) =>
@@ -254,17 +286,24 @@ export const OnlineSearchPage: FC = () => {
 						]),
 					)
 					.catch(() => {});
+				// Playback has started - clear the "正在准备播放" state immediately.
+				if (seq === playSeqRef.current) setMessage("");
 			} catch (err) {
-				setMessage(
-					t("page.online.playFailed", "无法播放：{error}", {
-						error: (err as Error)?.message ?? String(err),
-					}),
-				);
+				if (seq === playSeqRef.current) {
+					setMessage(
+						t("page.online.playFailed", "无法播放：{error}", {
+							error: (err as Error)?.message ?? String(err),
+						}),
+					);
+				}
 			} finally {
-				setResolving("");
+				if (seq === playSeqRef.current) {
+					resolvingRef.current = "";
+					setResolving("");
+				}
 			}
 		},
-		[queueManager, resolving, t],
+		[queueManager, t],
 	);
 
 	const saveTo = useCallback(
@@ -287,7 +326,6 @@ export const OnlineSearchPage: FC = () => {
 				await db.songs.upsert([stored]);
 				await db.playlists.addSongs(playlistId, [stored.id]);
 				setMessage(t("page.online.saved", "已收藏到歌单"));
-				prefetchOnlineSong(song);
 			} catch (err) {
 				setMessage(
 					t("page.online.saveFailed", "收藏失败：{error}", {
@@ -346,7 +384,7 @@ export const OnlineSearchPage: FC = () => {
 					) : null}
 				</Flex>
 
-				{songs.length > 0 ? (
+				{visibleSources.length > 1 ? (
 					<Flex gap="2" align="center" wrap="wrap" mt="3">
 						<Button
 							size="1"
@@ -374,146 +412,141 @@ export const OnlineSearchPage: FC = () => {
 					</Text>
 				) : null}
 
-				{shownSources.map((source) => {
-					const list = grouped.get(source) ?? [];
-					return (
-						<Flex key={source} direction="column" mt="4" gap="1">
-							<Flex align="center" gap="2">
-								<Text size="2" weight="bold">
-									{PLATFORM_LABEL[source] ?? source}
-								</Text>
-								<Badge size="1" variant="soft" radius="full">
-									{list.length}
-								</Badge>
-							</Flex>
-							<Card style={{ overflow: "hidden" }}>
-								<Inset>
-									<Flex
-										px="3"
-										py="2"
-										style={{
-											display: "grid",
-											gridTemplateColumns: COLUMNS,
-											gap: 12,
-											alignItems: "center",
-											borderBottom: "1px solid var(--gray-a4)",
-										}}
-									>
-										<Text size="1" color="gray">#</Text>
-										<Text size="1" color="gray">
-											<Trans i18nKey="page.online.column.name">歌曲名</Trans>
-										</Text>
-										<Text size="1" color="gray">
-											<Trans i18nKey="page.online.column.singer">歌手</Trans>
-										</Text>
-										<Text size="1" color="gray">
-											<Trans i18nKey="page.online.column.album">专辑</Trans>
-										</Text>
-										<Text size="1" color="gray">
-											<Trans i18nKey="page.online.column.duration">时长</Trans>
-										</Text>
-									</Flex>
+				{shownSongs.length > 0 ? (
+					<Flex direction="column" mt="4" gap="1">
+						<Card style={{ overflow: "hidden" }}>
+							<Inset>
+								<Flex
+									px="3"
+									py="2"
+									style={{
+										display: "grid",
+										gridTemplateColumns: COLUMNS,
+										gap: 12,
+										alignItems: "center",
+										borderBottom: "1px solid var(--gray-a4)",
+									}}
+								>
+									<Text size="1" color="gray">#</Text>
+									<Text size="1" color="gray">
+										<Trans i18nKey="page.online.column.name">歌曲名</Trans>
+									</Text>
+									<Text size="1" color="gray">
+										<Trans i18nKey="page.online.column.singer">歌手</Trans>
+									</Text>
+									<Text size="1" color="gray">
+										<Trans i18nKey="page.online.column.album">专辑</Trans>
+									</Text>
+									<Text size="1" color="gray">
+										<Trans i18nKey="page.online.column.duration">时长</Trans>
+									</Text>
+								</Flex>
 
-									{list.map((song, index) => {
-										const key = songKeyOf(song);
-										const quality = qualityLabel(song);
-										return (
-											<ContextMenu.Root key={key}>
-												<ContextMenu.Trigger>
-													<Flex
-														px="3"
-														py="2"
-														onDoubleClick={() => void play(song)}
-														onMouseEnter={() => prefetchOnlineSong(song)}
-														style={{
-															display: "grid",
-															gridTemplateColumns: COLUMNS,
-															gap: 12,
-															alignItems: "center",
-															cursor: "pointer",
-															borderBottom: "1px solid var(--gray-a3)",
-														}}
-													>
-														<Text size="1" color="gray">
-															{resolving === key ? (
-																<Spinner size="1" />
-															) : (
-																index + 1
-															)}
+								{shownSongs.map((song, index) => {
+									const key = songKeyOf(song);
+									const quality = qualityLabel(song);
+									return (
+										<ContextMenu.Root key={key}>
+											<ContextMenu.Trigger>
+												<Flex
+													px="3"
+													py="2"
+													onDoubleClick={() => void play(song)}
+													// No hover prefetch: only an actual play
+													// (or the last-15s next-song prefetch) downloads.
+													style={{
+														display: "grid",
+														gridTemplateColumns: COLUMNS,
+														gap: 12,
+														alignItems: "center",
+														cursor: "pointer",
+														borderBottom: "1px solid var(--gray-a3)",
+													}}
+												>
+													<Text size="1" color="gray">
+														{resolving === key ? (
+															<Spinner size="1" />
+														) : (
+															index + 1
+														)}
+													</Text>
+													<Flex align="center" gap="2" minWidth="0">
+														<Text size="2" truncate title={song.name}>
+															{song.name}
 														</Text>
-														<Flex align="center" gap="2" minWidth="0">
-															<Text size="2" truncate title={song.name}>
-																{song.name}
+														{quality ? (
+															<Text size="1" color="grass">
+																{quality}
 															</Text>
-															{quality ? (
-																<Text size="1" color="grass">
-																	{quality}
-																</Text>
-															) : null}
-														</Flex>
-														<Text
-															size="2"
-															color="gray"
-															truncate
-															title={song.singer}
-														>
-															{song.singer || "—"}
-														</Text>
-														<Text
-															size="2"
-															color="gray"
-															truncate
-															title={song.albumName}
-														>
-															{song.albumName || "—"}
-														</Text>
-														<Text size="2" color="gray">
-															{formatDuration(song.interval)}
-														</Text>
+														) : null}
+														{platformFilter === "all" ? (
+															<Badge size="1" variant="soft" radius="full" color="gray">
+																{PLATFORM_LABEL[song.source] ?? song.source}
+															</Badge>
+														) : null}
 													</Flex>
-												</ContextMenu.Trigger>
-												<ContextMenu.Content>
-													<ContextMenu.Item
-														onSelect={() => void play(song)}
+													<Text
+														size="2"
+														color="gray"
+														truncate
+														title={song.singer}
 													>
-														<Trans i18nKey="page.online.menu.play">播放</Trans>
-													</ContextMenu.Item>
-													<ContextMenu.Sub>
-														<ContextMenu.SubTrigger>
-															<Trans i18nKey="page.online.menu.save">
-																收藏到歌单
-															</Trans>
-														</ContextMenu.SubTrigger>
-														<ContextMenu.SubContent>
-															{playlists.length === 0 ? (
-																<ContextMenu.Item disabled>
-																	<Trans i18nKey="page.online.menu.noPlaylist">
-																		还没有歌单，请先创建一个
-																	</Trans>
+														{song.singer || "—"}
+													</Text>
+													<Text
+														size="2"
+														color="gray"
+														truncate
+														title={song.albumName}
+													>
+														{song.albumName || "—"}
+													</Text>
+													<Text size="2" color="gray">
+														{formatDuration(song.interval)}
+													</Text>
+												</Flex>
+											</ContextMenu.Trigger>
+											<ContextMenu.Content>
+												<ContextMenu.Item
+													onSelect={() => void play(song)}
+												>
+													<Trans i18nKey="page.online.menu.play">播放</Trans>
+												</ContextMenu.Item>
+												<ContextMenu.Sub>
+													<ContextMenu.SubTrigger>
+														<Trans i18nKey="page.online.menu.save">
+															收藏到歌单
+														</Trans>
+													</ContextMenu.SubTrigger>
+													<ContextMenu.SubContent>
+														{playlists.length === 0 ? (
+															<ContextMenu.Item disabled>
+																<Trans i18nKey="page.online.menu.noPlaylist">
+																	还没有歌单，请先创建一个
+																</Trans>
+															</ContextMenu.Item>
+														) : (
+															playlists.map((playlist) => (
+																<ContextMenu.Item
+																	key={playlist.id}
+																	onSelect={() =>
+																		void saveTo(song, playlist.id)
+																	}
+																>
+																	{playlist.name}
 																</ContextMenu.Item>
-															) : (
-																playlists.map((playlist) => (
-																	<ContextMenu.Item
-																		key={playlist.id}
-																		onSelect={() =>
-																			void saveTo(song, playlist.id)
-																		}
-																	>
-																		{playlist.name}
-																	</ContextMenu.Item>
-																))
-															)}
-														</ContextMenu.SubContent>
-													</ContextMenu.Sub>
-												</ContextMenu.Content>
-											</ContextMenu.Root>
-										);
-									})}
-								</Inset>
-							</Card>
-						</Flex>
-					);
-				})}
+															))
+														)}
+													</ContextMenu.SubContent>
+												</ContextMenu.Sub>
+											</ContextMenu.Content>
+										</ContextMenu.Root>
+									);
+								})}
+							</Inset>
+						</Card>
+					</Flex>
+				) : null}
 			</Container>
 		</AppContainer>
 	);

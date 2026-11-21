@@ -32,6 +32,7 @@ import {
 	onToggleShuffleAtom,
 } from "@applemusic-like-lyrics/react-full";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import chalk from "chalk";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 import { type FC, useEffect, useLayoutEffect, useRef } from "react";
@@ -355,6 +356,39 @@ export const LocalMusicContext: FC = () => {
 		void ensureSourceHealth(true).catch(() => {});
 	}, [onlineMode]);
 
+	// Online lyrics/covers are fetched after playback starts and written back to
+	// the DB. The initial syncMusicInfo ran before the cover existed, so without
+	// this listener the player kept showing a transparent (black) cover forever.
+	useEffect(() => {
+		let disposed = false;
+		let unlisten: (() => void) | undefined;
+		listen<{ table: string; id: unknown }>("db-row-changed", (event) => {
+			if (event.payload.table !== "songs") return;
+			void (async () => {
+				const currentId = store.get(musicIdAtom);
+				if (!currentId || disposed) return;
+				const song = await db.songs.get(currentId);
+				if (!song || disposed || song.id !== store.get(musicIdAtom)) return;
+				if (song.coverPath) {
+					const p = song.coverPath;
+					store.set(
+						musicCoverAtom,
+						p.startsWith("http://") || p.startsWith("https://")
+							? p
+							: convertFileSrc(p),
+					);
+				}
+			})();
+		}).then((fn) => {
+			if (disposed) fn();
+			else unlisten = fn;
+		}).catch(() => {});
+		return () => {
+			disposed = true;
+			unlisten?.();
+		};
+	}, [store]);
+
 	const syncMusicInfo = async (
 		data: Extract<AudioThreadEvent, { type: "loadAudio" }>["data"],
 	) => {
@@ -480,6 +514,9 @@ export const LocalMusicContext: FC = () => {
 			if (nextPosition !== store.get(musicPlayingPositionAtom)) {
 				store.set(musicPlayingPositionAtom, nextPosition);
 			}
+			// Prefetch the next ONLINE song only in the last 15 seconds, once per
+			// song. Hover/play no longer download anything (see online.tsx).
+			store.get(queueManagerAtom)?.maybePrefetchNextOnline(nextPosition, duration * 1000);
 			rafId = requestAnimationFrame(updateLoop);
 		};
 

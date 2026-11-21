@@ -252,6 +252,17 @@ export const currentSongWritersAtom = atom<string[]>([]);
  */
 export const playbackEpochAtom = atom(0);
 
+/**
+ * Preferred quality for online-music downloads. "auto" keeps the historical
+ * 320k-first behaviour; a concrete tier is tried first whenever a source
+ * declares support for it.
+ */
+export type PreferredQuality = "auto" | "flac24bit" | "flac" | "320k" | "128k";
+export const preferredQualityAtom = atomWithStorage<PreferredQuality>(
+	"amll-player.preferredQuality",
+	"auto",
+);
+
 export const queueManagerAtom = atom<PlayQueueManager | null>(null);
 
 const _languageBaseAtom = atom(i18n.language);
