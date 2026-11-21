@@ -11,6 +11,7 @@
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import {
 	Badge,
+	Box,
 	Button,
 	Card,
 	ContextMenu,
@@ -413,23 +414,39 @@ export const OnlineSearchPage: FC = () => {
 					</Badge>
 				</Flex>
 
-				<TextField.Root
-					placeholder={t("page.online.placeholder", "搜索在线歌曲，按回车开始……")}
-					mt="2"
-					value={keyword}
-					onChange={(evt) => setKeyword(evt.target.value)}
-					onKeyUp={(evt) => {
-						if (evt.key === "Enter") void runSearch(keyword);
-					}}
-					ref={inputRef}
-					size="3"
-				>
-					<TextField.Slot>
-						<MagnifyingGlassIcon />
-					</TextField.Slot>
-				</TextField.Root>
+				<Flex gap="2" align="end" mt="2" width="100%">
+					<Box flexGrow="1" minWidth="0">
+						<TextField.Root
+							placeholder={t("page.online.placeholder", "搜索在线歌曲，按回车开始……")}
+							value={keyword}
+							onChange={(evt) => setKeyword(evt.target.value)}
+							onKeyUp={(evt) => {
+								if (evt.key === "Enter") void runSearch(keyword);
+							}}
+							ref={inputRef}
+							size="3"
+						>
+							<TextField.Slot>
+								<MagnifyingGlassIcon />
+							</TextField.Slot>
+						</TextField.Root>
+					</Box>
+					{/* Once a search exists the button moves next to the box and
+					    the history row below is hidden - keeps the idle view minimal. */}
+					{searched ? (
+						<Button
+							variant="solid"
+							size="3"
+							disabled={loading}
+							onClick={() => void runSearch(keyword)}
+						>
+							{loading ? <Spinner size="1" /> : <MagnifyingGlassIcon />}
+							<Trans i18nKey="page.online.search">搜索</Trans>
+						</Button>
+					) : null}
+				</Flex>
 
-				{searchHistory.length > 0 ? (
+				{!searched && searchHistory.length > 0 ? (
 					<Flex gap="2" align="center" wrap="wrap" mt="2">
 						<Text size="1" color="gray">
 							{t("page.online.searchHistory", "搜索历史")}
@@ -448,23 +465,26 @@ export const OnlineSearchPage: FC = () => {
 					</Flex>
 				) : null}
 
-				<Flex gap="2" align="center" mt="2">
-					<Button
-						variant="solid"
-						disabled={loading}
-						onClick={() => void runSearch(keyword)}
-					>
-						{loading ? <Spinner size="1" /> : <MagnifyingGlassIcon />}
-						<Trans i18nKey="page.online.search">搜索</Trans>
-					</Button>
-					{searched && !loading ? (
-						<Text size="2" color="gray">
-							{t("page.online.resultCount", "找到 {count} 首", {
-								count: songs.length,
-							})}
-						</Text>
-					) : null}
-				</Flex>
+				{!searched ? (
+					<Flex gap="2" align="center" mt="2">
+						<Button
+							variant="solid"
+							disabled={loading}
+							onClick={() => void runSearch(keyword)}
+						>
+							{loading ? <Spinner size="1" /> : <MagnifyingGlassIcon />}
+							<Trans i18nKey="page.online.search">搜索</Trans>
+						</Button>
+					</Flex>
+				) : null}
+
+				{searched && !loading ? (
+					<Text size="2" color="gray" mt="2" as="p">
+						{t("page.online.resultCount", "找到 {count} 首", {
+							count: songs.length,
+						})}
+					</Text>
+				) : null}
 
 				{visibleSources.length > 1 ? (
 					<Flex gap="2" align="center" wrap="wrap" mt="3">

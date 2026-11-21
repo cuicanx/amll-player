@@ -1133,7 +1133,7 @@ fn clear_usage_dir(dir: &std::path::Path) {
 /// Image CDNs check Referer. Using NetEase's Referer for a QQ or Kuwo image
 /// returned 403 for most songs, which looked exactly like a missing cover.
 fn cover_referer_for(url: &str) -> Option<&'static str> {
-    if url.contains("y.qq.com") || url.contains("qpic.cn") {
+    if url.contains("y.qq.com") || url.contains("qpic.cn") || url.contains("gtimg.cn") {
         Some("https://y.qq.com/")
     } else if url.contains("kugou") {
         Some("https://www.kugou.com/")
@@ -1550,6 +1550,12 @@ pub async fn online_pic(platform: String, id: String) -> Result<String, String> 
     match platform.as_str() {
         "kw" => pic_kuwo(&client, &id).await,
         "kg" => pic_kugou(&client, &id).await,
+        // Saved online rows often carry an empty coverUrl (the search result
+        // had no cover). Resolve one from the platform by id, exactly like
+        // LX's per-platform pic.js. Without these two branches every saved
+        // NetEase/QQ song in a playlist forever shows a black cover.
+        "wy" => pic_netease(&client, &id).await,
+        "tx" => pic_tencent(&client, &id).await,
         other => Err(format!("封面暂不支持平台 {other}")),
     }
 }
@@ -1565,6 +1571,79 @@ async fn pic_kuwo(client: &reqwest::Client, id: &str) -> Result<String, String> 
         Ok(body.to_string())
     } else {
         Err("该歌曲没有封面".into())
+    }
+}
+
+/// NetEase: album.picUrl from the public song/detail endpoint (LX wy_index.js).
+async fn pic_netease(client: &reqwest::Client, id: &str) -> Result<String, String> {
+    if id.is_empty() || !id.chars().all(|c| c.is_ascii_digit()) {
+        return Err("网易封面需要数字歌曲 ID".into());
+    }
+    let url = format!("https://music.163.com/api/song/detail?ids=%5B{id}%5D");
+    let resp = client
+        .get(&url)
+        .header("Referer", "https://music.163.com/")
+        .header("Cookie", "NMTID=test; os=pc")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+    let pic = json
+        .get("songs")
+        .and_then(|v| v.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|s| s.get("album"))
+        .and_then(|a| a.get("picUrl"))
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string());
+    pic.ok_or_else(|| "该网易歌曲没有封面".to_string())
+}
+
+/// QQ: album art when the album mid exists, otherwise the singer image.
+/// LX tx_musicSearch.js uses T002 with album.mid and falls back to T001 with
+/// singer.mid when the album mid is empty - which is the common case for the
+/// QQ search API today, and the reason QQ covers were all black.
+async fn pic_tencent(client: &reqwest::Client, id: &str) -> Result<String, String> {
+    if id.is_empty() {
+        return Err("QQ 封面需要歌曲 mid".into());
+    }
+    let url = format!(
+        "https://c.y.qq.com/v8/fcg-bin/fcg_play_single_song.fcg?songmid={id}&format=json&platform=yqq"
+    );
+    let resp = client
+        .get(&url)
+        .header("Referer", "https://y.qq.com/")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+    let song = json
+        .get("data")
+        .and_then(|v| v.as_array())
+        .and_then(|arr| arr.first());
+    let album_mid = song
+        .and_then(|s| s.get("album"))
+        .and_then(|a| a.get("mid"))
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty() && *s != "空");
+    if let Some(album_mid) = album_mid {
+        return Ok(format!(
+            "https://y.qq.com/music/photo_new/T002R300x300M000{album_mid}.jpg"
+        ));
+    }
+    let singer_mid = song
+        .and_then(|s| s.get("singer"))
+        .and_then(|v| v.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|a| a.get("mid"))
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty());
+    match singer_mid {
+        Some(mid) => Ok(format!(
+            "https://y.qq.com/music/photo_new/T001R300x300M000{mid}.jpg"
+        )),
+        None => Err("该 QQ 歌曲没有封面".into()),
     }
 }
 
