@@ -770,7 +770,7 @@ fn bytes_look_like_stub(bytes: &[u8]) -> bool {
     let has_id3 = head.starts_with(b"ID3");
     let has_flac = head.starts_with(b"fLaC");
     let has_mp3 = head.len() >= 2 && head[0] == 0xFF && (head[1] & 0xE0) == 0xE0;
-    let has_m4a = head.get(4..8) == Some(b"ftyp");
+    let has_m4a = head.get(4..8) == Some(&b"ftyp"[..]);
     let has_ogg = head.starts_with(b"OggS");
     !(has_id3 || has_flac || has_mp3 || has_m4a || has_ogg)
 }
@@ -794,7 +794,7 @@ fn file_looks_like_stub(path: &std::path::Path) -> bool {
     let has_id3 = head.starts_with(b"ID3");
     let has_flac = head.starts_with(b"fLaC");
     let has_mp3 = head[0] == 0xFF && (head[1] & 0xE0) == 0xE0;
-    let has_m4a = head.get(4..8) == Some(b"ftyp");
+    let has_m4a = head.get(4..8) == Some(&b"ftyp"[..]);
     let has_ogg = head.starts_with(b"OggS");
     !(has_id3 || has_flac || has_mp3 || has_m4a || has_ogg)
 }
