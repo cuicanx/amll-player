@@ -270,19 +270,23 @@ export const LyricTabContent: FC = () => {
 								</Option>
 							<Button
 								variant="soft"
-								disabled={!song?.translatedLrc?.trim()}
+								disabled={!translatedLyricContent.trim() && !lyricContent.trim()}
 								onClick={() => {
-									// Swap from the ORIGINAL stored lyric data, not from the
-									// (possibly edited) textareas. This button corrects the case
-									// where a translation was mis-detected as the main lyric:
-									// main <- original translation, translation <- original main.
-									if (!song) return;
-									const originalMain = song.lyric ?? "";
-									const originalTranslated = song.translatedLrc ?? "";
+									// Swap what the user currently sees in the two boxes.
+									// The old code disabled the button when the *stored*
+									// translatedLrc was empty - but a translation that was
+									// mis-detected as the main lyric is exactly that case,
+									// so the button could never be clicked. Use the live
+									// textarea values (loaded from the song on open) and
+									// enable the swap whenever there is anything to swap.
+									const nextMain = translatedLyricContent;
+									const nextTranslated = lyricContent;
+									setLyricContent(nextMain);
+									setTranslatedLyricContent(nextTranslated);
 									void saveData(
 										lyricFormat,
-										originalTranslated,
-										originalMain,
+										nextMain,
+										nextTranslated,
 										romanLyricContent,
 									);
 								}}
