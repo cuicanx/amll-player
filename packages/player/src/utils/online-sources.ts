@@ -61,6 +61,25 @@ export function loadSources(): StoredSource[] {
 		localStorage.setItem(SEEDED_KEY, "1");
 		saveSources(list);
 	}
+
+	// Built-in sources must always run the script that shipped with this build.
+	// A stored copy can come from an older build, and a source signs its
+	// requests with a hash of its own text: a stale copy silently makes every
+	// request look forged to the server.
+	for (const item of BUILTIN_SOURCES) {
+		const stored = list.find((s) => s.id === item.id);
+		if (stored && stored.rawScript !== item.raw) {
+			stored.rawScript = item.raw;
+			const info = parseScriptInfo(item.raw);
+			stored.name = info.name;
+			stored.description = info.description;
+			stored.version = info.version;
+			stored.author = info.author;
+			stored.homepage = info.homepage;
+			saveSources(list);
+		}
+	}
+
 	return list;
 }
 

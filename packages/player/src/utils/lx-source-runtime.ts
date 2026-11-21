@@ -294,6 +294,11 @@ export class LxSourceRuntime {
 
 	private evaluate() {
 		const runtime = this;
+		void invoke("dev_log", {
+			message: `script ${this.info.name} len=${this.info.rawScript.length} tail=${JSON.stringify(
+				this.info.rawScript.slice(-24),
+			)}`,
+		}).catch(() => {});
 		const lx = {
 			version: "2.0.0",
 			env: "desktop",
