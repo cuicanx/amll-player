@@ -343,7 +343,9 @@ export const LocalMusicContext: FC = () => {
 	// opening the settings page.
 	useEffect(() => {
 		if (!onlineMode) return;
-		void ensureSourceHealth().catch(() => {});
+		// Force a real check: a cached "loaded" entry must never stand in for a
+		// source that can no longer resolve anything.
+		void ensureSourceHealth(true).catch(() => {});
 	}, [onlineMode]);
 
 	const syncMusicInfo = async (

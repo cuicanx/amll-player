@@ -158,6 +158,7 @@ export async function ensureSourceHealth(force = false): Promise<Map<string, { o
 
 	const enabled = loadSources().filter((s) => s.enabled);
 	health.clear();
+	const verified = new Map<string, { ok: boolean; message: string }>();
 	await Promise.all(
 		enabled.map(async (source) => {
 			const runtime = runtimeFor(source);
@@ -177,10 +178,14 @@ export async function ensureSourceHealth(force = false): Promise<Map<string, { o
 						probe = `解析测试失败：${(err as Error)?.message ?? err}`;
 					}
 				}
-				health.set(source.id, {
+				const entry = {
 					ok: true,
 					message: `已加载 ${platforms.join(" / ")}${probe ? `；${probe}` : ""}`,
-				});
+				};
+				health.set(source.id, entry);
+				// Only a source that proved it can resolve is worth caching;
+				// caching "loaded but broken" is what made the badge lie.
+				if (probe === "解析测试通过") verified.set(source.id, entry);
 				devLog(`health ${source.name}: ok platforms=${platforms.join(",")} ${probe}`);
 			} catch (err) {
 				const message = (err as Error)?.message ?? String(err);
@@ -189,7 +194,7 @@ export async function ensureSourceHealth(force = false): Promise<Map<string, { o
 			}
 		}),
 	);
-	persistHealth(health);
+	persistHealth(verified);
 	return health;
 }
 
