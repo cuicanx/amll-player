@@ -1,7 +1,12 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { LRUCache } from "lru-cache";
 import { useLayoutEffect, useRef, useState } from "react";
-import type { Song } from "./db-client.ts";
+import { db, type Song } from "./db-client.ts";
+import {
+	fetchOnlineCover,
+	isOnlinePath,
+	parseOnlinePath,
+} from "./online-api.ts";
 import { getVideoThumbnail } from "./video-thumbnail.ts";
 
 const thumbnailCache = new LRUCache<string, string>({
@@ -10,6 +15,26 @@ const thumbnailCache = new LRUCache<string, string>({
 		URL.revokeObjectURL(url);
 	},
 });
+
+/** One repair per song at a time, even when several virtual rows render it. */
+const repairingCovers = new Set<string>();
+
+function isLocalCachedCover(path: string): boolean {
+	if (/^https?:\/\//.test(path) || path.startsWith("/data/")) return false;
+	// Windows drive / UNC or a POSIX absolute cache path.
+	return /^(?:[A-Za-z]:[\\/]|\\\\|\/)/.test(path);
+}
+
+function repairOnlineCover(song: Song): void {
+	if (repairingCovers.has(song.id) || !isOnlinePath(song.filePath)) return;
+	const online = parseOnlinePath(song.filePath);
+	if (!online) return;
+	repairingCovers.add(song.id);
+	void fetchOnlineCover(online)
+		.then((path) => (path ? db.songs.update(song.id, { coverPath: path }) : undefined))
+		.catch(() => {})
+		.finally(() => repairingCovers.delete(song.id));
+}
 
 export const useSongCover = (song?: Song) => {
 	const [songImgUrl, setSongImgUrl] = useState<string>("");
@@ -22,6 +47,15 @@ export const useSongCover = (song?: Song) => {
 	useLayoutEffect(() => {
 		const requestId = ++requestIdRef.current;
 		if (!coverPath) {
+			if (song && isOnlinePath(song.filePath)) repairOnlineCover(song);
+			setSongImgUrl("");
+			return;
+		}
+
+		// Historical online rows store a raw http URL or a relative Migu path.
+		// Both are unusable in the WebView; self-heal them from the pseudo path.
+		if (song && isOnlinePath(song.filePath) && !isLocalCachedCover(coverPath)) {
+			repairOnlineCover(song);
 			setSongImgUrl("");
 			return;
 		}
@@ -69,7 +103,7 @@ export const useSongCover = (song?: Song) => {
 				console.warn("提取视频略缩图失败:", err);
 				setSongImgUrl("");
 			});
-	}, [coverPath]);
+	}, [coverPath, song?.id, song?.filePath]);
 
 	return songImgUrl;
 };
