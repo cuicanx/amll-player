@@ -23,9 +23,18 @@ export interface StoredSource extends LxSourceInfo {
 	addedAt: number;
 }
 
+/**
+ * Sources sign requests with a hash of their own text, so line endings are part
+ * of the identity. A Windows git checkout rewrites LF to CRLF, which silently
+ * changed the hash and made the server answer "block ip" to every request.
+ */
+function normalizeScript(text: string): string {
+	return text.replace(/\r\n/g, "\n");
+}
+
 export const BUILTIN_SOURCES = [
-	{ id: "builtin-dujia", label: "独家音源", raw: dujiaSource },
-	{ id: "builtin-yehua", label: "野花音源", raw: yehuaSource },
+	{ id: "builtin-dujia", label: "独家音源", raw: normalizeScript(dujiaSource) },
+	{ id: "builtin-yehua", label: "野花音源", raw: normalizeScript(yehuaSource) },
 ];
 
 function makeId() {
