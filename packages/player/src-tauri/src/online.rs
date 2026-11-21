@@ -47,6 +47,10 @@ pub struct OnlineHttpResponse {
 fn make_client(no_proxy: bool) -> reqwest::Client {
     let mut builder = reqwest::Client::builder()
         .user_agent(UA)
+        // LX (needle) and the reference implementation both speak HTTP/1.1.
+        // Some source servers sit behind a WAF that treats HTTP/2 clients with a
+        // different (blocking) policy, so match the desktop behaviour here.
+        .http1_only()
         .connect_timeout(Duration::from_secs(10));
     if no_proxy {
         builder = builder.no_proxy();
