@@ -215,6 +215,30 @@ export const enableTaskbarLyricAtom = atomWithStorage(
 
 export const audioQualityDialogOpenedAtom = atom(false);
 
+/**
+ * Display-only "swap main lyric / translation" toggle.
+ *
+ * This is NOT song data: it never writes to the lyrics database. When enabled
+ * the translated line is rendered as the large main line and the original
+ * lyric becomes the sub line. It is a global playback preference so it is
+ * available on every song without editing any lyric text.
+ */
+export const swapLyricMainTranslationAtom = atomWithStorage(
+	"amll-player.swapLyricMainTranslation",
+	false,
+);
+
+/**
+ * Automatic online-song cache cleanup interval, in DAYS.
+ * 0 disables automatic cleanup. New installs default to 3 days.
+ */
+export type AutoClearCacheDays = 0 | 1 | 3 | 7 | 30;
+export const AUTO_CLEAR_CACHE_OPTIONS: AutoClearCacheDays[] = [0, 1, 3, 7, 30];
+export const autoClearCacheDaysAtom = atomWithStorage<AutoClearCacheDays>(
+	"amll-player.autoClearCacheDays",
+	3,
+);
+
 export const taskbarLyricThemeSettingAtom = atomWithStorage<
 	"auto" | "light" | "dark"
 >("amll-player.taskbarLyricTheme", "auto");

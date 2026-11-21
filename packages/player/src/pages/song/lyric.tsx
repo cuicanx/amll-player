@@ -1,4 +1,5 @@
 import { Button, Callout, Flex, Select, Text, TextArea } from "@radix-ui/themes";
+import { useAtom } from "jotai";
 import { listen, TauriEvent } from "@tauri-apps/api/event";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import {
@@ -12,6 +13,7 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import { ExtensionInjectPoint } from "../../components/ExtensionInjectPoint/index.tsx";
 import { TTMLImportDialog } from "../../components/TTMLImportDialog/index.tsx";
+import { swapLyricMainTranslationAtom } from "../../states/appAtoms.ts";
 import { db } from "../../utils/db-client.ts";
 import { getLyricFormatFromExtension, Option } from "./common.tsx";
 import { SongContext } from "./song-ctx.ts";
@@ -23,6 +25,9 @@ export const LyricTabContent: FC = () => {
 	const [translatedLyricContent, setTranslatedLyricContent] = useState("");
 	const [romanLyricContent, setRomanLyricContent] = useState("");
 	const [lyricOffsetMs, setLyricOffsetMs] = useState(0);
+	const [swapMainTranslation, setSwapMainTranslation] = useAtom(
+		swapLyricMainTranslationAtom,
+	);
 	const { t } = useTranslation();
 
 	useLayoutEffect(() => {
@@ -220,6 +225,20 @@ export const LyricTabContent: FC = () => {
 						>
 							<Trans i18nKey="common.reset">重置</Trans>
 						</Button>
+						{/* Display-only toggle: never rewrites the lyric data. It only
+						    swaps which text AMLL renders as the main line vs the
+						    translation sub-line while playing. */}
+						<Button
+							size="1"
+							variant={swapMainTranslation ? "solid" : "soft"}
+							color={swapMainTranslation ? "iris" : "gray"}
+							onClick={() => setSwapMainTranslation((value) => !value)}
+						>
+							<Trans i18nKey="page.song.lyric.swapMainTranslation">
+								主译互换
+							</Trans>
+							{swapMainTranslation ? " · 开" : " · 关"}
+						</Button>
 					</Flex>
 				</Option>
 				{lyricFormat !== "none" && lyricFormat.length > 0 && (
@@ -242,79 +261,31 @@ export const LyricTabContent: FC = () => {
 									</Trans>
 								</Callout.Text>
 							</Callout.Root>
-						) : (
-							<>
-								<Option
-									label={t(
-										"page.song.lyric.translationLyricData",
-										"翻译歌词数据",
-									)}
-								>
-									<Callout.Root>
-										<Callout.Text>
-											<Trans i18nKey="page.song.lyric.translationLyricDataTip">
-												请提供 LyRiC
-												格式的歌词数据，将会根据时间戳与一致或靠近的原文歌词配对成为译文
-											</Trans>
-										</Callout.Text>
-									</Callout.Root>
-									<TextArea
-										value={translatedLyricContent}
-										style={{
-											minHeight: "10rem",
-										}}
-										onChange={(v) =>
-											setTranslatedLyricContent(v.currentTarget.value)
-										}
-									/>
-								</Option>
-							<Button
-								variant="soft"
-								disabled={!translatedLyricContent.trim() && !lyricContent.trim()}
-								onClick={() => {
-									// Swap what the user currently sees in the two boxes.
-									// The old code disabled the button when the *stored*
-									// translatedLrc was empty - but a translation that was
-									// mis-detected as the main lyric is exactly that case,
-									// so the button could never be clicked. Use the live
-									// textarea values (loaded from the song on open) and
-									// enable the swap whenever there is anything to swap.
-									const nextMain = translatedLyricContent;
-									const nextTranslated = lyricContent;
-									setLyricContent(nextMain);
-									setTranslatedLyricContent(nextTranslated);
-									void saveData(
-										lyricFormat,
-										nextMain,
-										nextTranslated,
-										romanLyricContent,
-									);
-								}}
-							>
-								<Trans i18nKey="page.song.lyric.swapTranslationToMain">
-									一键将翻译歌词设为主歌词
-								</Trans>
-							</Button>
-
-								<Option label="音译歌词数据">
-									<Callout.Root>
-										<Callout.Text>
-											<Trans i18nKey="page.song.lyric.romanLyricDataTip">
-												请提供 LyRiC
-												格式的歌词数据，将会根据时间戳与一致或靠近的原文歌词配对成为音译
-											</Trans>
-										</Callout.Text>
-									</Callout.Root>
-									<TextArea
-										value={romanLyricContent}
-										style={{
-											minHeight: "10rem",
-										}}
-										onChange={(v) =>
-											setRomanLyricContent(v.currentTarget.value)
-										}
-									/>
-								</Option>
+					) : (
+						<>
+							{/* The translation data editor is intentionally gone.
+							    "主译互换" is a pure playback-display toggle next to
+							    the offset controls above; it never edits or rewrites
+							    the stored lyric/translation text. */}
+							<Option label="音译歌词数据">
+								<Callout.Root>
+									<Callout.Text>
+										<Trans i18nKey="page.song.lyric.romanLyricDataTip">
+											请提供 LyRiC
+											格式的歌词数据，将会根据时间戳与一致或靠近的原文歌词配对成为音译
+										</Trans>
+									</Callout.Text>
+								</Callout.Root>
+								<TextArea
+									value={romanLyricContent}
+									style={{
+										minHeight: "10rem",
+									}}
+									onChange={(v) =>
+										setRomanLyricContent(v.currentTarget.value)
+									}
+								/>
+							</Option>
 							</>
 						)}
 					</>

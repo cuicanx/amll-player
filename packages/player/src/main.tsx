@@ -76,6 +76,26 @@ addEventListener("on-system-titlebar-click-minimize", async () => {
 	await win.minimize();
 });
 
+/**
+ * Run the scheduled online-cache cleanup once per application start.
+ *
+ * The interval itself lives in a persisted atom, so it survives restarts and
+ * applies to new installs too (3 days by default). Doing the work here - once
+ * at boot - avoids a background timer that would keep running for the whole
+ * session. Failures are ignored: a cleanup problem must never block startup.
+ */
+void (async () => {
+	try {
+		const raw = localStorage.getItem("amll-player.autoClearCacheDays");
+		const days = raw ? Number(JSON.parse(raw)) : 3;
+		if (!Number.isFinite(days) || days <= 0) return;
+		const { autoCleanOnlineCache } = await import("./utils/online-api.ts");
+		await autoCleanOnlineCache(days);
+	} catch {
+		// Best-effort only.
+	}
+})();
+
 createRoot(document.getElementById("root") as HTMLElement).render(
 	<ErrorBoundary fallbackRender={ErrorRender}>
 		<Provider>

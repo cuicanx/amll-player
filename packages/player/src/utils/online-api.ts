@@ -539,6 +539,17 @@ export async function clearOnlineCache(): Promise<OnlineCacheUsage> {
 	return invoke<OnlineCacheUsage>("online_cache_clear");
 }
 
+/**
+ * Delete online cache files that have not been touched for `days` days.
+ *
+ * `days === 0` disables the automatic cleanup entirely. The Rust side reports
+ * exactly how many files and bytes were removed so the UI can show a truthful
+ * result instead of guessing.
+ */
+export async function autoCleanOnlineCache(days: number): Promise<OnlineCacheUsage> {
+	return invoke<OnlineCacheUsage>("online_cache_auto_clean", { days });
+}
+
 /** Stable identity of an online song, usable as a cache key. */
 function cacheKeyOf(song: OnlineSong): string {
 	return `online://${song.source}/${song.id}`;

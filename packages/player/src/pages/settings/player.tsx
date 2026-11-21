@@ -83,6 +83,9 @@ import { toast } from "react-toastify";
 import { router } from "../../router.tsx";
 import {
 	advanceLyricDynamicLyricTimeAtom,
+	AUTO_CLEAR_CACHE_OPTIONS,
+	type AutoClearCacheDays,
+	autoClearCacheDaysAtom,
 	availableLanguagesAtom,
 	BottomLyricDisplayMode,
 	bottomLyricDisplayModeAtom,
@@ -126,6 +129,7 @@ import {
 	type StorageUsage,
 } from "../../utils/storage-api.ts";
 import {
+	autoCleanOnlineCache,
 	checkSourceAnnouncements,
 	clearOnlineCache,
 	ensureSourceHealth,
@@ -134,8 +138,7 @@ import {
 	type OnlineCacheUsage,
 	type SourceAnnouncement,
 	resetOnlineRuntimeCache,
-} from "../../utils/online-api.ts";
-import {
+} from "../../utils/online-api.ts";import {
 	importFromLxMusic,
 	importSource,
 	loadSources,
@@ -1230,6 +1233,7 @@ const StorageSettings: FC = () => {
 	const [loading, setLoading] = useState(true);
 	const [cleaning, setCleaning] = useState(false);
 	const [message, setMessage] = useState("");
+	const [autoClearDays, setAutoClearDays] = useAtom(autoClearCacheDaysAtom);
 
 	const refresh = () => {
 		setLoading(true);
@@ -1430,6 +1434,59 @@ const StorageSettings: FC = () => {
 					<Trans i18nKey="page.settings.storage.refresh">刷新</Trans>
 				</Button>
 			</Flex>
+
+			{/* Automatic cleanup interval for the online song cache. */}
+			<Card mt="4">
+				<Flex align="center" justify="between" gap="3" wrap="wrap">
+					<Flex direction="column" gap="1">
+						<Text size="2" weight="medium">
+							<Trans i18nKey="page.settings.storage.autoClear">
+								自动清除在线歌曲缓存
+							</Trans>
+						</Text>
+						<Text size="1" color="gray">
+							<Trans i18nKey="page.settings.storage.autoClearDetail">
+								超过所选时长未使用的在线歌曲缓存与封面会被自动删除
+							</Trans>
+						</Text>
+					</Flex>
+					<Select.Root
+						value={String(autoClearDays)}
+						onValueChange={(value) => {
+							const days = Number(value) as AutoClearCacheDays;
+							setAutoClearDays(days);
+							// Apply immediately so the user sees the effect without
+							// waiting for the next application start.
+							void autoCleanOnlineCache(days).then((freed) => {
+								if (freed.files > 0) {
+									setMessage(
+										t(
+											"page.settings.storage.autoClearDone",
+											"已自动清理 {count} 个文件，释放 {size}",
+											{
+												count: freed.files,
+												size: formatBytes(freed.bytes),
+											},
+										),
+									);
+									refresh();
+								}
+							});
+						}}
+					>
+						<Select.Trigger style={{ minWidth: "8rem" }} />
+						<Select.Content>
+							{AUTO_CLEAR_CACHE_OPTIONS.map((days) => (
+								<Select.Item key={days} value={String(days)}>
+									{days === 0
+										? t("page.settings.storage.autoClearNever", "不清理")
+										: t("page.settings.storage.autoClearDays", "{count} 天", { count: days })}
+								</Select.Item>
+							))}
+						</Select.Content>
+					</Select.Root>
+				</Flex>
+			</Card>
 			{message ? <Text as="div" size="2" color="gray" mt="2">{message}</Text> : null}
 		</>
 	);

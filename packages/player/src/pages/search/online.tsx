@@ -9,6 +9,8 @@
  * the same content in the same order.
  */
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import {
 	Badge,
 	Box,
@@ -401,6 +403,47 @@ export const OnlineSearchPage: FC = () => {
 		[t],
 	);
 
+	/**
+	 * Download an online song to a user-chosen location.
+	 *
+	 * The audio is resolved through exactly the same pipeline as playback
+	 * (`prepareOnlineSong`), so the exported file is a real, complete track
+	 * instead of a trial clip or a dead URL. The cached copy is then copied
+	 * to the path the user picked in the native save dialog.
+	 */
+	const download = useCallback(
+		async (song: OnlineSong) => {
+			try {
+				setMessage(t("page.online.downloadPreparing", "正在准备下载…"));
+				const cached = await prepareOnlineSong(song);
+				const safeName = (song.name || "song").replace(/[\\/:*?"<>|]/g, "_");
+				const dest = await save({
+					defaultPath: `${safeName}.mp3`,
+					title: t("page.online.downloadTitle", "保存歌曲"),
+					filters: [{ name: "Audio", extensions: ["mp3", "flac", "m4a", "ogg", "wav"] }],
+				});
+				if (!dest) {
+					setMessage(t("page.online.downloadCancelled", "已取消下载"));
+					return;
+				}
+				const saved = await invoke<string>("online_export_song", {
+					src: cached,
+					dest,
+				});
+				setMessage(
+					t("page.online.downloaded", "已保存到 {path}", { path: saved }),
+				);
+			} catch (err) {
+				setMessage(
+					t("page.online.downloadFailed", "下载失败：{error}", {
+						error: (err as Error)?.message ?? String(err),
+					}),
+				);
+			}
+		},
+		[t],
+	);
+
 	return (
 		<AppContainer>
 			<Container mx="4">
@@ -431,19 +474,18 @@ export const OnlineSearchPage: FC = () => {
 							</TextField.Slot>
 						</TextField.Root>
 					</Box>
-					{/* Once a search exists the button moves next to the box and
-					    the history row below is hidden - keeps the idle view minimal. */}
-					{searched ? (
-						<Button
-							variant="solid"
-							size="3"
-							disabled={loading}
-							onClick={() => void runSearch(keyword)}
-						>
-							{loading ? <Spinner size="1" /> : <MagnifyingGlassIcon />}
-							<Trans i18nKey="page.online.search">搜索</Trans>
-						</Button>
-					) : null}
+					{/* The search button always sits next to the input box. Earlier
+					    versions moved it there only after the first search, which
+					    made the idle layout jump around. */}
+					<Button
+						variant="solid"
+						size="3"
+						disabled={loading}
+						onClick={() => void runSearch(keyword)}
+					>
+						{loading ? <Spinner size="1" /> : <MagnifyingGlassIcon />}
+						<Trans i18nKey="page.online.search">搜索</Trans>
+					</Button>
 				</Flex>
 
 				{!searched && searchHistory.length > 0 ? (
@@ -465,19 +507,6 @@ export const OnlineSearchPage: FC = () => {
 					</Flex>
 				) : null}
 
-				{!searched ? (
-					<Flex gap="2" align="center" mt="2">
-						<Button
-							variant="solid"
-							disabled={loading}
-							onClick={() => void runSearch(keyword)}
-						>
-							{loading ? <Spinner size="1" /> : <MagnifyingGlassIcon />}
-							<Trans i18nKey="page.online.search">搜索</Trans>
-						</Button>
-					</Flex>
-				) : null}
-
 				{searched && !loading ? (
 					<Text size="2" color="gray" mt="2" as="p">
 						{t("page.online.resultCount", "找到 {count} 首", {
@@ -486,7 +515,10 @@ export const OnlineSearchPage: FC = () => {
 					</Text>
 				) : null}
 
-				{visibleSources.length > 1 ? (
+				{/* The platform tab row only makes sense once there are results to
+				    switch between - before that it just adds noise above the
+				    empty search box. */}
+				{searched && shownSongs.length > 0 && visibleSources.length > 1 ? (
 					<Flex gap="2" align="center" wrap="wrap" mt="3">
 						<Button
 							size="1"
@@ -613,6 +645,11 @@ export const OnlineSearchPage: FC = () => {
 													onSelect={() => void play(song)}
 												>
 													<Trans i18nKey="page.online.menu.play">播放</Trans>
+												</ContextMenu.Item>
+												<ContextMenu.Item
+													onSelect={() => void download(song)}
+												>
+													<Trans i18nKey="page.online.menu.download">下载</Trans>
 												</ContextMenu.Item>
 												<ContextMenu.Sub>
 													<ContextMenu.SubTrigger>

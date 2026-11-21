@@ -1100,11 +1100,77 @@ pub fn online_cache_usage(app: tauri::AppHandle) -> OnlineCacheUsage {
     scan_cache(&app)
 }
 
+/// Copy an already-resolved/cached online song to a user-chosen location.
+///
+/// Reusing the cache means the "download" menu item inherits the exact same
+/// source resolution, cross-platform fallback and trial-clip rejection as
+/// playback, so the saved file is always a real, playable track.
+#[tauri::command]
+pub fn online_export_song(src: String, dest: String) -> Result<String, String> {
+	let src_path = std::path::Path::new(&src);
+	if !src_path.is_file() {
+		return Err("缓存音频不存在，请播放一次后再下载".into());
+	}
+	let mut dest_path = std::path::PathBuf::from(&dest);
+	// The cache file carries the real container extension (flac/m4a/...),
+	// which the save dialog cannot know in advance. Align it so the output is
+	// never a .mp3 that actually contains FLAC data.
+	if let Some(ext) = src_path.extension() {
+		dest_path.set_extension(ext);
+	}
+	if let Some(parent) = dest_path.parent() {
+		std::fs::create_dir_all(parent).map_err(|e| format!("创建目录失败: {e}"))?;
+	}
+	std::fs::copy(src_path, &dest_path).map_err(|e| format!("保存失败: {e}"))?;
+	Ok(dest_path.to_string_lossy().to_string())
+}
+
+/// Remove online cache files older than `days`. `days == 0` means "never".
+/// Called once at startup and whenever the setting changes, so no background
+/// timer or polling is needed.
+#[tauri::command]
+pub fn online_cache_auto_clean(app: tauri::AppHandle, days: u64) -> OnlineCacheUsage {
+	let mut removed = OnlineCacheUsage { bytes: 0, files: 0 };
+	if days == 0 {
+		return removed;
+	}
+	let cutoff = std::time::SystemTime::now()
+		.checked_sub(std::time::Duration::from_secs(days.saturating_mul(86_400)))
+		.unwrap_or(std::time::UNIX_EPOCH);
+	for dir in [cache_dir(&app), cover_cache_dir(&app)] {
+		let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+		for entry in entries.flatten() {
+			let path = entry.path();
+			if !path.is_file() {
+				continue;
+			}
+			let Ok(meta) = entry.metadata() else { continue };
+			let Ok(modified) = meta.modified() else { continue };
+			if modified >= cutoff {
+				continue;
+			}
+			let size = meta.len();
+			if std::fs::remove_file(&path).is_ok() {
+				removed.files += 1;
+				removed.bytes += size;
+			}
+		}
+	}
+	if removed.files > 0 {
+		tracing::info!(
+			target: "amll_player_lib::online",
+			"auto cache clean (>{}d): {} files, {} bytes",
+			days, removed.files, removed.bytes
+		);
+	}
+	removed
+}
+
 #[tauri::command]
 pub fn online_cache_clear(app: tauri::AppHandle) -> OnlineCacheUsage {
-    let before = scan_cache(&app);
-    clear_usage_dir(&cache_dir(&app));
-    clear_usage_dir(&cover_cache_dir(&app));
+	let before = scan_cache(&app);
+	clear_usage_dir(&cache_dir(&app));
+	clear_usage_dir(&cover_cache_dir(&app));
     tracing::info!(
         target: "amll_player_lib::online",
         "online cache cleared: {} files, {} bytes",

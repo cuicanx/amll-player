@@ -10,7 +10,7 @@ import {
 import chalk from "chalk";
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
-import { languageAtom } from "../states/appAtoms";
+import { languageAtom, swapLyricMainTranslationAtom } from "../states/appAtoms";
 import { handleTTMLParsing } from "../utils/ttml-parser";
 
 const LYRIC_LOG_TAG = chalk.bgHex("#FF4444").hex("#FFFFFF")(" LYRIC ");
@@ -74,26 +74,126 @@ interface LyricParserResult {
 	metadata: [string, string[]][];
 }
 
-/** Positive offset delays the lyrics; negative offset brings them forward. */
+/**
+ * Positive offset delays the lyrics; negative offset brings them forward.
+ *
+ * AMLL core validates EVERY line, word and ruby with `startTime <= endTime`
+ * (`assertValidLyricTimestamps`). The offset must therefore be applied to
+ * `startTime` AND `endTime` at all three levels. Shifting only `startTime`
+ * (the old behaviour) produced `startTime 3216 > endTime 1600` as soon as a
+ * user saved a +3000ms offset, which crashed the whole app on song switch
+ * and on the next launch.
+ */
 function shiftLyricLines(lines: LyricLine[], offsetMs: number): LyricLine[] {
 	if (!offsetMs) return lines;
+	const shift = (value: number) => Math.max(0, value + offsetMs);
 	return lines.map((line) => {
 		const shifted: LyricLine = {
 			...line,
-			startTime: Math.max(0, line.startTime + offsetMs),
+			startTime: shift(line.startTime),
 			words: line.words.map((word) => {
 				const next = {
 					...word,
-					startTime: Math.max(0, word.startTime + offsetMs),
+					startTime: shift(word.startTime),
 				} as typeof word;
 				const originalEnd = (word as { endTime?: number }).endTime;
 				if (typeof originalEnd === "number") {
-					Object.assign(next, { endTime: Math.max(0, originalEnd + offsetMs) });
+					Object.assign(next, { endTime: shift(originalEnd) });
+				}
+				const ruby = (word as {
+					ruby?: Array<{ startTime: number; endTime: number }>;
+				}).ruby;
+				if (Array.isArray(ruby)) {
+					Object.assign(next, {
+						ruby: ruby.map((item) => ({
+							...item,
+							startTime: shift(item.startTime),
+							endTime: shift(item.endTime),
+						})),
+					});
 				}
 				return next;
 			}),
 		};
+		const originalLineEnd = (line as unknown as { endTime?: number }).endTime;
+		if (typeof originalLineEnd === "number") {
+			Object.assign(shifted, { endTime: shift(originalLineEnd) });
+		}
 		return shifted;
+	});
+}
+
+/**
+ * Final safety net before handing lines to AMLL. It mirrors the core's
+ * `assertValidLyricTimestamps` exactly: every line, word and ruby must have a
+ * finite, non-negative `startTime` and an `endTime >= startTime`.
+ *
+ * Some real LRC files contain backwards timestamps, and translations/roman
+ * lines can be paired onto a line whose interval is shorter than the text.
+ * Without this, any such row crashes the renderer with an unrecoverable
+ * RangeError. Existing valid rows are returned byte-for-byte unchanged.
+ */
+function sanitizeTimestamps(lines: CoreLyricLine[]): CoreLyricLine[] {
+	const clampRange = (obj: Record<string, unknown>): Record<string, unknown> => {
+		const rawStart = obj.startTime;
+		const start =
+			typeof rawStart === "number" && Number.isFinite(rawStart) && rawStart >= 0
+				? rawStart
+				: 0;
+		const rawEnd = obj.endTime;
+		const end =
+			typeof rawEnd === "number" && Number.isFinite(rawEnd) && rawEnd >= start
+				? rawEnd
+				: start;
+		return { ...obj, startTime: start, endTime: end };
+	};
+	return lines.map((line) => {
+		const fixed = clampRange(line as unknown as Record<string, unknown>);
+		if (Array.isArray(fixed.words)) {
+			fixed.words = fixed.words.map((word: Record<string, unknown>) => {
+				const w = clampRange(word);
+				if (Array.isArray(w.ruby)) {
+					w.ruby = w.ruby.map((ruby: Record<string, unknown>) =>
+						clampRange(ruby),
+					);
+				}
+				return w;
+			});
+		}
+		return fixed as unknown as CoreLyricLine;
+	});
+}
+
+/**
+ * Display-only swap: show the translation as the main (large) line and the
+ * original lyric as the sub (small) line. The database is never written; the
+ * swap is applied to the parsed lines at render time and can be toggled at
+ * any moment while playing.
+ */
+function swapMainTranslationLines(lines: CoreLyricLine[]): CoreLyricLine[] {
+	return lines.map((line) => {
+		const translated = (line.translatedLyric ?? "").trim();
+		if (!translated) return line;
+		const mainText = line.words.map((word) => word.word).join("");
+		const first = line.words[0];
+		const last = line.words[line.words.length - 1];
+		// Build the swapped word from scratch instead of spreading the first
+		// original word: spreading would carry over its `ruby` annotation,
+		// which belongs to the original text and must not be attached to the
+		// translation.
+		const translatedWord = {
+			word: translated,
+			startTime: first?.startTime ?? line.startTime,
+			endTime:
+				(last as unknown as { endTime?: number } | undefined)?.endTime ??
+				line.endTime,
+			obscene: false,
+		};
+		return {
+			...line,
+			words: [translatedWord] as CoreLyricLine["words"],
+			translatedLyric: mainText,
+		};
 	});
 }
 
@@ -105,6 +205,7 @@ export const useLyricParser = (
 	offsetMs = 0,
 ): LyricParserResult => {
 	const displayLanguage = useAtomValue(languageAtom);
+	const swapMainTranslation = useAtomValue(swapLyricMainTranslationAtom);
 
 	return useMemo(() => {
 		if (!lyricStr || !format) {
@@ -207,14 +308,35 @@ export const useLyricParser = (
 				}
 			}
 
+			// Never let a malformed interval reach AMLL's assertion. This is the
+			// code-level fix for "save an offset -> switch song -> crash".
+			//
+			// The swap runs BEFORE the sanitizer on purpose: swapping rebuilds
+			// each line's word list from the translation, and that new word
+			// inherits timestamps from the original words. Sanitizing only
+			// afterwards guarantees the final, rendered structure is valid no
+			// matter what the swap produced.
+			const displayLines = sanitizeTimestamps(
+				swapMainTranslation
+					? swapMainTranslationLines(compatibleLyricLines)
+					: compatibleLyricLines,
+			);
 			return {
-				lyricLines: compatibleLyricLines,
-				hasLyrics: compatibleLyricLines.length > 0,
+				lyricLines: displayLines,
+				hasLyrics: displayLines.length > 0,
 				metadata: parsedMetadata,
 			};
 		} catch (e) {
 			console.warn("解析歌词时出现错误", e);
 			return { lyricLines: [], hasLyrics: false, metadata: [] };
 		}
-	}, [lyricStr, format, translatedLrc, romanLrc, offsetMs, displayLanguage]);
+	}, [
+		lyricStr,
+		format,
+		translatedLrc,
+		romanLrc,
+		offsetMs,
+		displayLanguage,
+		swapMainTranslation,
+	]);
 };

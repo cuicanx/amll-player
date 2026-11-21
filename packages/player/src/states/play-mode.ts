@@ -16,7 +16,9 @@ export const PLAY_MODE_STORAGE_KEY = "amll-player.playMode";
 function readBootMode(): PlayMode {
 	try {
 		const raw = localStorage.getItem(PLAY_MODE_STORAGE_KEY);
-		if (!raw) return "local";
+		// Fresh installs have no stored preference: start in online mode.
+		// Existing users keep whatever they chose (the stored value wins).
+		if (!raw) return "online";
 		// atomWithStorage writes JSON, so the stored text is `"online"` with the
 		// quotes. Comparing the raw string against `online` never matched, which
 		// is why the switch looked like it never applied after a restart.
