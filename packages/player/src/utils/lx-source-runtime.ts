@@ -209,6 +209,28 @@ function bufferFrom(data: unknown, encoding?: string): LxBuffer {
 	return new LxBuffer(bytesFrom(data, encoding));
 }
 
+/**
+ * Temporary instrumentation: log the first few low-level calls a source makes
+ * so its behaviour here can be diffed against a reference runtime. Used to find
+ * why a source signs requests differently inside the app.
+ */
+let traceBudget = 14;
+
+function traceUtil(label: string, args: unknown[]): void {
+	if (traceBudget <= 0) return;
+	traceBudget--;
+	const shown = args
+		.map((arg) => {
+			if (typeof arg === "string") return `${arg.length}:${arg.slice(0, 24)}`;
+			if (arg && typeof arg === "object" && "length" in arg) {
+				return `bytes[${(arg as { length: number }).length}]`;
+			}
+			return String(arg);
+		})
+		.join(" | ");
+	void invoke("dev_log", { message: `util ${label} ${shown}` }).catch(() => {});
+}
+
 
 //#endregion
 
@@ -351,10 +373,23 @@ export class LxSourceRuntime {
 				};
 			},
 			utils: {
-				buffer: { from: bufferFrom, bufToString: bytesToString },
+				buffer: {
+					from: (data: unknown, encoding?: string) => {
+						traceUtil("buffer.from", [data, encoding]);
+						return bufferFrom(data, encoding);
+					},
+					bufToString: (data: unknown, encoding?: string) => {
+						traceUtil("buffer.bufToString", [data, encoding]);
+						return bytesToString(data, encoding);
+					},
+				},
 				crypto: {
-					md5,
-					randomBytes(size: number) {
+					md5: (input: string | Uint8Array) => {
+						traceUtil("crypto.md5", [input]);
+						return md5(input);
+					},
+					randomBytes: (size: number) => {
+						traceUtil("crypto.randomBytes", [size]);
 						const bytes = new Uint8Array(size);
 						crypto.getRandomValues(bytes);
 						return new LxBuffer(bytes);
