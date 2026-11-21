@@ -244,6 +244,14 @@ export const currentLyricAuthorsAtom = atom<string[]>([]);
 
 export const currentSongWritersAtom = atom<string[]>([]);
 
+/**
+ * Incremented on every explicit song selection. Late async work (online
+ * resolve/download) and late audio-thread events carry no song identity, so
+ * consumers compare against this epoch to ignore results from the previous
+ * selection instead of letting them overwrite the new song's state.
+ */
+export const playbackEpochAtom = atom(0);
+
 export const queueManagerAtom = atom<PlayQueueManager | null>(null);
 
 const _languageBaseAtom = atom(i18n.language);

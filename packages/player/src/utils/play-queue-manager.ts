@@ -1,14 +1,24 @@
 import {
 	isShuffleActiveAtom,
+	musicDurationAtom,
+	musicIdAtom,
+	musicLyricLinesAtom,
 	musicPlayingPositionAtom,
 	RepeatMode,
 	repeatModeAtom,
 } from "@applemusic-like-lyrics/react-full";
 import { atom, type createStore, type PrimitiveAtom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
+import { toast } from "react-toastify";
+import i18n from "../i18n";
+import { playbackEpochAtom } from "../states/appAtoms.ts";
 import type { Song } from "./db-client.ts";
 import { db } from "./db-client.ts";
-import { isOnlinePath, preparePlaybackPath } from "./online-api.ts";
+import {
+	isOnlinePath,
+	prefetchPlaybackPath,
+	preparePlaybackPath,
+} from "./online-api.ts";
 import { emitAudioThread } from "./player.ts";
 
 type JotaiStore = ReturnType<typeof createStore>;
@@ -99,6 +109,8 @@ export class PlayQueueManager {
 	private repeatMode: RepeatMode = RepeatMode.Off;
 	private shuffleActive = false;
 	private playlistId: number | null = null;
+	/** Identifies the latest user selection so stale async results are ignored. */
+	private playGeneration = 0;
 
 	constructor(store: JotaiStore) {
 		this.store = store;
@@ -150,23 +162,58 @@ export class PlayQueueManager {
 
 	private playSongAt(index: number): void {
 		if (index < 0 || index >= this.playList.length) return;
+		const generation = ++this.playGeneration;
 		this.currentIndex = index;
-		this.syncToAtoms();
 		const song = this.playList[index];
+
+		// Reset progress/lyrics synchronously, before any async work. Previously
+		// the old song's seconds kept animating and its lyrics stayed on screen
+		// until the backend's loadAudio arrived, which looked like the progress
+		// bar jumping back and forth. Publishing the new id immediately also lets
+		// the lyric view load the new song's lyrics right away.
+		// This must happen before syncToAtoms() persists the queue, otherwise the
+		// previous song's position is saved as the new song's restore point.
+		this.store.set(playbackEpochAtom, generation);
+		this.store.set(musicPlayingPositionAtom, 0);
+		this.store.set(musicLyricLinesAtom, []);
+		this.store.set(musicIdAtom, song.id);
+		this.store.set(musicDurationAtom, (song.duration || 0) * 1000);
+		this.syncToAtoms();
 
 		// Online songs are referenced by a pseudo path because their real URL is
 		// signed and expires. Resolve + download once, then keep the local file so
 		// the next play (and the next song switch) never waits on the network.
 		if (isOnlinePath(song.filePath) || /^https?:\/\//.test(song.filePath)) {
+			const toastId = toast.loading(
+				i18n.t("page.online.loadingAudio", "正在加载在线歌曲…"),
+			);
 			void preparePlaybackPath(song.filePath)
 				.then((path) => {
+					// A faster second click must win: never start playing a song
+					// the user has already moved away from.
+					if (generation !== this.playGeneration) {
+						toast.dismiss(toastId);
+						return;
+					}
 					song.filePath = path;
+					toast.dismiss(toastId);
 					emitAudioThread("playAudio", {
 						song: { songId: song.id, filePath: path },
 					});
+					this.prefetchNextOnlineSong(index, generation);
 				})
 				.catch((err) => {
+					if (generation !== this.playGeneration) {
+						toast.dismiss(toastId);
+						return;
+					}
 					console.error("[PlayQueueManager] 在线歌曲解析失败:", err);
+					toast.error(
+						i18n.t("page.online.loadFailed", "在线歌曲加载失败：{error}", {
+							error: (err as Error)?.message ?? String(err),
+						}),
+					);
+					toast.dismiss(toastId);
 				});
 			return;
 		}
@@ -177,6 +224,22 @@ export class PlayQueueManager {
 				filePath: song.filePath,
 			},
 		});
+		this.prefetchNextOnlineSong(index, generation);
+	}
+
+	/**
+	 * Warm the next online song while the current one plays. Cached songs are
+	 * skipped by the prefetch helper, and the work is delayed so it never
+	 * competes with the song the user just started.
+	 */
+	private prefetchNextOnlineSong(index: number, generation: number): void {
+		if (this.playList.length < 2) return;
+		const next = this.playList[(index + 1) % this.playList.length];
+		if (!next || next.id === this.playList[index]?.id) return;
+		if (!isOnlinePath(next.filePath) && !/^https?:\/\//.test(next.filePath)) return;
+		window.setTimeout(() => {
+			if (generation === this.playGeneration) prefetchPlaybackPath(next.filePath);
+		}, 1500);
 	}
 
 	/** 在 playList 中查找 songId 的索引 */
@@ -419,6 +482,10 @@ export class PlayQueueManager {
 			);
 			if (this.currentIndex < 0) this.currentIndex = 0;
 
+			// Let the lyric view and the progress clock bind to the restored song
+			// immediately; the audio thread will confirm with loadAudio later.
+			this.store.set(playbackEpochAtom, ++this.playGeneration);
+			this.store.set(musicIdAtom, this.playList[this.currentIndex].id);
 			this.syncToAtoms();
 			return { restored: true, position: persisted.position ?? 0 };
 		} catch (err) {

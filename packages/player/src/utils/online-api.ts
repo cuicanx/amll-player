@@ -287,6 +287,14 @@ export function setResolveObserver(observer: ResolveObserver | null): void {
 	resolveObserver = observer;
 }
 
+/** Coarse progress label for the UI while a song is being prepared. */
+type PrepareObserver = (phase: string) => void;
+let prepareObserver: PrepareObserver | null = null;
+
+export function setPrepareObserver(observer: PrepareObserver | null): void {
+	prepareObserver = observer;
+}
+
 /** Consecutive resolve failures per source, used to stop hammering dead ones. */
 const resolveFailures = new Map<string, number>();
 const MAX_RESOLVE_FAILURES = 2;
@@ -297,18 +305,21 @@ interface ResolveCandidate {
 }
 
 /**
- * Collect every URL this song can produce, best first: custom sources (each
+ * Yield every URL this song can produce, best first: custom sources (each
  * supported quality) and then the built-in resolver.
  *
  * The old `resolvePlayUrl` returned the first URL that *parsed* successfully,
  * but a source can hand back a perfectly valid URL pointing at a 10-second
- * "当前音乐暂不支持播放" clip. Only the download layer can tell, so it needs
- * the whole candidate list to fall through when one turns out to be a stub.
+ * "当前音乐暂不支持播放" clip. Only the download layer can tell, so the caller
+ * needs the candidate stream and must fall through when one is a stub.
+ *
+ * Being a generator matters for latency: playback tries the first URL as soon
+ * as it is resolved instead of waiting for every source/quality probe first.
  */
-async function collectResolveCandidates(song: OnlineSong): Promise<ResolveCandidate[]> {
-	const candidates: ResolveCandidate[] = [];
-	const errors: string[] = [];
-
+async function* iterateResolveCandidates(
+	song: OnlineSong,
+	errors: string[],
+): AsyncGenerator<ResolveCandidate> {
 	for (const source of loadSources()) {
 		if (!source.enabled) continue;
 		if ((resolveFailures.get(source.id) ?? 0) >= MAX_RESOLVE_FAILURES) continue;
@@ -320,21 +331,19 @@ async function collectResolveCandidates(song: OnlineSong): Promise<ResolveCandid
 			}
 			if (!runtime.sources[song.source]) continue;
 			const info = toMusicInfo(song);
-			let resolved = 0;
 			for (const quality of qualitiesFor(runtime, song.source)) {
 				try {
 					const url = await runtime.musicUrl(song.source, info, quality);
-					candidates.push({ url, via: `${source.name}/${quality}` });
-					resolved += 1;
+					resolveFailures.delete(source.id);
 					devLog(`resolve ${song.source}/${song.id} ok via ${source.name}/${quality}`);
+					yield { url, via: `${source.name}/${quality}` };
 				} catch (err) {
 					const message = (err as Error)?.message ?? String(err);
 					errors.push(`${source.name}/${quality}: ${message}`);
+					resolveFailures.set(source.id, (resolveFailures.get(source.id) ?? 0) + 1);
 					devLog(`resolve ${song.source}/${song.id} fail via ${source.name}/${quality}: ${message}`);
 				}
 			}
-			if (resolved > 0) resolveFailures.delete(source.id);
-			else resolveFailures.set(source.id, (resolveFailures.get(source.id) ?? 0) + 1);
 		} catch (err) {
 			const message = (err as Error)?.message ?? String(err);
 			errors.push(`${source.name}: ${message}`);
@@ -349,11 +358,18 @@ async function collectResolveCandidates(song: OnlineSong): Promise<ResolveCandid
 			info: toMusicInfo(song),
 			quality: "320k",
 		});
-		candidates.push({ url, via: "内置音源" });
+		yield { url, via: "内置音源" };
 	} catch (err) {
 		errors.push(`内置音源: ${(err as Error)?.message ?? err}`);
 	}
+}
 
+async function collectResolveCandidates(song: OnlineSong): Promise<ResolveCandidate[]> {
+	const errors: string[] = [];
+	const candidates: ResolveCandidate[] = [];
+	for await (const candidate of iterateResolveCandidates(song, errors)) {
+		candidates.push(candidate);
+	}
 	if (candidates.length === 0) {
 		const detail = errors.length > 0 ? `（音源尝试：${errors.slice(0, 3).join("；")}）` : "";
 		throw new Error(`没有可用的播放地址${detail}`);
@@ -446,10 +462,34 @@ function isStubAudioError(err: unknown): boolean {
 	return String((err as Error)?.message ?? err).includes(STUB_AUDIO_MARKER);
 }
 
+/**
+ * LX's `filterStr`: drop whitespace and punctuation/brackets, keep the inner
+ * version text ("Live" stays significant), then lowercase. Singer order is
+ * normalised too, so "A / B" and "B、A" are the same track.
+ */
+function normalizeTrackText(value: string): string {
+	return value
+		.toLowerCase()
+		.replace(/[\s'.,，&"、()（）`~|<>\/\[\]!！-]/g, "");
+}
+
+function normalizeSinger(value: string): string {
+	return value
+		.split(/[、&;；/,，|]/)
+		.map((part) => normalizeTrackText(part))
+		.filter(Boolean)
+		.sort((a, b) => a.localeCompare(b, "zh-CN"))
+		.join("、");
+}
+
 function sameTrack(a: OnlineSong, b: OnlineSong): boolean {
-	const normalize = (s: string) =>
-		s.trim().toLowerCase().replace(/\s+/g, "").replace(/[（(].*?[）)]/g, "");
-	return normalize(a.name) === normalize(b.name) && normalize(a.singer) === normalize(b.singer);
+	if (normalizeTrackText(a.name) !== normalizeTrackText(b.name)) return false;
+	if (normalizeSinger(a.singer) !== normalizeSinger(b.singer)) return false;
+	// LX tolerates a few seconds of difference between platform metadata.
+	if (a.interval > 0 && b.interval > 0 && Math.abs(a.interval - b.interval) > 5) {
+		return false;
+	}
+	return true;
 }
 
 /** Platforms to try when the original one only serves a trial clip. */
@@ -491,20 +531,15 @@ export async function prepareOnlineSong(song: OnlineSong): Promise<string> {
 	const errors: string[] = [];
 
 	const tryCandidates = async (target: OnlineSong, viaNote: string): Promise<string | null> => {
-		let candidates: ResolveCandidate[];
-		try {
-			candidates = await collectResolveCandidates(target);
-		} catch (err) {
-			errors.push(`${target.source}: ${(err as Error)?.message ?? err}`);
-			return null;
-		}
-		const targetKey = cacheKeyOf(target);
-		for (const candidate of candidates) {
+		let gotCandidate = false;
+		for await (const candidate of iterateResolveCandidates(target, errors)) {
 			if (!candidate.url || tried.has(candidate.url)) continue;
 			tried.add(candidate.url);
+			gotCandidate = true;
+			prepareObserver?.("正在下载音频…");
 			try {
 				const path = await invoke<string>("online_cache_store", {
-					key: targetKey,
+					key: cacheKeyOf(target),
 					url: candidate.url,
 				});
 				const via = `${candidate.via}${viaNote}`;
@@ -521,12 +556,15 @@ export async function prepareOnlineSong(song: OnlineSong): Promise<string> {
 				}
 			}
 		}
+		if (!gotCandidate && viaNote) errors.push(`${target.source}: 没有可用播放地址`);
 		return null;
 	};
 
+	prepareObserver?.("正在解析音源…");
 	const direct = await tryCandidates(song, "");
 	if (direct) return direct;
 
+	prepareObserver?.("正在查找其他平台…");
 	const alternatives = await findSameTrackElsewhere(song);
 	for (const alt of alternatives) {
 		const altKey = cacheKeyOf(alt);
@@ -555,30 +593,115 @@ export async function preparePlaybackPath(filePath: string): Promise<string> {
 	return filePath;
 }
 
-/** Lyrics + cover for a built-in platform song. Missing pieces stay empty. */
+/**
+ * Best-effort background download. Used on search-row hover, when saving a
+ * favourite and for the next song in the queue: a cache hit then makes the
+ * actual double-click effectively instant. Never throws to the caller.
+ */
+const prefetching = new Set<string>();
+
+export function prefetchOnlineSong(song: OnlineSong): void {
+	const key = cacheKeyOf(song);
+	if (prefetching.has(key)) return;
+	prefetching.add(key);
+	void invoke<string | null>("online_cache_path", { key })
+		.then((cached) => (cached ? undefined : prepareOnlineSong(song)))
+		.catch(() => {})
+		.finally(() => prefetching.delete(key));
+}
+
+export function prefetchPlaybackPath(filePath: string): void {
+	if (isOnlinePath(filePath)) {
+		const song = parseOnlinePath(filePath);
+		if (song) prefetchOnlineSong(song);
+		return;
+	}
+	if (/^https?:\/\//.test(filePath)) {
+		const key = `url://${filePath}`;
+		void invoke<string | null>("online_cache_path", { key })
+			.then((cached) =>
+				cached
+					? undefined
+					: invoke<string>("online_cache_store", { key, url: filePath }),
+			)
+			.catch(() => {});
+	}
+}
+
+/** LX treats a response without a timestamped line as "no lyric". */
+function hasLyricLines(text: string): boolean {
+	return /\[\d{1,2}:\d{1,2}(?:[.:]\d+)?\]/.test(text ?? "");
+}
+
+async function requestLyric(
+	song: OnlineSong,
+): Promise<{ lyric: string; translated: string }> {
+	const res = await invoke<{ lyric: string; translated: string }>("online_lyric", {
+		platform: song.source,
+		id: song.songmid || song.id,
+		name: song.name,
+		singer: song.singer,
+		duration: song.interval,
+	});
+	if (!hasLyricLines(res.lyric)) throw new Error("歌词内容无效");
+	return res;
+}
+
+/**
+ * Lyrics + cover for an online song.
+ *
+ * LX's default sources do not ship lyrics themselves: it asks the platform's
+ * own lyric API, validates that the result really is a timed LRC, and when
+ * that fails searches the same track on other platforms and retries there.
+ * Mirror that fallback - a song with lyrics on any searched platform should
+ * show them, while a genuinely lyric-less song simply stays empty.
+ */
 export async function fetchOnlineMeta(
 	song: OnlineSong,
 ): Promise<{ lyric: string; translated: string; cover: string }> {
-	const id = song.songmid || song.id;
 	let lyric = "";
 	let translated = "";
 	let cover = "";
 
 	try {
-		const res = await invoke<{ lyric: string; translated: string }>("online_lyric", {
-			platform: song.source,
-			id,
-			name: song.name,
-			duration: song.interval,
-		});
+		const res = await requestLyric(song);
 		lyric = res.lyric;
 		translated = res.translated;
 	} catch {
-		// No lyric for this song - keep playing without it.
+		// Try other platforms below.
+	}
+
+	if (!lyric) {
+		try {
+			const alternatives = await onlineSearch(`${song.name} ${song.singer}`.trim());
+			const others = alternatives
+				.filter((candidate) => candidate.source !== song.source && sameTrack(candidate, song))
+				.sort((a, b) => {
+					const order: Record<string, number> = { kg: 0, kw: 1, mg: 2, wy: 3, tx: 4 };
+					return (order[a.source] ?? 99) - (order[b.source] ?? 99);
+				})
+				.slice(0, 4);
+			for (const alt of others) {
+				try {
+					const res = await requestLyric(alt);
+					lyric = res.lyric;
+					translated = res.translated;
+					devLog(`lyric ${song.source}/${song.id} matched ${alt.source}/${alt.id}`);
+					break;
+				} catch {
+					// Next candidate.
+				}
+			}
+		} catch {
+			// Search failed - keep playing without lyrics.
+		}
 	}
 
 	try {
-		cover = await invoke<string>("online_pic", { platform: song.source, id });
+		cover = await invoke<string>("online_pic", {
+			platform: song.source,
+			id: song.songmid || song.id,
+		});
 	} catch {
 		cover = song.coverUrl || "";
 	}

@@ -15,10 +15,30 @@ pub static PLAYER_HANDLER: LazyLock<RwLock<Option<AudioPlayerHandle>>> =
 
 #[tauri::command]
 pub async fn local_player_send_msg(msg: AudioThreadEventMessage<AudioThreadMessage>) {
-    if let Some(handler) = &*PLAYER_HANDLER.read().await
-        && let Err(err) = handler.send(msg).await
-    {
-        warn!("failed to send msg to local player: {:?}", err);
+    // The audio device is opened on a background thread. A command sent during
+    // startup can arrive before PLAYER_HANDLER is installed; dropping it made
+    // the volume restored by the UI never reach the decoder (the slider showed
+    // the saved value while playback stayed at the core default). Wait briefly
+    // for the handler instead of silently losing the message.
+    let mut pending = Some(msg);
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(3);
+    loop {
+        {
+            let guard = PLAYER_HANDLER.read().await;
+            if let Some(handler) = &*guard {
+                if let Some(msg) = pending.take() {
+                    if let Err(err) = handler.send(msg).await {
+                        warn!("failed to send msg to local player: {:?}", err);
+                    }
+                }
+                return;
+            }
+        }
+        if tokio::time::Instant::now() >= deadline {
+            warn!("audio player handler not ready; dropped startup msg");
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
 }
 

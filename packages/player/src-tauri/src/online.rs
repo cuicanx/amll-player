@@ -1026,12 +1026,22 @@ async fn lyric_kuwo(client: &reqwest::Client, id: &str) -> Result<OnlineLyric, S
     })
 }
 
+/// LX-style comparison text: ignore case, spaces and punctuation.
+fn normalize_match_text(input: &str) -> String {
+    input
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(|c| c.to_lowercase())
+        .collect()
+}
+
 /// Kugou lyrics are a two-step lookup: search for a candidate, then download it
 /// as plain LRC (`fmt=lrc`) so no KRC decryption is needed.
 async fn lyric_kugou(
     client: &reqwest::Client,
     hash: &str,
     name: &str,
+    singer: &str,
     duration: u32,
 ) -> Result<OnlineLyric, String> {
     let time_ms = duration.max(1) as u64 * 1000;
@@ -1050,13 +1060,59 @@ async fn lyric_kugou(
         .await
         .map_err(|e| e.to_string())?;
     let json: Value = resp.json().await.map_err(|e| e.to_string())?;
-    let candidate = json
+    let candidates = json
         .get("candidates")
         .and_then(|v| v.as_array())
-        .and_then(|a| a.first())
+        .cloned()
+        .unwrap_or_default();
+    if candidates.is_empty() {
+        return Err("没有找到歌词".to_string());
+    }
+
+    // The first candidate is often a different song with the same title (the
+    // "晴天" search returns a 3:30 entry before the 4:29 one). Score by title,
+    // singer and duration the way LX does, then pick the best match.
+    let wanted_name = normalize_match_text(name);
+    let wanted_singer = normalize_match_text(singer);
+    let pick = candidates
+        .iter()
+        .enumerate()
+        .max_by(|(ia, a), (ib, b)| {
+            let score = |item: &Value| -> i64 {
+                let song_name = normalize_match_text(
+                    item.get("song").and_then(|v| v.as_str()).unwrap_or_default(),
+                );
+                let artist = normalize_match_text(
+                    item.get("singer").and_then(|v| v.as_str()).unwrap_or_default(),
+                );
+                let mut s = if !wanted_name.is_empty() && song_name == wanted_name {
+                    50
+                } else if !wanted_name.is_empty() && song_name.contains(&wanted_name) {
+                    20
+                } else {
+                    0
+                };
+                if !wanted_singer.is_empty() && artist == wanted_singer {
+                    s += 30;
+                } else if !wanted_singer.is_empty() && artist.contains(&wanted_singer) {
+                    s += 10;
+                }
+                let item_ms = item
+                    .get("duration")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let diff = item_ms.abs_diff(time_ms) / 1000;
+                s += if diff <= 5 { 60 - diff as i64 } else { 0 };
+                s
+            };
+            score(a)
+                .cmp(&score(b))
+                .then_with(|| ib.cmp(ia)) // keep the first on a tie
+        })
+        .map(|(_, item)| item.clone())
         .ok_or_else(|| "没有找到歌词".to_string())?;
-    let id = candidate.get("id").and_then(|v| v.as_str()).unwrap_or_default();
-    let access_key = candidate
+    let id = pick.get("id").and_then(|v| v.as_str()).unwrap_or_default();
+    let access_key = pick
         .get("accesskey")
         .and_then(|v| v.as_str())
         .unwrap_or_default();
@@ -1117,12 +1173,20 @@ pub async fn online_lyric(
     platform: String,
     id: String,
     name: Option<String>,
+    singer: Option<String>,
     duration: Option<u32>,
 ) -> Result<OnlineLyric, String> {
     let client = make_client(true);
     match platform.as_str() {
         "kw" => lyric_kuwo(&client, &id).await,
-        "kg" => lyric_kugou(&client, &id, &name.unwrap_or_default(), duration.unwrap_or(0)).await,
+        "kg" => lyric_kugou(
+            &client,
+            &id,
+            &name.unwrap_or_default(),
+            &singer.unwrap_or_default(),
+            duration.unwrap_or(0),
+        )
+        .await,
         other => Err(format!("歌词暂不支持平台 {other}")),
     }
 }

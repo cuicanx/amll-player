@@ -44,6 +44,7 @@ import {
 	currentLyricAuthorsAtom,
 	currentSongWritersAtom,
 	enableMediaControlsAtom,
+	playbackEpochAtom,
 	queueManagerAtom,
 } from "../../states/appAtoms.ts";
 import { db } from "../../utils/db-client.ts";
@@ -337,6 +338,12 @@ export const LocalMusicContext: FC = () => {
 		position: 0,
 		timestamp: performance.now(),
 	});
+	// A song switch invalidates in-flight audio events. They carry no song id,
+	// so a short hold window plus the loadAudio confirmation filters them out.
+	const epochChangedRef = useRef(false);
+	const switchAtRef = useRef(0);
+	const syncSeqRef = useRef(0);
+	const pendingSeekRef = useRef<number | null>(null);
 
 	// Warm the custom sources once per launch in online mode. Their load result
 	// is written to the app log, so "which source works" can be verified without
@@ -357,11 +364,19 @@ export const LocalMusicContext: FC = () => {
 		}
 
 		const musicId = data.musicId;
+		const seq = ++syncSeqRef.current;
+		// A fast switch can leave two loadAudio queries in flight. Only the last
+		// one may write display state, otherwise the older song's metadata (and
+		// therefore its lyrics) overwrites the current song.
+		const isCurrent = () =>
+			seq === syncSeqRef.current &&
+			(!store.get(musicIdAtom) || store.get(musicIdAtom) === musicId);
 
 		try {
-			store.set(musicIdAtom, musicId);
+			if (!store.get(musicIdAtom)) store.set(musicIdAtom, musicId);
 
 			const songFromDb = await db.songs.get(musicId);
+			if (!isCurrent()) return;
 
 			if (songFromDb) {
 				store.set(musicNameAtom, songFromDb.songName);
@@ -446,6 +461,13 @@ export const LocalMusicContext: FC = () => {
 				running = false;
 				return;
 			}
+			// While a switch is pending, the extrapolated clock belongs to the
+			// previous song. Do not write it - that is what made the seconds
+			// jump back and forth against the new song's position events.
+			if (epochChangedRef.current) {
+				rafId = requestAnimationFrame(updateLoop);
+				return;
+			}
 			const now = performance.now();
 			const dt = (now - lastSyncRef.current.timestamp) / 1000;
 			const newPos = lastSyncRef.current.position + dt;
@@ -501,6 +523,15 @@ export const LocalMusicContext: FC = () => {
 		const queueManager = new PlayQueueManager(store);
 		store.set(queueManagerAtom, queueManager);
 
+		// The queue manager publishes a new epoch before starting async work.
+		// Hold the progress clock until loadAudio confirms the new song.
+		const unsubEpoch = store.sub(playbackEpochAtom, () => {
+			epochChangedRef.current = true;
+			switchAtRef.current = performance.now();
+			lastSyncRef.current = { position: 0, timestamp: switchAtRef.current };
+			pendingSeekRef.current = null;
+		});
+
 		// 恢复上次的队列信息
 		queueManager.restore().then(async ({ restored, position }) => {
 			if (restored) {
@@ -525,14 +556,15 @@ export const LocalMusicContext: FC = () => {
 					});
 					emitAudioThread("pauseAudio");
 
-					if (position > 0) {
-						lastSyncRef.current = {
-							position,
-							timestamp: performance.now(),
-						};
-						store.set(musicPlayingPositionAtom, (position * 1000) | 0);
-						emitAudioThread("seekAudio", { position });
-					}
+					// Apply the restored position when loadAudio arrives. Sending
+					// seekAudio now let loadAudio's unconditional reset to 0 undo
+					// it, which produced the "seconds jump around" symptom.
+					pendingSeekRef.current = position > 0 ? position : null;
+					lastSyncRef.current = {
+						position: 0,
+						timestamp: performance.now(),
+					};
+					store.set(musicPlayingPositionAtom, 0);
 				}
 			}
 		});
@@ -627,6 +659,13 @@ export const LocalMusicContext: FC = () => {
 				});
 			}),
 		);
+		// The slider value is restored from storage by react-full, but the
+		// decoder starts at its own default volume. Push the restored value once
+		// so the UI and the actual output agree without a manual drag. The Rust
+		// command waits for the audio handler, so this is safe during startup.
+		void emitAudioThread("setVolume", {
+			volume: store.get(musicVolumeAtom),
+		});
 		store.set(
 			onRequestOpenMenuAtom,
 			toEmit(() => {
@@ -640,6 +679,14 @@ export const LocalMusicContext: FC = () => {
 			const evtData = evt.payload.data;
 			switch (evtData?.type) {
 				case "playPosition": {
+					// Positions from the previous song have no song id. Ignore them
+					// while a switch is pending and for a short window afterwards.
+					if (
+						epochChangedRef.current ||
+						performance.now() - switchAtRef.current < 400
+					) {
+						break;
+					}
 					const now = performance.now();
 					const dt = (now - lastSyncRef.current.timestamp) / 1000;
 					const currentExtrapolated = lastSyncRef.current.position + dt;
@@ -659,6 +706,12 @@ export const LocalMusicContext: FC = () => {
 
 				case "loadAudio": {
 					const data = evtData.data;
+					const expectedId = store.get(musicIdAtom);
+					// A late loadAudio for a song the user has already left must
+					// not reset the new song's clock or overwrite its metadata.
+					if (data.musicId && expectedId && data.musicId !== expectedId) {
+						break;
+					}
 
 					if (data.quality) {
 						store.set(musicQualityAtom, processAudioQuality(data.quality));
@@ -667,17 +720,21 @@ export const LocalMusicContext: FC = () => {
 						store.set(musicDurationAtom, (data.musicInfo.duration * 1000) | 0);
 					}
 
-					lastSyncRef.current = {
-						position: 0,
-						timestamp: performance.now(),
-					};
-					store.set(musicPlayingPositionAtom, 0);
+					epochChangedRef.current = false;
+					const pendingSeek = pendingSeekRef.current;
+					pendingSeekRef.current = null;
+					const now = performance.now();
+					if (pendingSeek && pendingSeek > 0) {
+						lastSyncRef.current = { position: pendingSeek, timestamp: now };
+						store.set(musicPlayingPositionAtom, (pendingSeek * 1000) | 0);
+						emitAudioThread("seekAudio", { position: pendingSeek });
+					} else {
+						lastSyncRef.current = { position: 0, timestamp: now };
+						store.set(musicPlayingPositionAtom, 0);
+					}
 
-					const currentMusicId = store.get(musicIdAtom);
-					const newMusicId = data.musicId || "";
-
-					if (newMusicId && newMusicId !== currentMusicId) {
-						await syncMusicInfo(data);
+					if (data.musicId) {
+						void syncMusicInfo(data);
 					}
 					break;
 				}
@@ -728,6 +785,7 @@ export const LocalMusicContext: FC = () => {
 		});
 
 		return () => {
+			unsubEpoch();
 			unlistenPromise.then((unlisten) => unlisten());
 
 			window.removeEventListener("beforeunload", onBeforeUnload);
