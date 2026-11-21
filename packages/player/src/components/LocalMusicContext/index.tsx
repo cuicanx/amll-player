@@ -38,6 +38,7 @@ import { type FC, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { useLyricParser } from "../../hooks/useLyricParser.ts";
+import { isOnlineModeAtom } from "../../states/play-mode.ts";
 import {
 	audioQualityDialogOpenedAtom,
 	currentLyricAuthorsAtom,
@@ -51,7 +52,7 @@ import {
 	shouldRecoverEmbeddedLyric,
 } from "../../utils/lyric-recovery.ts";
 import { SyncStatus, syncLyrics } from "../../utils/lyric-db-api.ts";
-import { preparePlaybackPath } from "../../utils/online-api.ts";
+import { ensureSourceHealth, preparePlaybackPath } from "../../utils/online-api.ts";
 import { PlayQueueManager } from "../../utils/play-queue-manager.ts";
 import {
 	type AudioQuality,
@@ -330,11 +331,20 @@ export const LocalMusicContext: FC = () => {
 	const store = useStore();
 	const { t } = useTranslation();
 	const firstPlay = useRef(true);
+	const onlineMode = useAtomValue(isOnlineModeAtom);
 	const [musicPlaying, setMusicPlaying] = useAtom(musicPlayingAtom);
 	const lastSyncRef = useRef({
 		position: 0,
 		timestamp: performance.now(),
 	});
+
+	// Warm the custom sources once per launch in online mode. Their load result
+	// is written to the app log, so "which source works" can be verified without
+	// opening the settings page.
+	useEffect(() => {
+		if (!onlineMode) return;
+		void ensureSourceHealth().catch(() => {});
+	}, [onlineMode]);
 
 	const syncMusicInfo = async (
 		data: Extract<AudioThreadEvent, { type: "loadAudio" }>["data"],

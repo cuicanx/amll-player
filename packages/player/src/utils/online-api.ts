@@ -458,6 +458,8 @@ export async function fetchOnlineMeta(
 		const res = await invoke<{ lyric: string; translated: string }>("online_lyric", {
 			platform: song.source,
 			id,
+			name: song.name,
+			duration: song.interval,
 		});
 		lyric = res.lyric;
 		translated = res.translated;

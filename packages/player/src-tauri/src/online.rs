@@ -12,6 +12,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -81,9 +82,13 @@ async fn send_with_fallback(
 
     match attempt(client.clone(), body.clone()).await {
         Ok(resp) => Ok(resp),
-        Err(first) => attempt(make_client(true), body)
+        // Only fall back to the system proxy when the direct connection cannot
+        // be established at all. Going through a proxy by default is what made
+        // custom sources answer "block ip": their server sees the proxy's exit
+        // address, which it blocks, while LX (direct) works from the same host.
+        Err(first) => attempt(make_client(false), body)
             .await
-            .map_err(|second| format!("{first} / 已重试直连: {second}")),
+            .map_err(|second| format!("{first} / 已改用代理重试: {second}")),
     }
 }
 
@@ -111,7 +116,10 @@ pub async fn online_http(req: OnlineHttpRequest) -> Result<OnlineHttpResponse, S
         body = Some(encoded);
     }
 
-    let client = make_client(false);
+    // Direct by default: a proxy exit address is frequently blocked by these
+    // source servers. `send_with_fallback` retries through the proxy if the
+    // direct connection itself fails.
+    let client = make_client(true);
     let timeout = Duration::from_millis(req.timeout_ms.unwrap_or(20_000));
     let result = tokio::time::timeout(
         timeout,
@@ -858,12 +866,8 @@ fn format_lrc_time(seconds: f64) -> String {
 }
 
 /// Lyrics for the built-in platforms, mirroring LX's `musicSdk/kw/lyric.js`.
-#[tauri::command]
-pub async fn online_lyric(platform: String, id: String) -> Result<OnlineLyric, String> {
-    if platform != "kw" {
-        return Err(format!("内置歌词暂不支持平台 {platform}"));
-    }
-    let client = make_client(true);
+async fn lyric_kuwo(client: &reqwest::Client, id: &str) -> Result<OnlineLyric, String> {
+    let client = client;
     let url = format!("http://m.kuwo.cn/newh5/singles/songinfoandlrc?musicId={id}");
     let resp = client
         .get(&url)
@@ -941,13 +945,119 @@ pub async fn online_lyric(platform: String, id: String) -> Result<OnlineLyric, S
     })
 }
 
+/// Kugou lyrics are a two-step lookup: search for a candidate, then download it
+/// as plain LRC (`fmt=lrc`) so no KRC decryption is needed.
+async fn lyric_kugou(
+    client: &reqwest::Client,
+    hash: &str,
+    name: &str,
+    duration: u32,
+) -> Result<OnlineLyric, String> {
+    let time_ms = duration.max(1) as u64 * 1000;
+    let search_url = format!(
+        "http://lyrics.kugou.com/search?ver=1&man=yes&client=pc&keyword={}&hash={}&timelength={}&lrctxt=1",
+        urlencoding::encode(name),
+        hash,
+        time_ms
+    );
+    let resp = client
+        .get(&search_url)
+        .header("KG-RC", "1")
+        .header("KG-THash", "expand_search_manager.cpp:852736169:451")
+        .header("User-Agent", "KuGou2012-9020-ExpandSearchManager")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+    let candidate = json
+        .get("candidates")
+        .and_then(|v| v.as_array())
+        .and_then(|a| a.first())
+        .ok_or_else(|| "没有找到歌词".to_string())?;
+    let id = candidate.get("id").and_then(|v| v.as_str()).unwrap_or_default();
+    let access_key = candidate
+        .get("accesskey")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    if id.is_empty() || access_key.is_empty() {
+        return Err("没有找到歌词".into());
+    }
+
+    let download_url = format!(
+        "http://lyrics.kugou.com/download?ver=1&client=pc&id={id}&accesskey={access_key}&fmt=lrc&charset=utf8"
+    );
+    let resp = client
+        .get(&download_url)
+        .header("KG-RC", "1")
+        .header("KG-THash", "expand_search_manager.cpp:852736169:451")
+        .header("User-Agent", "KuGou2012-9020-ExpandSearchManager")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+    let content = json
+        .get("content")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    if content.is_empty() {
+        return Err("歌词内容为空".into());
+    }
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(content)
+        .map_err(|e| e.to_string())?;
+    Ok(OnlineLyric {
+        lyric: String::from_utf8_lossy(&bytes).to_string(),
+        translated: String::new(),
+    })
+}
+
+/// Cover for kugou songs: `album_img` still carries a `{size}` placeholder.
+async fn pic_kugou(client: &reqwest::Client, hash: &str) -> Result<String, String> {
+    let url = format!("http://m.kugou.com/app/i/getSongInfo.php?cmd=playInfo&hash={hash}");
+    let resp = client
+        .get(&url)
+        .header("User-Agent", "KuGou2012-9020-ExpandSearchManager")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+    for key in ["album_img", "imgUrl"] {
+        if let Some(value) = json.get(key).and_then(|v| v.as_str()) {
+            if value.starts_with("http") {
+                return Ok(value.replace("{size}", "480"));
+            }
+        }
+    }
+    Err("该歌曲没有封面".into())
+}
+
+#[tauri::command]
+pub async fn online_lyric(
+    platform: String,
+    id: String,
+    name: Option<String>,
+    duration: Option<u32>,
+) -> Result<OnlineLyric, String> {
+    let client = make_client(true);
+    match platform.as_str() {
+        "kw" => lyric_kuwo(&client, &id).await,
+        "kg" => lyric_kugou(&client, &id, &name.unwrap_or_default(), duration.unwrap_or(0)).await,
+        other => Err(format!("歌词暂不支持平台 {other}")),
+    }
+}
+
 /// Cover URL for the built-in platforms, mirroring LX's `musicSdk/kw/pic.js`.
 #[tauri::command]
 pub async fn online_pic(platform: String, id: String) -> Result<String, String> {
-    if platform != "kw" {
-        return Err(format!("内置封面暂不支持平台 {platform}"));
-    }
     let client = make_client(true);
+    match platform.as_str() {
+        "kw" => pic_kuwo(&client, &id).await,
+        "kg" => pic_kugou(&client, &id).await,
+        other => Err(format!("封面暂不支持平台 {other}")),
+    }
+}
+
+async fn pic_kuwo(client: &reqwest::Client, id: &str) -> Result<String, String> {
     let url = format!(
         "http://artistpicserver.kuwo.cn/pic.web?corp=kuwo&type=rid_pic&pictype=500&size=500&rid={id}"
     );
