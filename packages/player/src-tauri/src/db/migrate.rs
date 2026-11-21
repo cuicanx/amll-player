@@ -20,6 +20,7 @@ pub struct MigrateSongItem {
     pub lyric: String,
     pub translated_lrc: Option<String>,
     pub roman_lrc: Option<String>,
+    pub lyric_offset_ms: Option<i32>,
     pub cover_base64: Option<String>,
     pub cover_type: Option<String>,
 }
@@ -129,6 +130,7 @@ pub async fn migrate_songs_batch(
             roman_lrc: Set(item.roman_lrc),
             cover_path: Set(cover_path),
             modified_at: Set(None),
+            lyric_offset_ms: Set(item.lyric_offset_ms),
         };
 
         match song::Entity::insert(active)
@@ -145,6 +147,7 @@ pub async fn migrate_songs_batch(
                         song::Column::TranslatedLrc,
                         song::Column::RomanLrc,
                         song::Column::CoverPath,
+                        song::Column::LyricOffsetMs,
                     ])
                     .to_owned(),
             )

@@ -1,4 +1,4 @@
-import { Button, Callout, Flex, Select, TextArea } from "@radix-ui/themes";
+import { Button, Callout, Flex, Select, Text, TextArea } from "@radix-ui/themes";
 import { listen, TauriEvent } from "@tauri-apps/api/event";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import {
@@ -22,15 +22,22 @@ export const LyricTabContent: FC = () => {
 	const [lyricContent, setLyricContent] = useState("");
 	const [translatedLyricContent, setTranslatedLyricContent] = useState("");
 	const [romanLyricContent, setRomanLyricContent] = useState("");
+	const [lyricOffsetMs, setLyricOffsetMs] = useState(0);
 	const { t } = useTranslation();
 
 	useLayoutEffect(() => {
 		if (song) {
 			setLyricFormat(song.lyricFormat);
 			setLyricContent(song.lyric);
+			setTranslatedLyricContent(song.translatedLrc ?? "");
+			setRomanLyricContent(song.romanLrc ?? "");
+			setLyricOffsetMs(song.lyricOffsetMs ?? 0);
 		} else {
 			setLyricFormat("none");
 			setLyricContent("");
+			setTranslatedLyricContent("");
+			setRomanLyricContent("");
+			setLyricOffsetMs(0);
 		}
 	}, [song]);
 
@@ -93,6 +100,7 @@ export const LyricTabContent: FC = () => {
 			saveLyricContent: string,
 			saveTranslatedLyricContent: string,
 			saveRomanLyricContent: string,
+			saveLyricOffsetMs = lyricOffsetMs,
 		) => {
 			if (song === undefined) return;
 			if (saveLyricFormat === "none") {
@@ -101,11 +109,13 @@ export const LyricTabContent: FC = () => {
 					lyric: "",
 					translatedLrc: "",
 					romanLrc: "",
+					lyricOffsetMs: 0,
 				});
 				setLyricFormat("none");
 				setLyricContent("");
 				setTranslatedLyricContent("");
 				setRomanLyricContent("");
+				setLyricOffsetMs(0);
 				return;
 			}
 			if (saveLyricFormat === "ttml") {
@@ -114,11 +124,13 @@ export const LyricTabContent: FC = () => {
 					lyric: saveLyricContent,
 					translatedLrc: "",
 					romanLrc: "",
+					lyricOffsetMs: saveLyricOffsetMs,
 				});
 				setLyricFormat("ttml");
 				setLyricContent(saveLyricContent);
 				setTranslatedLyricContent("");
 				setRomanLyricContent("");
+				setLyricOffsetMs(saveLyricOffsetMs);
 				return;
 			}
 			await db.songs.update(song.id, {
@@ -126,13 +138,15 @@ export const LyricTabContent: FC = () => {
 				lyric: saveLyricContent,
 				translatedLrc: saveTranslatedLyricContent,
 				romanLrc: saveRomanLyricContent,
+				lyricOffsetMs: saveLyricOffsetMs,
 			});
 			setLyricFormat(saveLyricFormat);
 			setLyricContent(saveLyricContent);
 			setTranslatedLyricContent(saveTranslatedLyricContent);
 			setRomanLyricContent(saveRomanLyricContent);
+			setLyricOffsetMs(saveLyricOffsetMs);
 		},
-		[song],
+		[song, lyricOffsetMs],
 	);
 
 	return (
@@ -183,6 +197,31 @@ export const LyricTabContent: FC = () => {
 						</Select.Content>
 					</Select.Root>
 				</Option>
+				<Option label={t("page.song.lyric.offsetLabel", "歌词偏移（毫秒）")}>
+					<Flex align="center" gap="2" wrap="wrap">
+						<Text size="2" color="gray">
+							{lyricOffsetMs > 0 ? `+${lyricOffsetMs}` : lyricOffsetMs} ms
+						</Text>
+						{[-500, -100, 100, 500].map((delta) => (
+							<Button
+								key={delta}
+								size="1"
+								variant="soft"
+								onClick={() => setLyricOffsetMs((value) => value + delta)}
+							>
+								{delta > 0 ? "+" : ""}
+								{delta / 1000}s
+							</Button>
+						))}
+						<Button
+							size="1"
+							variant="ghost"
+							onClick={() => setLyricOffsetMs(0)}
+						>
+							<Trans i18nKey="common.reset">重置</Trans>
+						</Button>
+					</Flex>
+				</Option>
 				{lyricFormat !== "none" && lyricFormat.length > 0 && (
 					<>
 						<Option label={t("page.song.lyric.lyricData", "歌词数据")}>
@@ -229,6 +268,26 @@ export const LyricTabContent: FC = () => {
 										}
 									/>
 								</Option>
+								<Button
+									variant="soft"
+									disabled={!translatedLyricContent.trim()}
+									onClick={() => {
+										const nextMain = translatedLyricContent;
+										const nextTranslated = lyricContent;
+										setLyricContent(nextMain);
+										setTranslatedLyricContent(nextTranslated);
+										void saveData(
+											lyricFormat,
+											nextMain,
+											nextTranslated,
+											romanLyricContent,
+										);
+									}}
+								>
+									<Trans i18nKey="page.song.lyric.swapTranslationToMain">
+										一键将翻译歌词设为主歌词
+									</Trans>
+								</Button>
 
 								<Option label="音译歌词数据">
 									<Callout.Root>

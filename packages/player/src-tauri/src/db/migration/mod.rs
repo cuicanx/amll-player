@@ -1,5 +1,6 @@
 pub mod m20260614_000001_init;
 pub mod m20260614_000002_add_modified_at_and_playlist_song_sources;
+pub mod m20261121_000003_add_lyric_offset;
 
 use sea_orm_migration::prelude::*;
 
@@ -11,6 +12,7 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20260614_000001_init::Migration),
             Box::new(m20260614_000002_add_modified_at_and_playlist_song_sources::Migration),
+            Box::new(m20261121_000003_add_lyric_offset::Migration),
         ]
     }
 }

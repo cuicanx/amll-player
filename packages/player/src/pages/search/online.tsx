@@ -36,6 +36,8 @@ import { queueManagerAtom } from "../../states/appAtoms.ts";
 import { db, type Playlist, type Song } from "../../utils/db-client.ts";
 import {
 	type OnlineSong,
+	fetchOnlineCover,
+	fetchOnlineLyric,
 	fetchOnlineMeta,
 	onlineSearch,
 	prepareOnlineSong,
@@ -45,6 +47,23 @@ import {
 } from "../../utils/online-api.ts";
 
 const COLUMNS = "36px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) 64px";
+
+/** Never block playback on a slow cover CDN; a later DB update fills it in. */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+	return new Promise<T>((resolve) => {
+		const timer = setTimeout(() => resolve(fallback), ms);
+		promise.then(
+			(value) => {
+				clearTimeout(timer);
+				resolve(value);
+			},
+			() => {
+				clearTimeout(timer);
+				resolve(fallback);
+			},
+		);
+	});
+}
 
 const PLATFORM_LABEL: Record<string, string> = {
 	kw: "酷我",
@@ -226,11 +245,17 @@ export const OnlineSearchPage: FC = () => {
 		[visibleSongs, platformFilter],
 	);
 
+	/**
+	 * LX keeps all five built-in platform tabs visible even when a platform
+	 * returns zero rows for the current keyword. Deriving tabs from the result
+	 * set made them appear/disappear at random; keep the fixed order and only
+	 * append a tab if a third-party source reports an extra platform.
+	 */
 	const visibleSources = useMemo(() => {
-		const present = new Set<string>(visibleSongs.map((song) => song.source));
-		const ordered = PLATFORM_ORDER.filter((source) => present.has(source));
-		const extra = [...present].filter((source) => !PLATFORM_ORDER.includes(source));
-		return [...ordered, ...extra];
+		const extra = [...new Set(visibleSongs.map((song) => song.source))].filter(
+			(source) => !PLATFORM_ORDER.includes(source),
+		);
+		return [...PLATFORM_ORDER, ...extra];
 	}, [visibleSongs]);
 
 	const play = useCallback(
@@ -249,9 +274,17 @@ export const OnlineSearchPage: FC = () => {
 			setResolving(key);
 			setMessage(t("page.online.loading", "正在准备播放…"));
 			try {
+				// Start the artwork download at the same time as the audio. The
+				// search row already carries the exact cover URL, so there is no
+				// reason to wait for lyrics/cross-platform lookups first.
+				const coverPromise = fetchOnlineCover(song).catch(() => "");
 				const path = await prepareOnlineSong(song);
 				// A faster click on another song wins; ignore this stale result.
 				if (seq !== playSeqRef.current) return;
+				// A short grace period lets the cached cover be in the very first
+				// metadata sync. A slow CDN must never delay playback; the
+				// background write below still updates the player.
+				const quickCover = await withTimeout(coverPromise, 1500, "");
 				const playable: Song = {
 					id: `online-${song.source}-${song.id}`,
 					// Keep the resolvable pseudo path in the DB. Writing the real
@@ -266,25 +299,25 @@ export const OnlineSearchPage: FC = () => {
 					lyric: "",
 					translatedLrc: null,
 					romanLrc: null,
-					// Leave cover empty on the first write. fetchOnlineMeta
-					// downloads the http cover into a local file and writes it
-					// back, which the player picks up via db-row-changed.
-					coverPath: null,
+					coverPath: quickCover || null,
 				};
 				await db.songs.upsert([playable]).catch(() => {});
 				queueManager.replaceQueueAndPlay({ ...playable, filePath: path });
 
-				void fetchOnlineMeta(song)
-					.then((meta) =>
-						db.songs.upsert([
-							{
-								...playable,
-								lyric: meta.lyric,
-								translatedLrc: meta.translated || null,
-								coverPath: meta.cover || playable.coverPath,
-							},
-						]),
-					)
+				// Late cover completion still reaches the player via the
+				// db-row-changed listener in LocalMusicContext.
+				void coverPromise.then((cover) => {
+					if (!cover || cover === quickCover || seq !== playSeqRef.current) return;
+					void db.songs.update(playable.id, { coverPath: cover }).catch(() => {});
+				});
+				void fetchOnlineLyric(song)
+					.then(({ lyric, translated }) => {
+						if (seq !== playSeqRef.current) return;
+						return db.songs.update(playable.id, {
+							lyric,
+							translatedLrc: translated || null,
+						});
+					})
 					.catch(() => {});
 				// Playback has started - clear the "正在准备播放" state immediately.
 				if (seq === playSeqRef.current) setMessage("");

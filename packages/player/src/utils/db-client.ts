@@ -23,6 +23,8 @@ export interface Song {
 	romanLrc?: string | null;
 	coverPath?: string | null;
 	modifiedAt?: number | null;
+	/** Lyric timing correction in milliseconds. */
+	lyricOffsetMs?: number | null;
 }
 
 interface UpdatePlaylistPayload {
@@ -39,6 +41,7 @@ interface UpdateSongPayload {
 	translatedLrc?: string | null;
 	romanLrc?: string | null;
 	coverPath?: string | null;
+	lyricOffsetMs?: number | null;
 }
 
 export interface CoverGcResult {

@@ -434,6 +434,7 @@ pub struct UpdateSongPayload {
     pub translated_lrc: Option<Option<String>>,
     pub roman_lrc: Option<Option<String>>,
     pub cover_path: Option<Option<String>>,
+    pub lyric_offset_ms: Option<Option<i32>>,
 }
 
 #[tauri::command]
@@ -473,6 +474,9 @@ pub async fn update_song(
     }
     if let Some(v) = changes.cover_path {
         active.cover_path = Set(v);
+    }
+    if let Some(v) = changes.lyric_offset_ms {
+        active.lyric_offset_ms = Set(v);
     }
 
     active

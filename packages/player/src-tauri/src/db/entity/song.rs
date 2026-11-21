@@ -21,6 +21,9 @@ pub struct Model {
     pub roman_lrc: Option<String>,
     pub cover_path: Option<String>,
     pub modified_at: Option<i64>,
+    /// Per-song lyric timing correction in milliseconds. Positive values show
+    /// lyrics later; negative values show them earlier.
+    pub lyric_offset_ms: Option<i32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

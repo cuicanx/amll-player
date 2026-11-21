@@ -32,9 +32,6 @@ export interface OnlineSong {
 	extra?: Record<string, unknown> | null;
 }
 
-/** Platforms the built-in resolver can talk to without any custom source. */
-const BUILTIN_PLATFORMS: OnlinePlatform[] = ["kw"];
-
 /**
  * Platforms we search, matching LX's built-in musicSdk list (kw, kg, tx, wy,
  * mg). Playback no longer hides a platform just because one free source cannot
@@ -201,26 +198,24 @@ export function getSourceHealth(id: string) {
 	return health.get(id);
 }
 
-/** Platforms worth searching: built-in ones plus those an enabled source declares. */
-export async function platformsForSearch(): Promise<OnlinePlatform[]> {
-	const result = new Set<OnlinePlatform>(BUILTIN_PLATFORMS);
-	for (const source of loadSources()) {
-		if (!source.enabled) continue;
-		// Only the source's own initialisation is needed here - no probe request.
-		// Probing on every search is what got us rate-limited ("block ip").
-		if (!(await ensureRuntimeReady(source))) continue;
-		for (const key of Object.keys(runtimeFor(source).sources)) {
-			if (SEARCHABLE.includes(key as OnlinePlatform)) result.add(key as OnlinePlatform);
-		}
-	}
-	return [...result];
+/**
+ * Platforms worth searching.
+ *
+ * Search is served by Rust's built-in platform APIs, so it must never wait for
+ * a custom source to initialise. The old implementation awaited each source in
+ * turn (up to 6 s each) and then only searched the platforms that happened to
+ * be declared by a loaded source - that was both slow and the reason the tab
+ * row changed from run to run. LX always searches its full built-in platform
+ * set, so we do the same here.
+ */
+export function platformsForSearch(): OnlinePlatform[] {
+	return [...SEARCHABLE];
 }
 
 export async function onlineSearch(keyword: string): Promise<OnlineSong[]> {
-	const platforms = await platformsForSearch();
 	return invoke<OnlineSong[]>("online_search", {
 		keyword,
-		platforms,
+		platforms: platformsForSearch(),
 		limit: 40,
 	});
 }
@@ -303,91 +298,166 @@ export function setPrepareObserver(observer: PrepareObserver | null): void {
 /** Consecutive resolve failures per source, used to stop hammering dead ones. */
 const resolveFailures = new Map<string, number>();
 const MAX_RESOLVE_FAILURES = 2;
+const RESOLVE_TIMEOUT_MS = 10_000;
 
-interface ResolveCandidate {
-	url: string;
+interface ResolveTask {
 	via: string;
+	run: () => Promise<string>;
+}
+
+interface ResolveSettled {
+	id: number;
+	ok: boolean;
+	via: string;
+	value?: string;
+	error?: unknown;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+	return new Promise<T>((resolve, reject) => {
+		const timer = setTimeout(() => reject(new Error(`${label} 解析超时`)), ms);
+		promise.then(
+			(value) => {
+				clearTimeout(timer);
+				resolve(value);
+			},
+			(error) => {
+				clearTimeout(timer);
+				reject(error);
+			},
+		);
+	});
 }
 
 /**
- * Yield every URL this song can produce, best first: custom sources (each
- * supported quality) and then the built-in resolver.
- *
- * The old `resolvePlayUrl` returned the first URL that *parsed* successfully,
- * but a source can hand back a perfectly valid URL pointing at a 10-second
- * "当前音乐暂不支持播放" clip. Only the download layer can tell, so the caller
- * needs the candidate stream and must fall through when one is a stub.
- *
- * Being a generator matters for latency: playback tries the first URL as soon
- * as it is resolved instead of waiting for every source/quality probe first.
+ * Start every candidate at once and hand them back in completion order.
+ * Returning from `next()` does not cancel the other HTTP requests (the WebView
+ * cannot abort a Rust request), but they are ignored, so a slow source never
+ * delays playback after a fast one has already succeeded.
  */
-async function* iterateResolveCandidates(
-	song: OnlineSong,
-	errors: string[],
-): AsyncGenerator<ResolveCandidate> {
-	for (const source of loadSources()) {
-		if (!source.enabled) continue;
-		if ((resolveFailures.get(source.id) ?? 0) >= MAX_RESOLVE_FAILURES) continue;
+function createResolveQueue(tasks: ResolveTask[]) {
+	const pending = new Map<number, Promise<ResolveSettled>>();
+	tasks.forEach((task, id) => {
+		const settled = task.run().then<ResolveSettled>(
+			(value) => ({ id, ok: true, via: task.via, value }),
+			(error) => ({ id, ok: false, via: task.via, error }),
+		);
+		pending.set(id, settled);
+	});
+	return {
+		async next(): Promise<ResolveSettled | null> {
+			if (pending.size === 0) return null;
+			const result = await Promise.race([...pending.values()]);
+			pending.delete(result.id);
+			return result;
+		},
+	};
+}
+
+/**
+ * Fan out ALL usable sources (and every quality each source declares) plus the
+ * built-in resolver. The old generator tried them one by one, so one hanging
+ * API held up the whole song. Each source is counted as failed only once - and
+ * only after every one of its qualities failed - otherwise the second failed
+ * quality permanently blacklisted an otherwise working source.
+ */
+async function buildResolveTasks(song: OnlineSong, errors: string[]): Promise<ResolveTask[]> {
+	const enabled = loadSources().filter(
+		(source) =>
+			source.enabled && (resolveFailures.get(source.id) ?? 0) < MAX_RESOLVE_FAILURES,
+	);
+	// Initialise in parallel as well: a dead source must not serialize the rest.
+	await Promise.all(enabled.map((source) => ensureRuntimeReady(source)));
+
+	const tasks: ResolveTask[] = [];
+	for (const source of enabled) {
+		if (!ready.get(source.id)) {
+			errors.push(`${source.name}: 初始化失败`);
+			continue;
+		}
 		const runtime = runtimeFor(source);
-		try {
-			if (!(await ensureRuntimeReady(source))) {
-				errors.push(`${source.name}: 初始化失败`);
-				continue;
-			}
-			if (!runtime.sources[song.source]) continue;
-			const info = toMusicInfo(song);
-			for (const quality of qualitiesFor(runtime, song.source)) {
-				try {
-					const url = await runtime.musicUrl(song.source, info, quality);
-					resolveFailures.delete(source.id);
-					devLog(`resolve ${song.source}/${song.id} ok via ${source.name}/${quality}`);
-					yield { url, via: `${source.name}/${quality}` };
-				} catch (err) {
-					const message = (err as Error)?.message ?? String(err);
-					errors.push(`${source.name}/${quality}: ${message}`);
-					resolveFailures.set(source.id, (resolveFailures.get(source.id) ?? 0) + 1);
-					devLog(`resolve ${song.source}/${song.id} fail via ${source.name}/${quality}: ${message}`);
-				}
-			}
-		} catch (err) {
-			const message = (err as Error)?.message ?? String(err);
-			errors.push(`${source.name}: ${message}`);
-			resolveFailures.set(source.id, (resolveFailures.get(source.id) ?? 0) + 1);
-			devLog(`resolve ${song.source}/${song.id} source ${source.name} threw: ${message}`);
+		if (!runtime.sources[song.source]) continue;
+		const qualities = qualitiesFor(runtime, song.source);
+		const group = { remaining: qualities.length, succeeded: false, id: source.id };
+		for (const quality of qualities) {
+			tasks.push({
+				via: `${source.name}/${quality}`,
+				run: async () => {
+					try {
+						const url = await withTimeout(
+							runtime.musicUrl(song.source, toMusicInfo(song), quality),
+							RESOLVE_TIMEOUT_MS,
+							source.name,
+						);
+						if (!url) throw new Error("音源返回了空地址");
+						group.succeeded = true;
+						resolveFailures.delete(source.id);
+						devLog(`resolve ${song.source}/${song.id} ok via ${source.name}/${quality}`);
+						return url;
+					} catch (err) {
+						const message = (err as Error)?.message ?? String(err);
+						errors.push(`${source.name}/${quality}: ${message}`);
+						devLog(
+							`resolve ${song.source}/${song.id} fail via ${source.name}/${quality}: ${message}`,
+						);
+						group.remaining -= 1;
+						if (group.remaining === 0 && !group.succeeded) {
+							resolveFailures.set(source.id, (resolveFailures.get(source.id) ?? 0) + 1);
+						}
+						throw err;
+					}
+				},
+			});
 		}
 	}
 
-	try {
-		const url = await invoke<string>("online_resolve", {
-			platform: song.source,
-			info: toMusicInfo(song),
-			quality: "320k",
+	for (const quality of ["320k", "128k"]) {
+		tasks.push({
+			via: `内置音源/${quality}`,
+			run: async () => {
+				try {
+					const url = await withTimeout(
+						invoke<string>("online_resolve", {
+							platform: song.source,
+							info: toMusicInfo(song),
+							quality,
+						}),
+						RESOLVE_TIMEOUT_MS,
+						"内置音源",
+					);
+					devLog(`resolve ${song.source}/${song.id} ok via 内置音源/${quality}`);
+					return url;
+				} catch (err) {
+					errors.push(
+						`内置音源/${quality}: ${(err as Error)?.message ?? String(err)}`,
+					);
+					throw err;
+				}
+			},
 		});
-		yield { url, via: "内置音源" };
-	} catch (err) {
-		errors.push(`内置音源: ${(err as Error)?.message ?? err}`);
 	}
+
+	return tasks;
 }
 
-async function collectResolveCandidates(song: OnlineSong): Promise<ResolveCandidate[]> {
-	const errors: string[] = [];
-	const candidates: ResolveCandidate[] = [];
-	for await (const candidate of iterateResolveCandidates(song, errors)) {
-		candidates.push(candidate);
-	}
-	if (candidates.length === 0) {
-		const detail = errors.length > 0 ? `（音源尝试：${errors.slice(0, 3).join("；")}）` : "";
-		throw new Error(`没有可用的播放地址${detail}`);
-	}
-	return candidates;
+function resolveErrorText(errors: string[]): string {
+	const detail = errors.length > 0 ? `（音源尝试：${errors.slice(0, 3).join("；")}）` : "";
+	return `没有可用的播放地址${detail}`;
 }
 
-/** Resolve a playable URL, custom sources first, built-in resolver last. */
+/** Resolve a playable URL: first successful source wins, no waiting for the rest. */
 export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
-	const candidates = await collectResolveCandidates(song);
-	const first = candidates[0];
-	resolveObserver?.(first.via.split("/")[0]);
-	return first.url;
+	const errors: string[] = [];
+	const queue = createResolveQueue(await buildResolveTasks(song, errors));
+	let settled = await queue.next();
+	while (settled) {
+		if (settled.ok && settled.value) {
+			resolveObserver?.(settled.via.split("/")[0]);
+			return settled.value;
+		}
+		settled = await queue.next();
+	}
+	throw new Error(resolveErrorText(errors));
 }
 
 /** Download a source script from an http(s) link (uses the Rust proxy). */
@@ -460,12 +530,8 @@ function cacheKeyOf(song: OnlineSong): string {
 	return `online://${song.source}/${song.id}`;
 }
 
-/** Rust flags stub audio with this marker so we can fall through to the next source. */
+/** Rust flags stub audio with this marker so we can log why a candidate was skipped. */
 const STUB_AUDIO_MARKER = "__STUB_AUDIO__";
-
-function isStubAudioError(err: unknown): boolean {
-	return String((err as Error)?.message ?? err).includes(STUB_AUDIO_MARKER);
-}
 
 /**
  * LX's `filterStr`: drop whitespace and punctuation/brackets, keep the inner
@@ -535,31 +601,44 @@ export async function prepareOnlineSong(song: OnlineSong): Promise<string> {
 	const tried = new Set<string>();
 	const errors: string[] = [];
 
+	/**
+	 * Consume candidates in completion order. The URL may be ready in 200 ms
+	 * for one source and never arrive for another; starting the download for
+	 * the first verified candidate is what removes the old "wait for every
+	 * source" stall. A trial clip simply falls through to the next completion.
+	 */
 	const tryCandidates = async (target: OnlineSong, viaNote: string): Promise<string | null> => {
+		const queue = createResolveQueue(await buildResolveTasks(target, errors));
 		let gotCandidate = false;
-		for await (const candidate of iterateResolveCandidates(target, errors)) {
-			if (!candidate.url || tried.has(candidate.url)) continue;
-			tried.add(candidate.url);
-			gotCandidate = true;
-			prepareObserver?.("正在下载音频…");
-			try {
-				const path = await invoke<string>("online_cache_store", {
-					key: cacheKeyOf(target),
-					url: candidate.url,
-				});
-				const via = `${candidate.via}${viaNote}`;
-				resolveObserver?.(via.split("/")[0]);
-				devLog(`prepare ${song.source}/${song.id} ok via ${via}`);
-				return path;
-			} catch (err) {
-				const message = (err as Error)?.message ?? String(err);
-				errors.push(`${candidate.via}: ${message}`);
-				devLog(`prepare ${song.source}/${song.id} candidate ${candidate.via} failed: ${message}`);
-				if (isStubAudioError(err)) {
-					// Trial clip - try the next candidate, do not abort.
-					continue;
+		let settled = await queue.next();
+		while (settled) {
+			if (settled.ok && settled.value && !tried.has(settled.value)) {
+				tried.add(settled.value);
+				gotCandidate = true;
+				prepareObserver?.("正在下载音频…");
+				try {
+					const path = await invoke<string>("online_cache_store", {
+						key: cacheKeyOf(target),
+						url: settled.value,
+					});
+					const via = `${settled.via}${viaNote}`;
+					resolveObserver?.(via.split("/")[0]);
+					devLog(`prepare ${song.source}/${song.id} ok via ${via}`);
+					return path;
+				} catch (err) {
+					const message = (err as Error)?.message ?? String(err);
+					errors.push(`${settled.via}: ${message}`);
+					devLog(
+						`prepare ${song.source}/${song.id} candidate ${settled.via} failed: ${message}`,
+					);
+					if (message.includes(STUB_AUDIO_MARKER)) {
+						// Trial clip: keep consuming the remaining completions.
+						settled = await queue.next();
+						continue;
+					}
 				}
 			}
+			settled = await queue.next();
 		}
 		if (!gotCandidate && viaNote) errors.push(`${target.source}: 没有可用播放地址`);
 		return null;
@@ -579,7 +658,9 @@ export async function prepareOnlineSong(song: OnlineSong): Promise<string> {
 		if (path) return path;
 	}
 
-	throw new Error(`无法播放：所有音源均返回试听片段或解析失败（${errors.slice(0, 4).join("；")}）`);
+	throw new Error(
+		`无法播放：所有音源均返回试听片段或解析失败（${errors.slice(0, 4).join("；")}）`,
+	);
 }
 
 /** Normalise whatever the queue holds into a path the decoder can open. */
@@ -633,6 +714,75 @@ export function prefetchPlaybackPath(filePath: string): void {
 	}
 }
 
+/**
+ * Download an http(s) cover into the local cache. Tauri's WebView blocks plain
+ * http images as mixed content, so a raw platform URL is never written to the
+ * DB as the display path. The Rust command also uses a host-specific Referer -
+ * sending music.163.com's Referer to QQ/Kuwo image CDNs was a common 403.
+ */
+async function cacheCoverUrl(url: string): Promise<string> {
+	try {
+		return await invoke<string>("online_cover_cache", { url });
+	} catch (err) {
+		if (url.startsWith("http://")) {
+			try {
+				return await invoke<string>("online_cover_cache", {
+					url: url.replace(/^http:\/\//, "https://"),
+				});
+			} catch {
+				// Keep the original error below.
+			}
+		}
+		throw err;
+	}
+}
+
+async function downloadFirstCover(urls: string[]): Promise<string> {
+	const seen = new Set<string>();
+	for (const raw of urls) {
+		const url = raw?.trim();
+		if (!url || !/^https?:\/\//.test(url) || seen.has(url)) continue;
+		seen.add(url);
+		try {
+			const path = await cacheCoverUrl(url);
+			if (path) return path;
+		} catch (err) {
+			devLog(`cover ${url.slice(0, 120)} failed: ${(err as Error)?.message ?? err}`);
+		}
+	}
+	return "";
+}
+
+/**
+ * Always return a LOCAL cover path for an online song.
+ *
+ * Candidates, in order: the cover returned by search (the exact row the user
+ * clicked, and the only one preserved in saved playlists), the platform's own
+ * pic API, then the same track on other platforms. Re-running this on playback
+ * also repairs saved rows whose cached cover file was removed by "clear
+ * cache": the pseudo path still carries the original http URL.
+ */
+export async function fetchOnlineCover(song: OnlineSong): Promise<string> {
+	const candidates: string[] = [];
+	if (song.coverUrl) candidates.push(song.coverUrl);
+	try {
+		const rawUrl = await invoke<string>("online_pic", {
+			platform: song.source,
+			id: song.songmid || song.id,
+		});
+		if (rawUrl) candidates.push(rawUrl);
+	} catch {
+		// Most platforms have no direct pic API; the search cover is enough.
+	}
+
+	let cover = await downloadFirstCover(candidates);
+	if (cover) return cover;
+
+	const alternatives = await findSameTrackElsewhere(song);
+	cover = await downloadFirstCover(alternatives.map((item) => item.coverUrl));
+	return cover;
+}
+
 /** LX treats a response without a timestamped line as "no lyric". */
 function hasLyricLines(text: string): boolean {
 	return /\[\d{1,2}:\d{1,2}(?:[.:]\d+)?\]/.test(text ?? "");
@@ -653,84 +803,51 @@ async function requestLyric(
 }
 
 /**
- * Lyrics + cover for an online song.
- *
- * LX's default sources do not ship lyrics themselves: it asks the platform's
- * own lyric API, validates that the result really is a timed LRC, and when
- * that fails searches the same track on other platforms and retries there.
- * Mirror that fallback - a song with lyrics on any searched platform should
- * show them, while a genuinely lyric-less song simply stays empty.
+ * Lyrics with the same cross-platform fallback LX uses. Kept separate from
+ * covers so a slow lyric search can never delay the artwork.
  */
-export async function fetchOnlineMeta(
+export async function fetchOnlineLyric(
 	song: OnlineSong,
-): Promise<{ lyric: string; translated: string; cover: string }> {
-	let lyric = "";
-	let translated = "";
-	let cover = "";
-
+): Promise<{ lyric: string; translated: string }> {
 	try {
-		const res = await requestLyric(song);
-		lyric = res.lyric;
-		translated = res.translated;
+		return await requestLyric(song);
 	} catch {
 		// Try other platforms below.
 	}
 
-	if (!lyric) {
-		try {
-			const alternatives = await onlineSearch(`${song.name} ${song.singer}`.trim());
-			const others = alternatives
-				.filter((candidate) => candidate.source !== song.source && sameTrack(candidate, song))
-				.sort((a, b) => {
-					const order: Record<string, number> = { kg: 0, kw: 1, mg: 2, wy: 3, tx: 4 };
-					return (order[a.source] ?? 99) - (order[b.source] ?? 99);
-				})
-				.slice(0, 4);
-			for (const alt of others) {
-				try {
-					const res = await requestLyric(alt);
-					lyric = res.lyric;
-					translated = res.translated;
-					devLog(`lyric ${song.source}/${song.id} matched ${alt.source}/${alt.id}`);
-					break;
-				} catch {
-					// Next candidate.
-				}
-			}
-		} catch {
-			// Search failed - keep playing without lyrics.
-		}
-	}
-
 	try {
-		const rawUrl = await invoke<string>("online_pic", {
-			platform: song.source,
-			id: song.songmid || song.id,
-		});
-		// Download the http cover into a local cache file - WebView blocks plain
-		// http images as mixed content, which made every online cover black.
-		if (rawUrl.startsWith("http")) {
+		const alternatives = await onlineSearch(`${song.name} ${song.singer}`.trim());
+		const others = alternatives
+			.filter((candidate) => candidate.source !== song.source && sameTrack(candidate, song))
+			.sort((a, b) => {
+				const order: Record<string, number> = { kg: 0, kw: 1, mg: 2, wy: 3, tx: 4 };
+				return (order[a.source] ?? 99) - (order[b.source] ?? 99);
+			})
+			.slice(0, 4);
+		for (const alt of others) {
 			try {
-				cover = await invoke<string>("online_cover_cache", { url: rawUrl });
+				const res = await requestLyric(alt);
+				devLog(`lyric ${song.source}/${song.id} matched ${alt.source}/${alt.id}`);
+				return res;
 			} catch {
-				cover = rawUrl.replace(/^http:\/\//, "https://");
+				// Next candidate.
 			}
-		} else {
-			cover = rawUrl;
 		}
 	} catch {
-		// Fall back to the cover returned by search (already downloaded below).
-		cover = song.coverUrl || "";
+		// Search failed - keep playing without lyrics.
 	}
-	if (cover.startsWith("http")) {
-		try {
-			cover = await invoke<string>("online_cover_cache", { url: cover });
-		} catch {
-			// Keep the URL; the image component has an onError fallback.
-		}
-	}
+	return { lyric: "", translated: "" };
+}
 
-	return { lyric, translated, cover };
+/** Lyrics + cover, fetched in parallel. */
+export async function fetchOnlineMeta(
+	song: OnlineSong,
+): Promise<{ lyric: string; translated: string; cover: string }> {
+	const [lyric, cover] = await Promise.all([
+		fetchOnlineLyric(song),
+		fetchOnlineCover(song),
+	]);
+	return { lyric: lyric.lyric, translated: lyric.translated, cover };
 }
 
 //#endregion

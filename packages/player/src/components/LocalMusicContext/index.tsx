@@ -295,6 +295,7 @@ const LyricContext: FC = () => {
 		song?.lyricFormat,
 		song?.translatedLrc ?? undefined,
 		song?.romanLrc ?? undefined,
+		song?.lyricOffsetMs ?? 0,
 	);
 
 	useEffect(() => {
@@ -377,6 +378,15 @@ export const LocalMusicContext: FC = () => {
 							? p
 							: convertFileSrc(p),
 					);
+					store.set(musicCoverIsVideoAtom, p.endsWith(".mp4"));
+				} else {
+					// Without this branch a song with no artwork inherited the
+					// previous song's cover and looked "successfully wrong".
+					store.set(
+						musicCoverAtom,
+						"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+					);
+					store.set(musicCoverIsVideoAtom, false);
 				}
 			})();
 		}).then((fn) => {

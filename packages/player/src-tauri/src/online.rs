@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use base64::Engine as _;
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -51,7 +52,10 @@ fn make_client(no_proxy: bool) -> reqwest::Client {
         // Some source servers sit behind a WAF that treats HTTP/2 clients with a
         // different (blocking) policy, so match the desktop behaviour here.
         .http1_only()
-        .connect_timeout(Duration::from_secs(10));
+        .connect_timeout(Duration::from_secs(10))
+        // A dead CDN must not leave a search/parse hanging forever. The value
+        // is generous enough for a full 10 MB MP3 on a slow connection.
+        .timeout(Duration::from_secs(30));
     if no_proxy {
         builder = builder.no_proxy();
     }
@@ -718,18 +722,31 @@ pub async fn online_search(
     let limit = limit.unwrap_or(30).clamp(1, 100);
     let client = make_client(true);
 
+    // All five platform searches run at once. The futures are collected in
+    // the original `platforms` order, so appending them preserves the exact
+    // order and content the sequential version produced - only the wall-clock
+    // time changes (previously the slowest platform was paid five times over).
+    let results = join_all(platforms.iter().map(|platform| {
+        let client = client.clone();
+        let keyword = keyword.clone();
+        let platform = platform.clone();
+        async move {
+            let result = match platform.as_str() {
+                "kw" => search_kuwo(&client, &keyword, limit).await,
+                "kg" => search_kugou(&client, &keyword, limit).await,
+                "wy" => search_netease(&client, &keyword, limit).await,
+                "mg" => search_migu(&client, &keyword, limit).await,
+                "tx" => search_tencent(&client, &keyword, limit).await,
+                other => Err(format!("暂不支持平台 {other}")),
+            };
+            (platform, result)
+        }
+    }))
+    .await;
+
     let mut songs = Vec::new();
     let mut errors = Vec::new();
-
-    for platform in &platforms {
-        let result = match platform.as_str() {
-            "kw" => search_kuwo(&client, &keyword, limit).await,
-            "kg" => search_kugou(&client, &keyword, limit).await,
-            "wy" => search_netease(&client, &keyword, limit).await,
-            "mg" => search_migu(&client, &keyword, limit).await,
-            "tx" => search_tencent(&client, &keyword, limit).await,
-            other => Err(format!("暂不支持平台 {other}")),
-        };
+    for (platform, result) in results {
         match result {
             Ok(mut list) => songs.append(&mut list),
             Err(e) => errors.push(format!("{platform}: {e}")),
@@ -1052,6 +1069,59 @@ fn clear_usage_dir(dir: &std::path::Path) {
 /// Download a cover image to a local cache file and return a path the WebView
 /// can display. Online cover URLs are plain http and get blocked as mixed
 /// content, which made every online song show a black cover.
+/// Image CDNs check Referer. Using NetEase's Referer for a QQ or Kuwo image
+/// returned 403 for most songs, which looked exactly like a missing cover.
+fn cover_referer_for(url: &str) -> Option<&'static str> {
+    if url.contains("y.qq.com") || url.contains("qpic.cn") {
+        Some("https://y.qq.com/")
+    } else if url.contains("kugou") {
+        Some("https://www.kugou.com/")
+    } else if url.contains("kuwo") {
+        Some("http://www.kuwo.cn/")
+    } else if url.contains("music.163.com") || url.contains("126.net") {
+        Some("https://music.163.com/")
+    } else if url.contains("migu") {
+        Some("https://music.migu.cn/")
+    } else {
+        None
+    }
+}
+
+async fn fetch_cover_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String> {
+    let mut attempts: Vec<(String, Option<&'static str>)> = Vec::new();
+    if let Some(referer) = cover_referer_for(url) {
+        attempts.push((url.to_string(), Some(referer)));
+    }
+    attempts.push((url.to_string(), None));
+    if url.starts_with("http://") {
+        let https = url.replacen("http://", "https://", 1);
+        attempts.push((https, cover_referer_for(url)));
+    }
+
+    let mut last_error = "封面下载失败".to_string();
+    for (candidate, referer) in attempts {
+        let mut request = client.get(&candidate);
+        if let Some(referer) = referer {
+            request = request.header("Referer", referer);
+        }
+        match request.send().await {
+            Ok(resp) => {
+                if !resp.status().is_success() {
+                    last_error = format!("封面下载失败: HTTP {}", resp.status());
+                    continue;
+                }
+                match resp.bytes().await {
+                    Ok(bytes) if !bytes.is_empty() => return Ok(bytes.to_vec()),
+                    Ok(_) => last_error = "封面为空".to_string(),
+                    Err(e) => last_error = format!("封面读取失败: {e}"),
+                }
+            }
+            Err(e) => last_error = format!("封面下载失败: {e}"),
+        }
+    }
+    Err(last_error)
+}
+
 #[tauri::command]
 pub async fn online_cover_cache(app: tauri::AppHandle, url: String) -> Result<String, String> {
     if !url.starts_with("http://") && !url.starts_with("https://") {
@@ -1063,19 +1133,7 @@ pub async fn online_cover_cache(app: tauri::AppHandle, url: String) -> Result<St
         return Ok(file.to_string_lossy().to_string());
     }
     let client = make_client(true);
-    let resp = client
-        .get(&url)
-        .header("Referer", "https://music.163.com/")
-        .send()
-        .await
-        .map_err(|e| format!("封面下载失败: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!("封面下载失败: HTTP {}", resp.status()));
-    }
-    let bytes = resp.bytes().await.map_err(|e| format!("封面读取失败: {e}"))?;
-    if bytes.is_empty() {
-        return Err("封面为空".into());
-    }
+    let bytes = fetch_cover_bytes(&client, &url).await?;
     std::fs::write(&file, &bytes).map_err(|e| format!("封面写入失败: {e}"))?;
     Ok(file.to_string_lossy().to_string())
 }

@@ -15,7 +15,9 @@ import { playbackEpochAtom } from "../states/appAtoms.ts";
 import type { Song } from "./db-client.ts";
 import { db } from "./db-client.ts";
 import {
+	fetchOnlineCover,
 	isOnlinePath,
+	parseOnlinePath,
 	prefetchPlaybackPath,
 	preparePlaybackPath,
 } from "./online-api.ts";
@@ -188,6 +190,27 @@ export class PlayQueueManager {
 		// signed and expires. Resolve + download once, then keep the local file so
 		// the next play (and the next song switch) never waits on the network.
 		if (isOnlinePath(song.filePath) || /^https?:\/\//.test(song.filePath)) {
+			// A saved online song may still point at a cover file removed by the
+			// storage cleanup. Re-cache from the URL embedded in the pseudo path
+			// (a no-op on a hit) and write the fresh path back to the DB. The
+			// db-row-changed listener then repairs the currently displayed cover.
+			const onlineSong = parseOnlinePath(song.filePath);
+			if (onlineSong) {
+				void fetchOnlineCover(onlineSong)
+					.then((cover) => {
+						if (
+							!cover ||
+							generation !== this.playGeneration ||
+							this.store.get(musicIdAtom) !== song.id ||
+							cover === song.coverPath
+						) {
+							return;
+						}
+						return db.songs.update(song.id, { coverPath: cover });
+					})
+					.catch(() => {});
+			}
+
 			const toastId = toast.loading(
 				i18n.t("page.online.loadingAudio", "正在加载在线歌曲…"),
 			);

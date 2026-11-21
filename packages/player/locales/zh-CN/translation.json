@@ -563,7 +563,9 @@
 					"yrc": "YRC 歌词"
 				},
 				"lyricFormatLabel": "歌词格式",
+				"offsetLabel": "歌词偏移（毫秒，正值延后）",
 				"romanLyricDataTip": "请提供 LyRiC 格式的歌词数据，将会根据时间戳与一致或靠近的原文歌词配对成为音译",
+				"swapTranslationToMain": "一键将翻译歌词设为主歌词",
 				"translationLyricData": "翻译歌词数据",
 				"translationLyricDataTip": "请提供 LyRiC 格式的歌词数据，将会根据时间戳与一致或靠近的原文歌词配对成为译文",
 				"ttmlLyricTip": "TTML 歌词可同时包含翻译与音译数据。"

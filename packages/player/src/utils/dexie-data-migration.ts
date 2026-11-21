@@ -88,6 +88,7 @@ export async function* runMigration(): AsyncGenerator<MigrationProgress> {
 					lyric: song.lyric,
 					translatedLrc: song.translatedLrc ?? null,
 					romanLrc: song.romanLrc ?? null,
+					lyricOffsetMs: song.lyricOffsetMs ?? 0,
 					coverBase64: coverBase64 ?? null,
 					coverType: coverType ?? null,
 				};

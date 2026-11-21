@@ -74,11 +74,35 @@ interface LyricParserResult {
 	metadata: [string, string[]][];
 }
 
+/** Positive offset delays the lyrics; negative offset brings them forward. */
+function shiftLyricLines(lines: LyricLine[], offsetMs: number): LyricLine[] {
+	if (!offsetMs) return lines;
+	return lines.map((line) => {
+		const shifted: LyricLine = {
+			...line,
+			startTime: Math.max(0, line.startTime + offsetMs),
+			words: line.words.map((word) => {
+				const next = {
+					...word,
+					startTime: Math.max(0, word.startTime + offsetMs),
+				} as typeof word;
+				const originalEnd = (word as { endTime?: number }).endTime;
+				if (typeof originalEnd === "number") {
+					Object.assign(next, { endTime: Math.max(0, originalEnd + offsetMs) });
+				}
+				return next;
+			}),
+		};
+		return shifted;
+	});
+}
+
 export const useLyricParser = (
 	lyricStr?: string,
 	format?: string,
 	translatedLrc?: string,
 	romanLrc?: string,
+	offsetMs = 0,
 ): LyricParserResult => {
 	const displayLanguage = useAtomValue(languageAtom);
 
@@ -128,7 +152,8 @@ export const useLyricParser = (
 				}
 			}
 
-			const compatibleLyricLines: CoreLyricLine[] = parsedLyricLines.map(
+			const shiftedLines = shiftLyricLines(parsedLyricLines, offsetMs);
+			const compatibleLyricLines: CoreLyricLine[] = shiftedLines.map(
 				(line) => ({
 					...line,
 					words: line.words.map((word) => ({
@@ -140,7 +165,7 @@ export const useLyricParser = (
 
 			if (translatedLrc) {
 				try {
-					const translatedLyricLines = parseLrc(translatedLrc);
+					const translatedLyricLines = shiftLyricLines(parseLrc(translatedLrc), offsetMs);
 					for (const line of translatedLyricLines) {
 						pairLyric(
 							{
@@ -162,7 +187,7 @@ export const useLyricParser = (
 
 			if (romanLrc) {
 				try {
-					const romanLyricLines = parseLrc(romanLrc);
+					const romanLyricLines = shiftLyricLines(parseLrc(romanLrc), offsetMs);
 					for (const line of romanLyricLines) {
 						pairLyric(
 							{
@@ -191,5 +216,5 @@ export const useLyricParser = (
 			console.warn("解析歌词时出现错误", e);
 			return { lyricLines: [], hasLyrics: false, metadata: [] };
 		}
-	}, [lyricStr, format, translatedLrc, romanLrc, displayLanguage]);
+	}, [lyricStr, format, translatedLrc, romanLrc, offsetMs, displayLanguage]);
 };
