@@ -73,8 +73,12 @@ const PLATFORM_LABEL: Record<string, string> = {
 	mg: "咪咕",
 };
 
-/** LX's musicSdk order: kw, kg, tx, wy, mg (bd/xm are disabled). */
-const PLATFORM_ORDER = ["kw", "kg", "tx", "wy", "mg"];
+/**
+ * Default platform order: aggregate first (rendered separately below), then
+ * QQ, Kugou, NetEase, Kuwo, Migu. Kept in one place so the tab row order and
+ * the search request order can never drift apart.
+ */
+const PLATFORM_ORDER = ["tx", "kg", "wy", "kw", "mg"];
 
 function formatDuration(seconds: number): string {
 	if (!seconds || seconds < 0) return "--:--";
@@ -152,6 +156,29 @@ function qualityLabel(song: OnlineSong): string {
 
 const songKeyOf = (song: OnlineSong) => `${song.source}::${song.id}`;
 
+const SEARCH_HISTORY_KEY = "amll-player.onlineSearchHistory";
+const SEARCH_HISTORY_MAX = 10;
+
+function loadSearchHistory(): string[] {
+	try {
+		const raw = localStorage.getItem(SEARCH_HISTORY_KEY);
+		const parsed = raw ? JSON.parse(raw) : [];
+		return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string").slice(0, SEARCH_HISTORY_MAX) : [];
+	} catch {
+		return [];
+	}
+}
+
+function pushSearchHistory(term: string): string[] {
+	const next = [term, ...loadSearchHistory().filter((item) => item !== term)].slice(0, SEARCH_HISTORY_MAX);
+	try {
+		localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next));
+	} catch {
+		// Storage unavailable - history still works for this session.
+	}
+	return next;
+}
+
 export const OnlineSearchPage: FC = () => {
 	const { t } = useTranslation();
 	const [keyword, setKeyword] = useState("");
@@ -161,6 +188,7 @@ export const OnlineSearchPage: FC = () => {
 	const [message, setMessage] = useState("");
 	const [searched, setSearched] = useState("");
 	const [platformFilter, setPlatformFilter] = useState("all");
+	const [searchHistory, setSearchHistory] = useState<string[]>(() => loadSearchHistory());
 	const [playlists, setPlaylists] = useState<Playlist[]>([]);
 	const queueManager = useAtomValue(queueManagerAtom);
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -195,6 +223,8 @@ export const OnlineSearchPage: FC = () => {
 	const runSearch = useCallback(async (text: string) => {
 		const trimmed = text.trim();
 		if (!trimmed) return;
+		setKeyword(trimmed);
+		setSearchHistory(pushSearchHistory(trimmed));
 		setLoading(true);
 		setMessage("");
 		setSearched(trimmed);
@@ -398,6 +428,25 @@ export const OnlineSearchPage: FC = () => {
 						<MagnifyingGlassIcon />
 					</TextField.Slot>
 				</TextField.Root>
+
+				{searchHistory.length > 0 ? (
+					<Flex gap="2" align="center" wrap="wrap" mt="2">
+						<Text size="1" color="gray">
+							{t("page.online.searchHistory", "搜索历史")}
+						</Text>
+						{searchHistory.map((term) => (
+							<Button
+								key={term}
+								size="1"
+								variant="soft"
+								color="gray"
+								onClick={() => void runSearch(term)}
+							>
+								{term}
+							</Button>
+						))}
+					</Flex>
+				) : null}
 
 				<Flex gap="2" align="center" mt="2">
 					<Button

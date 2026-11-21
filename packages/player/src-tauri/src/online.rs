@@ -424,18 +424,52 @@ async fn search_kugou(client: &reqwest::Client, keyword: &str, limit: u32) -> Re
 //#region netease
 
 async fn search_netease(client: &reqwest::Client, keyword: &str, limit: u32) -> Result<Vec<OnlineSong>, String> {
-    let url = format!(
-        "https://music.163.com/api/search/get/web?s={}&type=1&offset=0&total=true&limit={}",
-        urlencoding::encode(keyword),
-        limit
-    );
-    let resp = client
-        .get(&url)
-        .header("Referer", "https://music.163.com/")
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    let json: Value = resp.json().await.map_err(|e| e.to_string())?;
+    // `/api/search/get/web` is heavily rate-limited and now returns
+    // `{"code":405,"msg":"操作频繁"}` for most requests, which made NetEase
+    // search (and therefore its covers) intermittently empty. `/api/search/pc`
+    // still answers normally with the same `result.songs` shape, so try it
+    // first and fall back to the legacy endpoint only if it fails.
+    let endpoints = [
+        format!(
+            "https://music.163.com/api/search/pc?s={}&type=1&offset=0&limit={}",
+            urlencoding::encode(keyword),
+            limit
+        ),
+        format!(
+            "https://music.163.com/api/search/get/web?s={}&type=1&offset=0&total=true&limit={}",
+            urlencoding::encode(keyword),
+            limit
+        ),
+    ];
+    let mut json: Option<Value> = None;
+    let mut last_error = String::new();
+    for url in endpoints {
+        // `json()` is async, so the response body must be awaited separately
+        // from `send()` - it cannot go through a synchronous `and_then`.
+        let resp = client
+            .get(&url)
+            .header("Referer", "https://music.163.com/")
+            .send()
+            .await;
+        let value = match resp {
+            Ok(r) => r.json::<Value>().await,
+            Err(e) => Err(e),
+        };
+        match value {
+            Ok(value) if value.get("result").and_then(|r| r.get("songs")).is_some() => {
+                json = Some(value);
+                break;
+            }
+            Ok(value) => {
+                last_error = format!(
+                    "网易返回: {}",
+                    value.get("msg").and_then(|v| v.as_str()).unwrap_or("无 songs 字段")
+                );
+            }
+            Err(e) => last_error = e.to_string(),
+        }
+    }
+    let json = json.ok_or_else(|| last_error)?;
 
     let list = json
         .get("result")
@@ -579,6 +613,28 @@ async fn search_tencent(
 const MIGU_DEVICE_ID: &str = "963B7AA0D21511ED807EE5846EC87D20";
 const MIGU_SIGN_SALT: &str = "6cdc72a439cef99a3418d2a78aa28c73";
 const MIGU_APP_KEY: &str = "yyapp2d16148780a1dcc7408e06336b98cfd50";
+/// Migu's image CDN host, verified to serve the `/data/oss/...` cover paths.
+const MIGU_IMAGE_HOST: &str = "https://d.musicapp.migu.cn";
+
+/// Turn any form Migu uses for a cover into an absolute, downloadable URL.
+fn normalize_migu_image(raw: &str) -> String {
+    let value = raw.trim();
+    if value.is_empty() {
+        return String::new();
+    }
+    if value.starts_with("http://") || value.starts_with("https://") {
+        // Plain http image hosts get blocked as mixed content; upgrade them.
+        return value.replacen("http://", "https://", 1);
+    }
+    if value.starts_with("//") {
+        return format!("https:{value}");
+    }
+    if value.starts_with('/') {
+        return format!("{MIGU_IMAGE_HOST}{value}");
+    }
+    // A bare path without a leading slash (some responses omit it).
+    format!("{MIGU_IMAGE_HOST}/{value}")
+}
 
 /// Migu signs the keyword with a fixed salt plus a millisecond timestamp,
 /// exactly like LX's `musicSdk/mg/musicSearch.js`.
@@ -674,14 +730,19 @@ async fn search_migu(client: &reqwest::Client, keyword: &str, limit: u32) -> Res
                 .get("duration")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0) as u32;
-            // Migu exposes covers as img1/img2/img3 (there is no plain `img`).
+            // Migu exposes covers as img1/img2/img3, and they are ROOT-RELATIVE
+            // paths like `/data/oss/resource/...webp`, not absolute URLs. The
+            // frontend downloader rejects anything not starting with http(s),
+            // so every Migu cover silently became "no cover". Migu's official
+            // image host (verified: returns image/webp, HTTP 200) is
+            // `d.musicapp.migu.cn`; `music.migu.cn` only serves an HTML page.
             song.cover_url = ["img1", "img2", "img3"]
                 .iter()
                 .find_map(|key| {
                     item.get(*key)
                         .and_then(|v| v.as_str())
                         .filter(|s| !s.is_empty())
-                        .map(|s| s.to_string())
+                        .map(|s| normalize_migu_image(s))
                 })
                 .unwrap_or_default();
 

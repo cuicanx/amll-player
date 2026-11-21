@@ -33,12 +33,13 @@ export interface OnlineSong {
 }
 
 /**
- * Platforms we search, matching LX's built-in musicSdk list (kw, kg, tx, wy,
- * mg). Playback no longer hides a platform just because one free source cannot
- * resolve a VIP/paid track: `prepareOnlineSong` already falls through to other
- * qualities, sources and the same track on other platforms.
+ * Platforms we search, in the app's default order: QQ, Kugou, NetEase, Kuwo,
+ * Migu (the aggregate tab is built by the UI on top of these). Playback no
+ * longer hides a platform just because one free source cannot resolve a
+ * VIP/paid track: `prepareOnlineSong` already falls through to other qualities,
+ * sources and the same track on other platforms.
  */
-const SEARCHABLE: OnlinePlatform[] = ["kw", "kg", "tx", "wy", "mg"];
+const SEARCHABLE: OnlinePlatform[] = ["tx", "kg", "wy", "kw", "mg"];
 
 /** A song everyone has, used to check whether a source really works. */
 const PROBE_SONG: OnlineSong = {
@@ -108,18 +109,26 @@ function runtimeFor(source: StoredSource): LxSourceRuntime {
 	return runtime;
 }
 
-/** Initialise a source at most once per session. No network beyond its own init. */
+/**
+ * Initialise a source at most once per session. No network beyond its own init.
+ *
+ * Heavy obfuscated sources (the user's 58 KB V7 script) can take well over 6 s
+ * to evaluate and emit `inited`; the old 6 s budget marked them permanently
+ * dead, which is why NetEase/Migu songs reported "all sources failed" even
+ * though the source works in LX. 15 s matches LX's own tolerance. A failed
+ * init is NOT cached - a slow device or a cold WebView can succeed on retry.
+ */
 const ready = new Map<string, boolean>();
+const INIT_TIMEOUT_MS = 15_000;
 
 async function ensureRuntimeReady(source: StoredSource): Promise<boolean> {
-	const cached = ready.get(source.id);
-	if (cached !== undefined) return cached;
+	if (ready.get(source.id) === true) return true;
 	try {
-		await runtimeFor(source).init(6000);
+		await runtimeFor(source).init(INIT_TIMEOUT_MS);
 		ready.set(source.id, true);
 		return true;
 	} catch {
-		ready.set(source.id, false);
+		// Do not cache failure: allow a later resolve attempt to re-initialise.
 		return false;
 	}
 }
@@ -159,8 +168,9 @@ export async function ensureSourceHealth(force = false): Promise<Map<string, { o
 		enabled.map(async (source) => {
 			const runtime = runtimeFor(source);
 			try {
-				// A broken source must not stall the first search: fail fast.
-				await runtime.init(6000);
+				// Heavy obfuscated sources need more than a few seconds to emit
+				// `inited`; too short a budget made working sources look broken.
+				await runtime.init(INIT_TIMEOUT_MS);
 				const platforms = Object.keys(runtime.sources);
 				let probe = "";
 				// The resolve test is informational only. A source that loads is
@@ -441,8 +451,12 @@ async function buildResolveTasks(song: OnlineSong, errors: string[]): Promise<Re
 }
 
 function resolveErrorText(errors: string[]): string {
+	// The old text blamed "内置音源暂不支持平台" for every Migu/NetEase
+	// failure, because the built-in resolver only supports Kuwo. That message
+	// is misleading: custom sources are the normal path for those platforms.
+	// Keep the raw attempts for diagnosis but lead with an actionable hint.
 	const detail = errors.length > 0 ? `（音源尝试：${errors.slice(0, 3).join("；")}）` : "";
-	return `没有可用的播放地址${detail}`;
+	return `咪咕/网易等平台需要自定义音源解析，请检查设置中的音源是否已启用或在落雪音乐中可正常使用${detail}`;
 }
 
 /** Resolve a playable URL: first successful source wins, no waiting for the rest. */
@@ -659,7 +673,7 @@ export async function prepareOnlineSong(song: OnlineSong): Promise<string> {
 	}
 
 	throw new Error(
-		`无法播放：所有音源均返回试听片段或解析失败（${errors.slice(0, 4).join("；")}）`,
+		`无法播放：${resolveErrorText(errors.slice(0, 4))}`,
 	);
 }
 

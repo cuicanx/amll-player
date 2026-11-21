@@ -268,26 +268,29 @@ export const LyricTabContent: FC = () => {
 										}
 									/>
 								</Option>
-								<Button
-									variant="soft"
-									disabled={!translatedLyricContent.trim()}
-									onClick={() => {
-										const nextMain = translatedLyricContent;
-										const nextTranslated = lyricContent;
-										setLyricContent(nextMain);
-										setTranslatedLyricContent(nextTranslated);
-										void saveData(
-											lyricFormat,
-											nextMain,
-											nextTranslated,
-											romanLyricContent,
-										);
-									}}
-								>
-									<Trans i18nKey="page.song.lyric.swapTranslationToMain">
-										一键将翻译歌词设为主歌词
-									</Trans>
-								</Button>
+							<Button
+								variant="soft"
+								disabled={!song?.translatedLrc?.trim()}
+								onClick={() => {
+									// Swap from the ORIGINAL stored lyric data, not from the
+									// (possibly edited) textareas. This button corrects the case
+									// where a translation was mis-detected as the main lyric:
+									// main <- original translation, translation <- original main.
+									if (!song) return;
+									const originalMain = song.lyric ?? "";
+									const originalTranslated = song.translatedLrc ?? "";
+									void saveData(
+										lyricFormat,
+										originalTranslated,
+										originalMain,
+										romanLyricContent,
+									);
+								}}
+							>
+								<Trans i18nKey="page.song.lyric.swapTranslationToMain">
+									一键将翻译歌词设为主歌词
+								</Trans>
+							</Button>
 
 								<Option label="音译歌词数据">
 									<Callout.Root>
