@@ -291,42 +291,50 @@ export function setResolveObserver(observer: ResolveObserver | null): void {
 const resolveFailures = new Map<string, number>();
 const MAX_RESOLVE_FAILURES = 2;
 
-/** Resolve a playable URL, custom sources first, built-in resolver last. */
-export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
+interface ResolveCandidate {
+	url: string;
+	via: string;
+}
+
+/**
+ * Collect every URL this song can produce, best first: custom sources (each
+ * supported quality) and then the built-in resolver.
+ *
+ * The old `resolvePlayUrl` returned the first URL that *parsed* successfully,
+ * but a source can hand back a perfectly valid URL pointing at a 10-second
+ * "当前音乐暂不支持播放" clip. Only the download layer can tell, so it needs
+ * the whole candidate list to fall through when one turns out to be a stub.
+ */
+async function collectResolveCandidates(song: OnlineSong): Promise<ResolveCandidate[]> {
+	const candidates: ResolveCandidate[] = [];
 	const errors: string[] = [];
 
 	for (const source of loadSources()) {
 		if (!source.enabled) continue;
-		// An unreachable source (e.g. a dead API host) fails every time; after a
-		// couple of tries stop paying for its round-trips in this session.
 		if ((resolveFailures.get(source.id) ?? 0) >= MAX_RESOLVE_FAILURES) continue;
-		// No health gating here: a source marked unavailable earlier may already
-		// be fine again, and trying it costs one request at most.
 		const runtime = runtimeFor(source);
 		try {
-			// Initialise FIRST: `runtime.sources` is empty until the script has
-			// sent its `inited` event, so checking it before init made every
-			// source look unsupported and silently fell back to the built-in.
 			if (!(await ensureRuntimeReady(source))) {
 				errors.push(`${source.name}: 初始化失败`);
 				continue;
 			}
 			if (!runtime.sources[song.source]) continue;
 			const info = toMusicInfo(song);
+			let resolved = 0;
 			for (const quality of qualitiesFor(runtime, song.source)) {
 				try {
 					const url = await runtime.musicUrl(song.source, info, quality);
+					candidates.push({ url, via: `${source.name}/${quality}` });
+					resolved += 1;
 					devLog(`resolve ${song.source}/${song.id} ok via ${source.name}/${quality}`);
-					resolveFailures.delete(source.id);
-					resolveObserver?.(source.name);
-					return url;
 				} catch (err) {
 					const message = (err as Error)?.message ?? String(err);
 					errors.push(`${source.name}/${quality}: ${message}`);
 					devLog(`resolve ${song.source}/${song.id} fail via ${source.name}/${quality}: ${message}`);
 				}
 			}
-			resolveFailures.set(source.id, (resolveFailures.get(source.id) ?? 0) + 1);
+			if (resolved > 0) resolveFailures.delete(source.id);
+			else resolveFailures.set(source.id, (resolveFailures.get(source.id) ?? 0) + 1);
 		} catch (err) {
 			const message = (err as Error)?.message ?? String(err);
 			errors.push(`${source.name}: ${message}`);
@@ -341,12 +349,24 @@ export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
 			info: toMusicInfo(song),
 			quality: "320k",
 		});
-		resolveObserver?.("内置音源");
-		return url;
+		candidates.push({ url, via: "内置音源" });
 	} catch (err) {
-		const detail = errors.length > 0 ? `（音源尝试：${errors.slice(0, 3).join("；")}）` : "";
-		throw new Error(`${(err as Error)?.message ?? err}${detail}`);
+		errors.push(`内置音源: ${(err as Error)?.message ?? err}`);
 	}
+
+	if (candidates.length === 0) {
+		const detail = errors.length > 0 ? `（音源尝试：${errors.slice(0, 3).join("；")}）` : "";
+		throw new Error(`没有可用的播放地址${detail}`);
+	}
+	return candidates;
+}
+
+/** Resolve a playable URL, custom sources first, built-in resolver last. */
+export async function resolvePlayUrl(song: OnlineSong): Promise<string> {
+	const candidates = await collectResolveCandidates(song);
+	const first = candidates[0];
+	resolveObserver?.(first.via.split("/")[0]);
+	return first.url;
 }
 
 /** Download a source script from an http(s) link (uses the Rust proxy). */
@@ -419,19 +439,104 @@ function cacheKeyOf(song: OnlineSong): string {
 	return `online://${song.source}/${song.id}`;
 }
 
+/** Rust flags stub audio with this marker so we can fall through to the next source. */
+const STUB_AUDIO_MARKER = "__STUB_AUDIO__";
+
+function isStubAudioError(err: unknown): boolean {
+	return String((err as Error)?.message ?? err).includes(STUB_AUDIO_MARKER);
+}
+
+function sameTrack(a: OnlineSong, b: OnlineSong): boolean {
+	const normalize = (s: string) =>
+		s.trim().toLowerCase().replace(/\s+/g, "").replace(/[（(].*?[）)]/g, "");
+	return normalize(a.name) === normalize(b.name) && normalize(a.singer) === normalize(b.singer);
+}
+
+/** Platforms to try when the original one only serves a trial clip. */
+const FALLBACK_PLATFORM_ORDER: OnlinePlatform[] = ["kg", "kw", "mg", "wy", "tx"];
+
 /**
- * Play a song from a local file, downloading it once.
- *
- * Streaming straight into the decoder blocked the audio thread for the whole
- * download, so switching songs (even to a local file) had to wait behind it.
- * Downloading first turns every later play into a plain file open.
+ * When a platform serves only a 10-second trial clip, look for the same song
+ * on another platform and try there. 晴天 on 酷我 (kw/228908) is exactly this
+ * case: 酷狗 (kg) serves the full 4:29 file from the same exclusive source.
+ */
+async function findSameTrackElsewhere(song: OnlineSong): Promise<OnlineSong[]> {
+	let results: OnlineSong[];
+	try {
+		results = await onlineSearch(`${song.name} ${song.singer}`.trim());
+	} catch {
+		return [];
+	}
+	return results
+		.filter((candidate) => candidate.source !== song.source && sameTrack(candidate, song))
+		.sort((a, b) => {
+			const ai = FALLBACK_PLATFORM_ORDER.indexOf(a.source as OnlinePlatform);
+			const bi = FALLBACK_PLATFORM_ORDER.indexOf(b.source as OnlinePlatform);
+			return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+		})
+		.slice(0, 6);
+}
+
+/**
+ * Download a song once into the local cache, trying every candidate URL.
+ * Falling through a stub clip to the next quality / source / platform is what
+ * turns "晴天播放成 10 秒语音" into a real 4:29 playback.
  */
 export async function prepareOnlineSong(song: OnlineSong): Promise<string> {
 	const key = cacheKeyOf(song);
 	const cached = await invoke<string | null>("online_cache_path", { key });
 	if (cached) return cached;
-	const url = await resolvePlayUrl(song);
-	return invoke<string>("online_cache_store", { key, url });
+
+	const tried = new Set<string>();
+	const errors: string[] = [];
+
+	const tryCandidates = async (target: OnlineSong, viaNote: string): Promise<string | null> => {
+		let candidates: ResolveCandidate[];
+		try {
+			candidates = await collectResolveCandidates(target);
+		} catch (err) {
+			errors.push(`${target.source}: ${(err as Error)?.message ?? err}`);
+			return null;
+		}
+		const targetKey = cacheKeyOf(target);
+		for (const candidate of candidates) {
+			if (!candidate.url || tried.has(candidate.url)) continue;
+			tried.add(candidate.url);
+			try {
+				const path = await invoke<string>("online_cache_store", {
+					key: targetKey,
+					url: candidate.url,
+				});
+				const via = `${candidate.via}${viaNote}`;
+				resolveObserver?.(via.split("/")[0]);
+				devLog(`prepare ${song.source}/${song.id} ok via ${via}`);
+				return path;
+			} catch (err) {
+				const message = (err as Error)?.message ?? String(err);
+				errors.push(`${candidate.via}: ${message}`);
+				devLog(`prepare ${song.source}/${song.id} candidate ${candidate.via} failed: ${message}`);
+				if (isStubAudioError(err)) {
+					// Trial clip - try the next candidate, do not abort.
+					continue;
+				}
+			}
+		}
+		return null;
+	};
+
+	const direct = await tryCandidates(song, "");
+	if (direct) return direct;
+
+	const alternatives = await findSameTrackElsewhere(song);
+	for (const alt of alternatives) {
+		const altKey = cacheKeyOf(alt);
+		const altCached = await invoke<string | null>("online_cache_path", { key: altKey });
+		if (altCached) return altCached;
+		const path = await tryCandidates(alt, `（${alt.source}同曲）`);
+		if (path) return path;
+	}
+
+	throw new Error(`无法播放：所有音源均返回试听片段或解析失败（${errors.slice(0, 4).join("；")}）`);
 }
 
 /** Normalise whatever the queue holds into a path the decoder can open. */

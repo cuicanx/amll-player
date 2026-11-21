@@ -750,6 +750,55 @@ fn pick_extension(url: &str) -> &'static str {
     ".mp3"
 }
 
+/// Marker embedded in errors from `online_cache_store` when the downloaded
+/// bytes are not a real song. The JS layer recognises it and moves on to the
+/// next candidate (other quality / other platform) instead of playing a
+/// 10-second "当前音乐暂不支持播放" voice clip.
+pub const STUB_AUDIO_MARKER: &str = "__STUB_AUDIO__";
+
+/// A real song is at least a couple of minutes long; even a 128 kbps 4-minute
+/// track is ~4 MB. A 10-second copyright-notice clip is ~150-200 KB. The
+/// threshold only needs to separate those two cases, not be a precise codec
+/// probe. 500 KB is comfortably between them.
+const MIN_AUDIO_BYTES: u64 = 500_000;
+
+fn bytes_look_like_stub(bytes: &[u8]) -> bool {
+    if (bytes.len() as u64) < MIN_AUDIO_BYTES {
+        return true;
+    }
+    let head = &bytes[..bytes.len().min(16)];
+    let has_id3 = head.starts_with(b"ID3");
+    let has_flac = head.starts_with(b"fLaC");
+    let has_mp3 = head.len() >= 2 && head[0] == 0xFF && (head[1] & 0xE0) == 0xE0;
+    let has_m4a = head.get(4..8) == Some(b"ftyp");
+    let has_ogg = head.starts_with(b"OggS");
+    !(has_id3 || has_flac || has_mp3 || has_m4a || has_ogg)
+}
+
+fn file_looks_like_stub(path: &std::path::Path) -> bool {
+    use std::io::Read as _;
+    let Ok(meta) = std::fs::metadata(path) else {
+        return true;
+    };
+    if meta.len() < MIN_AUDIO_BYTES {
+        return true;
+    }
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return true;
+    };
+    let mut head = [0u8; 16];
+    let read = file.read(&mut head).unwrap_or(0);
+    if read < 4 {
+        return true;
+    }
+    let has_id3 = head.starts_with(b"ID3");
+    let has_flac = head.starts_with(b"fLaC");
+    let has_mp3 = head[0] == 0xFF && (head[1] & 0xE0) == 0xE0;
+    let has_m4a = head.get(4..8) == Some(b"ftyp");
+    let has_ogg = head.starts_with(b"OggS");
+    !(has_id3 || has_flac || has_mp3 || has_m4a || has_ogg)
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OnlineCacheUsage {
@@ -782,9 +831,25 @@ pub fn online_cache_path(app: tauri::AppHandle, key: String) -> Option<String> {
     let entries = std::fs::read_dir(&dir).ok()?;
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().to_string();
-        if name.starts_with(&base) && entry.metadata().map(|m| m.len() > 0).unwrap_or(false) {
-            return Some(entry.path().to_string_lossy().to_string());
+        if !name.starts_with(&base) {
+            continue;
         }
+        // A previous version cached whatever URL the source returned, including
+        // the 11-second "当前音乐暂不支持播放" voice clip for 晴天 (kw/228908).
+        // Such a hit must be treated as a miss so the song gets resolved again.
+        if !entry.metadata().map(|m| m.len() > 0).unwrap_or(false) {
+            continue;
+        }
+        if file_looks_like_stub(&entry.path()) {
+            tracing::warn!(
+                target: "amll_player_lib::online",
+                "online_cache_path: 清除无效的试听片段缓存 {}",
+                name
+            );
+            let _ = std::fs::remove_file(entry.path());
+            continue;
+        }
+        return Some(entry.path().to_string_lossy().to_string());
     }
     None
 }
@@ -812,6 +877,18 @@ pub async fn online_cache_store(
     let bytes = resp.bytes().await.map_err(|e| format!("读取失败: {e}"))?;
     if bytes.is_empty() {
         return Err("下载失败: 空文件".into());
+    }
+    // Reject copyright-notice / trial clips (typically ~11 s of speech). The
+    // JS caller sees STUB_AUDIO_MARKER and tries the next quality / platform.
+    if bytes_look_like_stub(&bytes) {
+        tracing::warn!(
+            target: "amll_player_lib::online",
+            "online_cache_store: 拒绝试听片段 key={} bytes={} url={}",
+            key,
+            bytes.len(),
+            url.chars().take(140).collect::<String>()
+        );
+        return Err(format!("{STUB_AUDIO_MARKER}: 音源返回的是试听片段（{} 字节）", bytes.len()));
     }
 
     let dir = cache_dir(&app);
