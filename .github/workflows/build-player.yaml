@@ -7,6 +7,10 @@ on:
     paths-ignore:
       - "**/*.md"
       - "packages/docs/**"
+    # 正式版发布通道：推送形如 v1.0.0 的 tag 时触发，
+    # 产出的安装包版本号就是 tag 上的版本号，且不是预发布。
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -30,6 +34,106 @@ jobs:
           tag: ${{ github.ref_name }}-player-dev
           fail-if-no-assets: false
           fail-if-no-release: false
+
+  build-release-desktop:
+    name: 构建正式版 (Tauri 桌面版本)
+    # 只在推送 v* tag 时运行，产出正式版安装包并发布为非预发布 Release。
+    # 与上面的开发构建完全分离：开发构建始终是 `<branch>-player-dev`
+    # 预发布且版本号带 commit 计数，正式版的版本号就是 tag 上的版本号。
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: clean-pre-release
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 PNPM
+        uses: pnpm/action-setup@v6
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: 配置 Rust 缓存
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+          key: release-windows-x64
+          cache-on-failure: true
+
+      - name: 安装 wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: "v0.14.0"
+
+      - name: 安装 pnpm 依赖
+        run: |
+          pnpm i --frozen-lockfile --ignore-scripts
+
+      # 正式版的版本号直接来自 tag（v1.0.0 -> 1.0.0），
+      # 不能再走 gen-dev-version.mjs，否则会被改写成 1.0.<commitCount>。
+      - name: 设置正式版版本号
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Release version: $VERSION"
+          node -e '
+            const fs = require("node:fs");
+            const version = process.argv[1];
+            const confPath = "packages/player/src-tauri/tauri.conf.json";
+            const conf = JSON.parse(fs.readFileSync(confPath, "utf-8"));
+            conf.version = version;
+            fs.writeFileSync(confPath, JSON.stringify(conf, null, "\t"));
+            console.log("tauri.conf.json version ->", conf.version);
+          ' "$VERSION"
+
+      - name: 构建并发布正式版
+        uses: tauri-apps/tauri-action@v1
+        with:
+          projectPath: packages/player
+          tagName: ${{ github.ref_name }}
+          uploadUpdaterJson: true
+          releaseName: AMLL Player ${{ github.ref_name }} 正式版
+          releaseBody: |
+            ## AMLL Player ${{ github.ref_name }} 正式版
+
+            > 首个正式发布版本。
+
+            ### 崩溃修复
+
+            - 歌词偏移量导致的白屏崩溃（代码层根治）：偏移此前只作用于行起始时间而未同步结束时间，
+              AMLL 歌词引擎会因 `startTime > endTime` 抛出 `RangeError` 直接崩溃。
+              现已补齐行级 `endTime` 偏移，并新增时间戳净化兜底（逐行、逐单词、逐注音校验）。
+
+            ### 主译互换改为纯显示层
+
+            - 删除「翻译歌词数据」编辑框，仅保留一个按钮，放在歌词偏移旁边。
+            - 点击只在播放时调换主歌词与翻译歌词的主次顺序，不修改任何歌词数据。
+
+            ### 新增功能
+
+            - 存储空间新增「自动清除在线歌曲缓存」：多档位可选（含不清理），默认 3 天。
+            - 新用户默认在线模式（不影响已有用户设置）。
+            - 在线搜索按钮固定在搜索框右侧。
+            - 平台分区栏仅在有搜索结果时显示。
+            - 在线搜索结果右键菜单新增「下载」，可自由选择保存位置。
+
+            ---
+
+            本版本对应源码提交 `${{ github.sha }}`。
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
   build-tauri-desktop:
     name: 构建 Tauri 桌面版本
