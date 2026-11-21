@@ -209,6 +209,35 @@ function bufferFrom(data: unknown, encoding?: string): LxBuffer {
 	return new LxBuffer(bytesFrom(data, encoding));
 }
 
+/**
+ * Globals a browser provides but the desktop LX runtime does not.
+ *
+ * Sources probe for these to decide whether they are running inside a real
+ * browser; when they think so they sign requests with an extra `v/si/s3`
+ * variant that their server answers with "block ip". Shadowing them keeps the
+ * desktop behaviour.
+ */
+const HIDDEN_GLOBALS_LIST = [
+	"document",
+	"navigator",
+	"localStorage",
+	"sessionStorage",
+	"fetch",
+	"XMLHttpRequest",
+	"WebSocket",
+	"screen",
+	"location",
+	"history",
+	"Image",
+	"indexedDB",
+	"caches",
+	"matchMedia",
+	"requestAnimationFrame",
+	"performance",
+];
+
+const HIDDEN_GLOBALS = new Set(HIDDEN_GLOBALS_LIST);
+
 //#endregion
 
 export class LxSourceRuntime {
@@ -307,6 +336,7 @@ export class LxSourceRuntime {
 				callback: (err: unknown, resp: Record<string, unknown> | null, body: unknown) => void,
 			) {
 				let cancelled = false;
+				invoke("dev_log", { message: `lx.request ${url}` }).catch(() => {});
 				invoke<OnlineHttpResponse>("online_http", {
 					req: {
 						url,
@@ -380,6 +410,7 @@ export class LxSourceRuntime {
 		const own: Record<string, unknown> = { lx };
 		const sandbox = new Proxy(own, {
 			get(target, key) {
+				if (typeof key === "string" && HIDDEN_GLOBALS.has(key)) return undefined;
 				if (key in target) return target[key as string];
 				return (globalThis as unknown as Record<string | symbol, unknown>)[key];
 			},
@@ -392,9 +423,58 @@ export class LxSourceRuntime {
 			},
 		});
 
+		// Browser-only globals are shadowed with `undefined` (a parameter beats a
+		// real global). Their presence is what makes a source switch to a
+		// stronger signature variant that its server then rejects; the desktop
+		// LX runtime does not expose them either.
+		const names = ["globalThis", "window", "self", "lx"];
+		const values: unknown[] = [sandbox, sandbox, sandbox, lx];
+		for (const name of HIDDEN_GLOBALS_LIST) {
+			names.push(name);
+			values.push(undefined);
+		}
+		const provided: Record<string, unknown> = {
+			console,
+			setTimeout,
+			clearTimeout,
+			setInterval,
+			clearInterval,
+			queueMicrotask,
+			TextEncoder,
+			TextDecoder,
+			URL,
+			URLSearchParams,
+			atob,
+			btoa,
+			AbortController,
+			crypto: { randomUUID: () => crypto.randomUUID() },
+			// Sources are written against a Node-style Buffer; without one they
+			// take a different code path and sign requests differently.
+			Buffer: {
+				from: bufferFrom,
+				alloc: (size: number) => new LxBuffer(new Uint8Array(size)),
+				isBuffer: (value: unknown) => value instanceof LxBuffer,
+				concat: (list: unknown[]) => {
+					const parts = list.map((item) => bytesFrom(item));
+					const total = parts.reduce((sum, part) => sum + part.length, 0);
+					const out = new Uint8Array(total);
+					let offset = 0;
+					for (const part of parts) {
+						out.set(part, offset);
+						offset += part.length;
+					}
+					return new LxBuffer(out);
+				},
+			},
+		};
+		for (const [name, value] of Object.entries(provided)) {
+			names.push(name);
+			values.push(value);
+		}
+
 		try {
-			const fn = new Function("globalThis", "window", "self", "lx", this.info.rawScript);
-			fn.call(sandbox, sandbox, sandbox, sandbox, lx);
+			const fn = new Function(...names, this.info.rawScript);
+			fn.apply(sandbox, values);
 		} catch (err) {
 			throw new Error(`音源脚本执行失败: ${(err as Error)?.message ?? err}`);
 		}
