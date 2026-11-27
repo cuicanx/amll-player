@@ -106,6 +106,7 @@ dependencies = [
  "md5",
  "memmap2",
  "mimalloc",
+ "minisign-verify",
  "ndk-context",
  "objc2",
  "objc2-avf-audio",
@@ -118,6 +119,7 @@ dependencies = [
  "sea-orm-migration",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "taskbar-lyric",
  "tauri",
  "tauri-build",
@@ -3484,7 +3486,7 @@ dependencies = [
 [[package]]
 name = "now-playing-controls"
 version = "0.1.0"
-source = "git+https://github.com/apoint123/now-playing-controls.git#8237429431ca57285ed52c71216fafef2ef3378f"
+source = "git+https://github.com/apoint123/now-playing-controls.git?rev=8237429431ca57285ed52c71216fafef2ef3378f#8237429431ca57285ed52c71216fafef2ef3378f"
 dependencies = [
  "anyhow",
  "block2",
@@ -6289,7 +6291,7 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 [[package]]
 name = "taskbar-lyric"
 version = "0.1.0"
-source = "git+https://github.com/apoint123/taskbar-lyric.git#bd7ee3a66d28af8a857d2ce2b26a3c78fa0058fa"
+source = "git+https://github.com/apoint123/taskbar-lyric.git?rev=bd7ee3a66d28af8a857d2ce2b26a3c78fa0058fa#bd7ee3a66d28af8a857d2ce2b26a3c78fa0058fa"
 dependencies = [
  "anyhow",
  "tracing",
