@@ -13,10 +13,7 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import { ExtensionInjectPoint } from "../../components/ExtensionInjectPoint/index.tsx";
 import { TTMLImportDialog } from "../../components/TTMLImportDialog/index.tsx";
-import {
-	swapLyricGlobalAtom,
-	swapLyricLegacyAtom,
-} from "../../states/appAtoms.ts";
+import { swapLyricGlobalAtom } from "../../states/appAtoms.ts";
 import { db } from "../../utils/db-client.ts";
 import { getLyricFormatFromExtension, Option } from "./common.tsx";
 import { SongContext } from "./song-ctx.ts";
@@ -31,7 +28,6 @@ export const LyricTabContent: FC = () => {
 	// The button edits the PER-SONG value. The global switch (settings page)
 	// overrides it at render time; enabling it here does not fight the global.
 	const globalSwap = useAtomValue(swapLyricGlobalAtom);
-	const legacySwap = useAtomValue(swapLyricLegacyAtom);
 	const perSongSwap = song?.swapTranslation ?? null;
 	const swapMainTranslation = globalSwap || perSongSwap === true;
 	const { t } = useTranslation();
@@ -43,12 +39,6 @@ export const LyricTabContent: FC = () => {
 			setTranslatedLyricContent(song.translatedLrc ?? "");
 			setRomanLyricContent(song.romanLrc ?? "");
 			setLyricOffsetMs(song.lyricOffsetMs ?? 0);
-			// One-time migration: older builds stored a single global boolean in
-			// localStorage. Carry that choice into this song's per-song value so
-			// nobody loses their setting after the upgrade.
-			if (song.swapTranslation == null && legacySwap) {
-				void db.songs.update(song.id, { swapTranslation: true });
-			}
 		} else {
 			setLyricFormat("none");
 			setLyricContent("");

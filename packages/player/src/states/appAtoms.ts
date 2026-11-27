@@ -222,21 +222,38 @@ export const audioQualityDialogOpenedAtom = atom(false);
  * `swapTranslation` value from the database (null = no swap). Kept as a
  * separate key so existing users' per-song preferences are never overwritten.
  */
+const SWAP_GLOBAL_KEY = "amll-player.swapLyricGlobal";
+const SWAP_LEGACY_KEY = "amll-player.swapLyricMainTranslation";
+
+function readInitialGlobalSwap(): boolean {
+	try {
+		// If the new key already exists, respect it even when false - otherwise
+		// an old TRUE in localStorage would keep overriding the user's choice.
+		const raw = localStorage.getItem(SWAP_GLOBAL_KEY);
+		if (raw !== null) return JSON.parse(raw) === true;
+		// First run after upgrade: carry the old GLOBAL preference over to the
+		// new GLOBAL switch exactly once. Never writes per-song values.
+		const legacy = localStorage.getItem(SWAP_LEGACY_KEY);
+		if (legacy === null) return false;
+		const value = JSON.parse(legacy) === true;
+		localStorage.setItem(SWAP_GLOBAL_KEY, JSON.stringify(value));
+		localStorage.removeItem(SWAP_LEGACY_KEY);
+		return value;
+	} catch {
+		return false;
+	}
+}
+
 export const swapLyricGlobalAtom = atomWithStorage(
-	"amll-player.swapLyricGlobal",
-	false,
+	SWAP_GLOBAL_KEY,
+	readInitialGlobalSwap(),
 );
 
 /**
- * Legacy global toggle from older builds. Kept ONLY to migrate an existing
- * user's choice into the new model: on first run its value is written as the
- * per-song default for songs that have no explicit value. New code must not
- * read this atom for rendering.
+ * @deprecated Only kept as a storage-key constant for the one-time migration
+ * above. Do not read this atom for rendering or per-song decisions.
  */
-export const swapLyricLegacyAtom = atomWithStorage(
-	"amll-player.swapLyricMainTranslation",
-	false,
-);
+export const swapLyricLegacyAtom = atomWithStorage(SWAP_LEGACY_KEY, false);
 
 /**
  * Automatic online-song cache cleanup interval, in DAYS.

@@ -141,13 +141,14 @@ jobs:
             artifact_name_suffix: windows-x64
             package_extension: zip
             os_runner: windows-latest
-          # - platform: ubuntu-latest
-          #   args: ""
-          #   name: linux
-          #   arch: x86_64
-          #   artifact_name_suffix: linux-x64
-          #   package_extension: tar.gz
-          #   os_runner: ubuntu-latest
+          - platform: ubuntu-latest
+            args: ""
+            name: linux
+            arch: x86_64
+            artifact_name_suffix: linux-x64
+            package_extension: tar.gz
+            os_runner: ubuntu-latest
+          # Windows ARM64: keep disabled until an ARM runner is confirmed.
           # - platform: windows-latest
           #   args: "--target aarch64-pc-windows-msvc"
           #   name: windows
@@ -155,13 +156,15 @@ jobs:
           #   artifact_name_suffix: windows-arm64
           #   package_extension: zip
           #   os_runner: windows-latest
-          # - platform: macos-latest
-          #   args: "--target aarch64-apple-darwin"
-          #   name: macOS
-          #   arch: aarch64
-          #   artifact_name_suffix: macos-arm64
-          #   package_extension: tar.gz
-          #   os_runner: macos-15
+          - platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+            name: macOS
+            arch: aarch64
+            artifact_name_suffix: macos-arm64
+            package_extension: tar.gz
+            os_runner: macos-15
+          # macOS x64 stays disabled: arm64 covers current Apple hardware and
+          # halves CI cost. Re-enable when an Intel build is actually needed.
           # - platform: macos-latest
           #   args: "--target x86_64-apple-darwin"
           #   name: macOS
@@ -339,6 +342,27 @@ jobs:
           if (rewritten.length === 0) {
             throw new Error("无法解析任何平台的资产名，拒绝生成错误的镜像清单");
           }
+          // Guard against the bug that caused "更新校验失败": a platform's
+          // download URL must point at the SAME file its signature describes.
+          // Decode the minisign trusted comment and compare extensions.
+          const fileKind = (name) => {
+            if (!name) return "";
+            if (/\.msi$/i.test(name)) return "msi";
+            if (/\.exe$/i.test(name)) return "exe";
+            if (/\.AppImage$/i.test(name)) return "appimage";
+            if (/\.deb$/i.test(name)) return "deb";
+            if (/\.dmg$/i.test(name)) return "dmg";
+            return name.split(".").pop().toLowerCase();
+          };
+          for (const [key, platform] of Object.entries(src.platforms || {})) {
+            const sigText = Buffer.from(platform.signature || "", "base64").toString("utf8");
+            const signedName = /file:([^\n]+)/.exec(sigText)?.[1]?.trim();
+            if (!signedName) continue;
+            const urlName = decodeURIComponent(platform.url.split("/").pop() || "");
+            if (fileKind(signedName) !== fileKind(urlName)) {
+              throw new Error(`平台 ${key} 的下载地址(${urlName})与签名文件(${signedName})类型不一致，拒绝生成镜像清单`);
+            }
+          }
           src.notes = (src.notes || "") + "\n\n（镜像下载地址：国内网络无需 VPN）";
           fs.writeFileSync("latest-mirror.json", JSON.stringify(src, null, 2));
           console.log("latest-mirror.json 已重写:\n" + rewritten.join("\n"));
@@ -357,7 +381,15 @@ jobs:
   build-tauri-android:
     name: 构建 Tauri 安卓版本
     needs: clean-pre-release
-    # Temporarily disabled: only Windows x64 is built. Remove this line to restore.
+    # Android is disabled by default: the current steps produce UNSIGNED
+    # apk/aab files that cannot be installed. To enable, first configure the
+    # signing keystore in tauri.conf.json (`bundle.android.signingConfig`) and
+    # add these repository secrets:
+    #   ANDROID_KEYSTORE, ANDROID_KEYSTORE_PASSWORD,
+    #   ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS
+    # then add a signing step after "构建 AMLL Player 安卓版本", rename the
+    # outputs from *-unsigned.apk to signed ones, and change `if: false` to
+    # `if: true`. Job-level `if` cannot read secrets directly in Actions.
     if: false
     runs-on: ubuntu-latest
 
@@ -469,7 +501,13 @@ jobs:
   build-tauri-ios:
     name: 构建 Tauri iOS 版本
     needs: clean-pre-release
-    # Temporarily disabled: only Windows x64 is built. Remove this line to restore.
+    # iOS is disabled by default: the current steps produce an UNSIGNED .ipa
+    # that cannot be installed outside a jailbroken device. To enable, add an
+    # Apple Developer certificate + provisioning profile as secrets
+    # (APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+    # APPLE_PROVISIONING_PROFILE), switch the build step to a signed archive
+    # + export, or submit via TestFlight, then change `if: false` to `if: true`.
+    # Job-level `if` cannot read secrets directly in Actions.
     if: false
     runs-on: macos-15
 

@@ -1,3 +1,6 @@
+// mimalloc uses mmap/madvise patterns that iOS restricts; the system allocator
+// is safer there. All other platforms keep the performance allocator.
+#[cfg(not(target_os = "ios"))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
@@ -71,11 +74,48 @@ fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             let session = AVAudioSession::sharedInstance();
             let category = ns_string!("AVAudioSessionCategoryPlayback");
 
-            let _: () = msg_send![&session, setCategory: category, error: std::ptr::null_mut::<*mut *mut objc2_foundation::NSError>()];
+            // Never pass null_mut() as NSError**: the framework may write to it
+            // on failure. Use a real out-pointer and check the BOOL result so a
+            // failed activation is logged instead of silently corrupting memory.
+            let mut error: *mut objc2_foundation::NSError = std::ptr::null_mut();
+            let category_ok: bool = msg_send![
+                &session,
+                setCategory: category,
+                mode: ns_string!("AVAudioSessionModeDefault"),
+                options: 0u64,
+                error: &mut error as *mut *mut objc2_foundation::NSError
+            ];
+            if !category_ok {
+                let detail = if error.is_null() {
+                    "unknown error".to_string()
+                } else {
+                    let desc: *mut objc2_foundation::NSString =
+                        msg_send![error, localizedDescription];
+                    if desc.is_null() {
+                        "unknown error".to_string()
+                    } else {
+                        std::ffi::CStr::from_ptr(
+                            msg_send![desc, UTF8String] as *const std::ffi::c_char,
+                        )
+                        .to_string_lossy()
+                        .into_owned()
+                    }
+                };
+                warn!("iOS AVAudioSession setCategory failed: {detail}");
+            }
 
-            let _: bool = msg_send![&session, setActive: true, error: std::ptr::null_mut::<*mut *mut objc2_foundation::NSError>()];
+            error = std::ptr::null_mut();
+            let active_ok: bool = msg_send![
+                &session,
+                setActive: true,
+                error: &mut error as *mut *mut objc2_foundation::NSError
+            ];
+            if !active_ok {
+                warn!("iOS AVAudioSession setActive failed (error ptr: {error:?})");
+            } else {
+                info!("iOS AVAudioSession Category set to Playback successfully!");
+            }
         }
-        info!("iOS AVAudioSession Category set to Playback successfully!");
     }
     #[cfg(target_os = "android")]
     {
