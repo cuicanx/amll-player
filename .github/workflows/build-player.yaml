@@ -101,7 +101,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           # Stable release ships ONE artifact for ONE platform: the Windows
           # NSIS installer. Dev channel keeps the full multi-platform matrix.
-          args: --bundles nsis -- --locked
+          args: --bundles nsis
           uploadUpdaterJson: true
           releaseName: AMLL Player ${{ github.ref_name }} 正式版
           # Keep release notes short and user-facing. Details live in
@@ -142,7 +142,7 @@ jobs:
           # disabled to keep each debug cycle short. Re-enable by uncommenting
           # the blocks below when doing a dedicated cross-platform release test.
           - platform: windows-latest
-            args: "-- --locked"
+            args: ""
             name: windows
             arch: x86_64
             artifact_name_suffix: windows-x64
@@ -306,6 +306,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: 检查依赖锁定（Cargo.lock 无漂移）
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Cargo may silently rewrite Cargo.lock during build (e.g. a git dep
+          # without a pinned rev). Git deps are pinned in Cargo.toml, so any
+          # change here means a dependency drifted - fail loudly instead.
+          if ! git diff --exit-code -- Cargo.lock; then
+            echo "ERROR: Cargo.lock changed during build - dependency drift detected" >&2
+            exit 1
+          fi
+          echo "Cargo.lock unchanged, dependencies are reproducible."
 
       - name: 上传产物到 Action Artifact
         uses: actions/upload-artifact@v7
@@ -476,9 +489,9 @@ jobs:
           else
             echo "WARNING: no NDK sysroot found; bindgen may use host headers" >&2
           fi
-          # `-- --locked` is forwarded to cargo so Cargo.lock (with the pinned
-          # git revs) is authoritative - no silent dependency drift in CI.
-          pnpm -F player tauri android build --target aarch64 --target x86_64 --split-per-abi -- --locked
+          # Git deps are pinned by rev in Cargo.toml; the committed Cargo.lock
+          # is authoritative. A lockfile drift check runs in the desktop job.
+          pnpm -F player tauri android build --target aarch64 --target x86_64 --split-per-abi
 
       - name: 整理并重命名 Android 构建包
         run: |
