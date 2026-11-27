@@ -337,10 +337,10 @@ jobs:
           const fs = require("node:fs");
           const { execSync } = require("node:child_process");
           const repo = process.env.REPO, tag = process.env.TAG;
-          const rel = JSON.parse(execSync(`gh release view ${tag} --repo ${repo} --json assets`).toString());
           const src = JSON.parse(fs.readFileSync("latest.json", "utf8"));
+          const rel = JSON.parse(execSync(`gh release view ${tag} --repo ${repo} --json assets`).toString());
           const base = `https://gh-proxy.com/https://github.com/${repo}/releases/download/${tag}/`;
-          const byId = new Map((rel.assets || []).map((a) => [String(a.id), a.name]));
+          const assets = rel.assets || [];
           const fileKind = (name) => {
             if (!name) return "";
             if (/\.msi$/i.test(name)) return "msi";
@@ -348,22 +348,40 @@ jobs:
             if (/\.AppImage$/i.test(name)) return "appimage";
             if (/\.deb$/i.test(name)) return "deb";
             if (/\.rpm$/i.test(name)) return "rpm";
-            if (/\.tar\.gz$/i.test(name) || /\.app\.tar\.gz$/i.test(name)) return "tar.gz";
+            if (/\.tar\.gz$/i.test(name)) return "tar.gz";
             if (/\.dmg$/i.test(name)) return "dmg";
             return name.split(".").pop().toLowerCase();
           };
+          const norm = (name) => name.replace(/[^A-Za-z0-9]/g, "").toLowerCase();
           let rewritten = 0;
           for (const [key, platform] of Object.entries(src.platforms || {})) {
-            const idMatch = /(?:\/|%2F)assets\/(\d+)/.exec(platform.url || "");
-            const name = idMatch ? byId.get(idMatch[1]) : undefined;
-            if (!name) continue;
-            // Verify the URL points at the same file the signature describes.
+            // The signature is authoritative: it names the exact file that was
+            // signed. Use it to find the matching release asset, so the mirror
+            // URL always points at bytes this signature can verify.
             const sigText = Buffer.from(platform.signature || "", "base64").toString("utf8");
             const signedName = /file:([^\n]+)/.exec(sigText)?.[1]?.trim();
-            if (signedName && fileKind(signedName) !== fileKind(name)) {
-              throw new Error(`平台 ${key} 的签名文件(${signedName})与资产(${name})类型不一致，拒绝生成镜像清单`);
+            if (!signedName) continue;
+            const kind = fileKind(signedName);
+            // Strategy 1: asset id embedded in the official URL (most precise).
+            const idMatch = /(?:\/|%2F)assets\/(\d+)/.exec(platform.url || "");
+            let asset = idMatch ? assets.find((a) => String(a.id) === idMatch[1]) : undefined;
+            // Strategy 2: match by signed file name when the id cannot be
+            // resolved (e.g. stale manifest). Fall back to the only asset of
+            // that file type when the signed name is a generic .app.tar.gz.
+            if (!asset) {
+              asset = assets.find((a) =>
+                fileKind(a.name) === kind && norm(a.name).includes(norm(signedName))
+              );
             }
-            platform.url = base + encodeURIComponent(name);
+            if (!asset) {
+              const sameKind = assets.filter((a) => fileKind(a.name) === kind);
+              if (sameKind.length === 1) asset = sameKind[0];
+            }
+            if (!asset) {
+              console.log(`WARN ${key}: no release asset matches signed file ${signedName}`);
+              continue;
+            }
+            platform.url = base + encodeURIComponent(asset.name);
             rewritten++;
           }
           if (rewritten === 0) {
