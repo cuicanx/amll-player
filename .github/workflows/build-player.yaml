@@ -302,13 +302,29 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
-      # 官方 latest.json 里的 download url 是 api.github.com 的 asset 接口，
-      # 会 302 到 release-assets.githubusercontent.com。该域名在部分网络与
-      # VPN 分流规则下不可达，表现就是"能查到更新、点下载必然失败"。
-      # 这里另存一份把 url 换成 gh-proxy 直链的清单，供更新器优先使用。
-      - name: 生成镜像更新清单
-        if: matrix.artifact_name_suffix == 'windows-x64'
-        continue-on-error: true
+      - name: 上传产物到 Action Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: AMLL Player ${{matrix.name}}-${{matrix.arch}}
+          path: |
+            target/**/release/bundle/**/*
+            target/**/release/amll-player.exe
+            target/**/release/amll-player
+
+  # Mirror manifest must be generated AFTER every desktop matrix job finished:
+  # each platform uploads its own entry into the SAME latest.json via
+  # tauri-action. Generating it inside the Windows job raced with the other
+  # platforms and produced an incomplete/overwritten file. A dedicated job
+  # with `needs` guarantees the final merged manifest is used.
+  generate-mirror-manifest:
+    name: 生成镜像更新清单
+    needs: build-tauri-desktop
+    if: needs.build-tauri-desktop.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成并上传镜像清单
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -324,59 +340,40 @@ jobs:
           const rel = JSON.parse(execSync(`gh release view ${tag} --repo ${repo} --json assets`).toString());
           const src = JSON.parse(fs.readFileSync("latest.json", "utf8"));
           const base = `https://gh-proxy.com/https://github.com/${repo}/releases/download/${tag}/`;
-          // Each platform carries its OWN signature. Pointing every platform at
-          // the .msi made windows-x86_64-nsis (setup.exe) verify the exe signature
-          // against msi bytes -> "更新校验失败". Resolve the matching asset per
-          // platform via the asset id in the official URL so signature and bytes
-          // always describe the same file.
           const byId = new Map((rel.assets || []).map((a) => [String(a.id), a.name]));
-          const rewritten = [];
-          for (const [key, platform] of Object.entries(src.platforms || {})) {
-            const idMatch = /(?:\/|%2F)assets\/(\d+)/.exec(platform.url || "");
-            const name = idMatch ? byId.get(idMatch[1]) : undefined;
-            if (name) {
-              platform.url = base + encodeURIComponent(name);
-              rewritten.push(`${key} -> ${name}`);
-            }
-          }
-          if (rewritten.length === 0) {
-            throw new Error("无法解析任何平台的资产名，拒绝生成错误的镜像清单");
-          }
-          // Guard against the bug that caused "更新校验失败": a platform's
-          // download URL must point at the SAME file its signature describes.
-          // Decode the minisign trusted comment and compare extensions.
           const fileKind = (name) => {
             if (!name) return "";
             if (/\.msi$/i.test(name)) return "msi";
             if (/\.exe$/i.test(name)) return "exe";
             if (/\.AppImage$/i.test(name)) return "appimage";
             if (/\.deb$/i.test(name)) return "deb";
+            if (/\.rpm$/i.test(name)) return "rpm";
+            if (/\.tar\.gz$/i.test(name) || /\.app\.tar\.gz$/i.test(name)) return "tar.gz";
             if (/\.dmg$/i.test(name)) return "dmg";
             return name.split(".").pop().toLowerCase();
           };
+          let rewritten = 0;
           for (const [key, platform] of Object.entries(src.platforms || {})) {
+            const idMatch = /(?:\/|%2F)assets\/(\d+)/.exec(platform.url || "");
+            const name = idMatch ? byId.get(idMatch[1]) : undefined;
+            if (!name) continue;
+            // Verify the URL points at the same file the signature describes.
             const sigText = Buffer.from(platform.signature || "", "base64").toString("utf8");
             const signedName = /file:([^\n]+)/.exec(sigText)?.[1]?.trim();
-            if (!signedName) continue;
-            const urlName = decodeURIComponent(platform.url.split("/").pop() || "");
-            if (fileKind(signedName) !== fileKind(urlName)) {
-              throw new Error(`平台 ${key} 的下载地址(${urlName})与签名文件(${signedName})类型不一致，拒绝生成镜像清单`);
+            if (signedName && fileKind(signedName) !== fileKind(name)) {
+              throw new Error(`平台 ${key} 的签名文件(${signedName})与资产(${name})类型不一致，拒绝生成镜像清单`);
             }
+            platform.url = base + encodeURIComponent(name);
+            rewritten++;
+          }
+          if (rewritten === 0) {
+            throw new Error("无法解析任何平台资产，拒绝生成错误的镜像清单");
           }
           src.notes = (src.notes || "") + "\n\n（镜像下载地址：国内网络无需 VPN）";
           fs.writeFileSync("latest-mirror.json", JSON.stringify(src, null, 2));
-          console.log("latest-mirror.json 已重写:\n" + rewritten.join("\n"));
+          console.log(`latest-mirror.json 已重写 ${rewritten} 个平台`);
           '
           gh release upload "$TAG" latest-mirror.json --repo "$REPO" --clobber
-
-      - name: 上传产物到 Action Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: AMLL Player ${{matrix.name}}-${{matrix.arch}}
-          path: |
-            target/**/release/bundle/**/*
-            target/**/release/amll-player.exe
-            target/**/release/amll-player
 
   build-tauri-android:
     name: 构建 Tauri 安卓版本
