@@ -26,8 +26,8 @@ impl MappedData {
     }
     fn as_slice(&self) -> &[u8] {
         match self {
-            Self::Mapped(m) => m.as_ref(),
-            Self::Owned(v) => v.as_ref(),
+            Self::Mapped(m) => &m[..],
+            Self::Owned(v) => &v[..],
         }
     }
 }

@@ -34,43 +34,18 @@ where
     T: Send,
     F: Fn(&Path) -> T + Send + Sync,
 {
-    // Mobile CPUs throttle hard under sustained parallel IO. A small local
-    // thread pool avoids pegging every core (and the battery) on Android.
-    #[cfg(target_os = "android")]
-    let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(2)
-        .build()
-        .expect("failed to build scan thread pool");
-
-    #[cfg(target_os = "android")]
-    let results = pool.install(|| {
-        scan_entries(&folder, cancel_token, on_progress, &processor)
-    });
-    #[cfg(not(target_os = "android"))]
-    let results = scan_entries(&folder, cancel_token, on_progress, &processor);
-
-    results
-}
-
-fn scan_entries<P, T, F>(
-    folder: P,
-    cancel_token: &Arc<AtomicBool>,
-    on_progress: &(dyn Fn(u32) + Send + Sync),
-    processor: &F,
-) -> Vec<T>
-where
-    P: AsRef<Path>,
-    T: Send,
-    F: Fn(&Path) -> T + Send + Sync,
-{
     let extensions: HashSet<String> = AUDIO_EXTENSIONS.iter().map(|s| s.to_string()).collect();
-
-    // Do NOT follow symlinks: a symlink loop makes the walker recurse forever
-    // and exhaust file descriptors. `max_open` caps concurrently open handles,
-    // which matters on mobile where the per-process limit is much lower.
-    let walker = WalkDir::new(folder).follow_links(false).max_open(16);
     let results = Mutex::new(Vec::new());
     let processed = AtomicU32::new(0);
+
+    // Do NOT follow symlinks: a symlink loop makes the walker recurse forever
+    // and exhaust file descriptors. jwalk's own thread count caps both CPU
+    // usage and open descriptors - keep it small on mobile where the device
+    // throttles under sustained parallel IO.
+    let mut walker = WalkDir::new(folder).follow_links(false);
+    #[cfg(target_os = "android")]
+    let mut walker = walker.num_threads(2);
+    let walker = &mut walker;
 
     walker
         .into_iter()
@@ -88,7 +63,7 @@ where
                 .extension()
                 .and_then(|ext| ext.to_str())
                 .is_some_and(|ext| extensions.contains(&ext.to_lowercase()));
-            if is_valid { Some(path) } else { None }
+            if is_valid { Some(path.to_path_buf()) } else { None }
         })
         .for_each(|path| {
             let result = processor(&path);
