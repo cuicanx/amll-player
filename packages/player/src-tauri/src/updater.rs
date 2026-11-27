@@ -14,7 +14,7 @@ const DEV_TAG: &str = "main-player-dev";
 /// source of truth and CI keeps tauri.conf.json in sync). Deriving it avoids
 /// hard-coding a version that would go stale on the next release.
 fn stable_tag(app: &tauri::AppHandle) -> String {
-    format!("v{}", app.config().version)
+    format!("v{}", app.config().version.as_deref().unwrap_or("0.0.0"))
 }
 
 fn channel_tag(app: &tauri::AppHandle, channel: &str) -> String {
@@ -67,6 +67,7 @@ struct UpdateProgressPayload {
 
 fn endpoint_order(app: &tauri::AppHandle, region: &str, channel: &str) -> Vec<String> {
     let tag = channel_tag(app, channel);
+    let tag = tag.as_str();
     if region == "global" {
         vec![
             official_manifest(tag),
