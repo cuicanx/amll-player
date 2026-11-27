@@ -168,7 +168,16 @@ export interface UpdateInfo {
 	body?: string | null;
 	date?: string | null;
 	downloadHost?: string;
+	channel?: UpdateChannel;
 }
+
+/** Which release channel the updater follows. */
+export type UpdateChannel = "dev" | "stable";
+
+export const updateChannelAtom = atomWithStorage<UpdateChannel>(
+	"amll-player.updateChannel",
+	"stable",
+);
 
 export const updateInfoAtom = atom<UpdateInfo | false>(false);
 

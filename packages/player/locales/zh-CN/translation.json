@@ -163,7 +163,14 @@
 			"noOtherContributors": "暂无其他贡献者",
 			"releaseNotes": "更新内容",
 			"releaseNotesEmpty": "此版本没有附带更新说明，可直接安装。",
-			"updatePreparing": "正在连接更新源…"
+			"updatePreparing": "正在连接更新源…",
+			"updateChannel": {
+				"label": "更新通道",
+				"description": "正式版稳定可靠；测试版更新更快但可能不稳定。切换后会立即重新检查更新。",
+				"stable": "正式版",
+				"dev": "测试版",
+				"current": "当前通道：{{channel}}"
+			}
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 开发者页面",

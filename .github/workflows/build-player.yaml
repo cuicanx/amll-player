@@ -318,13 +318,16 @@ jobs:
   # with `needs` guarantees the final merged manifest is used.
   generate-mirror-manifest:
     name: 生成镜像更新清单
-    needs: build-tauri-desktop
-    if: needs.build-tauri-desktop.result == 'success'
+    # Wait for both channels' builds: dev (matrix desktop) is always needed;
+    # release job is skipped on branch pushes but produces the stable manifest
+    # on tag pushes. `always()` lets this job run when release is skipped.
+    needs: [build-tauri-desktop, build-release-desktop]
+    if: always() && needs.build-tauri-desktop.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: 生成并上传镜像清单
+      - name: 生成并上传镜像清单（开发通道）
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -333,64 +336,28 @@ jobs:
         run: |
           set -euo pipefail
           gh release download "$TAG" --repo "$REPO" -p latest.json -D . --clobber
-          node -e '
-          const fs = require("node:fs");
-          const { execSync } = require("node:child_process");
-          const repo = process.env.REPO, tag = process.env.TAG;
-          const src = JSON.parse(fs.readFileSync("latest.json", "utf8"));
-          const rel = JSON.parse(execSync(`gh release view ${tag} --repo ${repo} --json assets`).toString());
-          const base = `https://gh-proxy.com/https://github.com/${repo}/releases/download/${tag}/`;
-          const assets = rel.assets || [];
-          const fileKind = (name) => {
-            if (!name) return "";
-            if (/\.msi$/i.test(name)) return "msi";
-            if (/\.exe$/i.test(name)) return "exe";
-            if (/\.AppImage$/i.test(name)) return "appimage";
-            if (/\.deb$/i.test(name)) return "deb";
-            if (/\.rpm$/i.test(name)) return "rpm";
-            if (/\.tar\.gz$/i.test(name)) return "tar.gz";
-            if (/\.dmg$/i.test(name)) return "dmg";
-            return name.split(".").pop().toLowerCase();
-          };
-          const norm = (name) => name.replace(/[^A-Za-z0-9]/g, "").toLowerCase();
-          let rewritten = 0;
-          for (const [key, platform] of Object.entries(src.platforms || {})) {
-            // The signature is authoritative: it names the exact file that was
-            // signed. Use it to find the matching release asset, so the mirror
-            // URL always points at bytes this signature can verify.
-            const sigText = Buffer.from(platform.signature || "", "base64").toString("utf8");
-            const signedName = /file:([^\n]+)/.exec(sigText)?.[1]?.trim();
-            if (!signedName) continue;
-            const kind = fileKind(signedName);
-            // Strategy 1: asset id embedded in the official URL (most precise).
-            const idMatch = /(?:\/|%2F)assets\/(\d+)/.exec(platform.url || "");
-            let asset = idMatch ? assets.find((a) => String(a.id) === idMatch[1]) : undefined;
-            // Strategy 2: match by signed file name when the id cannot be
-            // resolved (e.g. stale manifest). Fall back to the only asset of
-            // that file type when the signed name is a generic .app.tar.gz.
-            if (!asset) {
-              asset = assets.find((a) =>
-                fileKind(a.name) === kind && norm(a.name).includes(norm(signedName))
-              );
-            }
-            if (!asset) {
-              const sameKind = assets.filter((a) => fileKind(a.name) === kind);
-              if (sameKind.length === 1) asset = sameKind[0];
-            }
-            if (!asset) {
-              console.log(`WARN ${key}: no release asset matches signed file ${signedName}`);
-              continue;
-            }
-            platform.url = base + encodeURIComponent(asset.name);
-            rewritten++;
-          }
-          if (rewritten === 0) {
-            throw new Error("无法解析任何平台资产，拒绝生成错误的镜像清单");
-          }
-          src.notes = (src.notes || "") + "\n\n（镜像下载地址：国内网络无需 VPN）";
-          fs.writeFileSync("latest-mirror.json", JSON.stringify(src, null, 2));
-          console.log(`latest-mirror.json 已重写 ${rewritten} 个平台`);
-          '
+          REPO="$REPO" TAG="$TAG" node ./packages/player/scripts/gen-mirror-manifest.mjs
+          gh release upload "$TAG" latest-mirror.json --repo "$REPO" --clobber
+
+      - name: 生成并上传镜像清单（正式通道）
+        if: startsWith(github.ref, 'refs/tags/v') && needs.build-release-desktop.result == 'success'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # The stable release is published by build-release-desktop; wait for
+          # its latest.json before generating the mirror manifest.
+          for i in $(seq 1 30); do
+            if gh release download "$TAG" --repo "$REPO" -p latest.json -D . --clobber 2>/dev/null; then
+              break
+            fi
+            sleep 10
+          done
+          test -f latest.json || { echo "stable latest.json not found" >&2; exit 1; }
+          REPO="$REPO" TAG="$TAG" node ./packages/player/scripts/gen-mirror-manifest.mjs
           gh release upload "$TAG" latest-mirror.json --repo "$REPO" --clobber
 
   build-tauri-android:
@@ -557,13 +524,10 @@ jobs:
   build-tauri-ios:
     name: 构建 Tauri iOS 版本
     needs: clean-pre-release
-    # iOS is disabled by default: the current steps produce an UNSIGNED .ipa
-    # that cannot be installed outside a jailbroken device. To enable, add an
-    # Apple Developer certificate + provisioning profile as secrets
-    # (APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
-    # APPLE_PROVISIONING_PROFILE), switch the build step to a signed archive
-    # + export, or submit via TestFlight, then change `if: false` to `if: true`.
-    # Job-level `if` cannot read secrets directly in Actions.
+    # iOS is DISABLED by project decision (2026-11-27). Do not enable.
+    # The steps below produce an UNSIGNED .ipa that no normal device can
+    # install; enabling without a full signing + TestFlight pipeline would
+    # only waste CI time and publish unusable artifacts. Kept for reference.
     if: false
     runs-on: macos-15
 

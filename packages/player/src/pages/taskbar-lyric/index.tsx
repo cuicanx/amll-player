@@ -263,24 +263,25 @@ export const TaskbarLyricApp = () => {
 	}, []);
 
 	useEffect(() => {
-		emit(REQUEST_UPDATE_EVENT).catch((err) => {
-			console.error("请求任务栏歌词数据更新失败:", err);
-		});
-
 		fetchSystemTheme().then((theme) => {
 			dispatch({ type: "UPDATE_SYSTEM_THEME", payload: theme });
 		});
 	}, []);
 
 	useEffect(() => {
-		const unlistenMetadata = listen<TaskbarLyricMetadataPayload>(
+		const pending: Promise<unknown>[] = [];
+		const track = (p: Promise<() => void>) => {
+			pending.push(p);
+			return p;
+		};
+		const unlistenMetadata = track(listen<TaskbarLyricMetadataPayload>(
 			METADATA_EVENT,
 			(evt) => {
 				dispatch({ type: "SYNC_METADATA", payload: evt.payload });
 			},
-		);
+		));
 
-		const unlistenPlayStatus = listen<TaskbarLyricPlayStatusPayload>(
+		const unlistenPlayStatus = track(listen<TaskbarLyricPlayStatusPayload>(
 			PLAY_STATUS_EVENT,
 			(evt) => {
 				const playing = evt.payload.musicPlaying;
@@ -291,29 +292,29 @@ export const TaskbarLyricApp = () => {
 
 				dispatch({ type: "UPDATE_PLAY_STATUS", payload: playing });
 			},
-		);
+		));
 
-		const unlistenPosition = listen<TaskbarLyricPositionPayload>(
+		const unlistenPosition = track(listen<TaskbarLyricPositionPayload>(
 			POSITION_EVENT,
 			(evt) => {
 				updateAnchor(evt.payload.position);
 			},
-		);
+		));
 
-		const unlistenTheme = listen<TaskbarLyricThemePayload>(
+		const unlistenTheme = track(listen<TaskbarLyricThemePayload>(
 			THEME_EVENT,
 			(evt) => {
 				dispatch({ type: "UPDATE_THEME_SETTING", payload: evt.payload.theme });
 			},
-		);
+		));
 
-		const unlistenAlign = listen<TaskbarLyricAlignmentPayload>(
+		const unlistenAlign = track(listen<TaskbarLyricAlignmentPayload>(
 			ALIGN_EVENT,
 			(evt) =>
 				dispatch({ type: "UPDATE_ALIGN_SETTING", payload: evt.payload.align }),
-		);
+		));
 
-		const unlistenLayoutExtra = listen<TaskbarLayoutExtraPayload>(
+		const unlistenLayoutExtra = track(listen<TaskbarLayoutExtraPayload>(
 			TASKBAR_LAYOUT_EXTRA_EVENT,
 			(evt) => {
 				dispatch({
@@ -321,9 +322,9 @@ export const TaskbarLyricApp = () => {
 					payload: evt.payload.isCentered ? "left" : "right",
 				});
 			},
-		);
+		));
 
-		const unlistenSystemTheme = listen<SystemThemeChangedPayload>(
+		const unlistenSystemTheme = track(listen<SystemThemeChangedPayload>(
 			SYSTEM_THEME_CHANGED_EVENT,
 			(evt) => {
 				dispatch({
@@ -331,18 +332,28 @@ export const TaskbarLyricApp = () => {
 					payload: evt.payload.isLightTheme ? "light" : "dark",
 				});
 			},
-		);
+		));
 
-		const unlistenMode = listen<TaskbarLyricModePayload>(MODE_EVENT, (evt) =>
+		const unlistenMode = track(listen<TaskbarLyricModePayload>(MODE_EVENT, (evt) =>
 			dispatch({ type: "UPDATE_MODE_SETTING", payload: evt.payload.mode }),
-		);
+		));
 
-		const unlistenFadeOut = listen(FADE_OUT_EVENT, () => {
+		const unlistenFadeOut = track(listen(FADE_OUT_EVENT, () => {
 			setIsVisible(false);
-		});
+		}));
 
-		const unlistenFadeIn = listen(FADE_IN_EVENT, () => {
+		const unlistenFadeIn = track(listen(FADE_IN_EVENT, () => {
 			setIsVisible(true);
+		}));
+
+		// Only ask the main window for state AFTER every listener is registered.
+		// Tauri's listen() resolves asynchronously; emitting earlier means the
+		// reply arrives before this window is ready and is silently dropped -
+		// that is why a song already playing at startup never showed cover/info.
+		void Promise.all(pending).then(() => {
+			emit(REQUEST_UPDATE_EVENT).catch((err) => {
+				console.error("请求任务栏歌词数据更新失败:", err);
+			});
 		});
 
 		return () => {

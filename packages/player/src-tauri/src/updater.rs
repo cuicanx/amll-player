@@ -5,16 +5,40 @@ use sha2::{Digest, Sha256};
 use tauri::{Emitter, Manager};
 use tauri_plugin_updater::UpdaterExt;
 
-/// Official updater manifest published by the build workflow.
-const OFFICIAL_MANIFEST: &str =
-    "https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest.json";
+/// Release tag that backs each update channel. `dev` is the rolling
+/// development build; `stable` is the latest tagged formal release. Both
+/// publish their own signed `latest.json` / `latest-mirror.json`.
+const DEV_TAG: &str = "main-player-dev";
+
+/// The stable tag always matches the app version (`version.json` is the single
+/// source of truth and CI keeps tauri.conf.json in sync). Deriving it avoids
+/// hard-coding a version that would go stale on the next release.
+fn stable_tag(app: &tauri::AppHandle) -> String {
+    format!("v{}", app.config().version)
+}
+
+fn channel_tag(app: &tauri::AppHandle, channel: &str) -> String {
+    if channel == "stable" {
+        stable_tag(app)
+    } else {
+        DEV_TAG.to_string()
+    }
+}
+
+/// Official manifest URL for a channel.
+fn official_manifest(tag: &str) -> String {
+    format!("https://github.com/cuicanx/amll-player/releases/download/{tag}/latest.json")
+}
 
 /// Mirrored manifest: identical signature, but download URLs rewritten to
 /// `gh-proxy.com` direct links.
-const MIRROR_MANIFEST: &str = "https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest-mirror.json";
+fn mirror_manifest(tag: &str) -> String {
+    format!("https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/{tag}/latest-mirror.json")
+}
 
-const OFFICIAL_MANIFEST_VIA_MIRROR: &str =
-    "https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest.json";
+fn official_manifest_via_mirror(tag: &str) -> String {
+    format!("https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/{tag}/latest.json")
+}
 
 /// Must stay byte-for-byte identical to `plugins.updater.pubkey` in
 /// tauri.conf.json. Kept here as a constant so verification does not depend on
@@ -29,6 +53,7 @@ pub struct UpdateCheckResult {
     body: Option<String>,
     date: Option<String>,
     download_host: String,
+    channel: String,
 }
 
 #[derive(Clone, Serialize)]
@@ -40,18 +65,19 @@ struct UpdateProgressPayload {
     speed: Option<u64>,
 }
 
-fn endpoint_order(region: &str) -> Vec<&'static str> {
+fn endpoint_order(app: &tauri::AppHandle, region: &str, channel: &str) -> Vec<String> {
+    let tag = channel_tag(app, channel);
     if region == "global" {
         vec![
-            OFFICIAL_MANIFEST,
-            MIRROR_MANIFEST,
-            OFFICIAL_MANIFEST_VIA_MIRROR,
+            official_manifest(tag),
+            mirror_manifest(tag),
+            official_manifest_via_mirror(tag),
         ]
     } else {
         vec![
-            MIRROR_MANIFEST,
-            OFFICIAL_MANIFEST_VIA_MIRROR,
-            OFFICIAL_MANIFEST,
+            mirror_manifest(tag),
+            official_manifest_via_mirror(tag),
+            official_manifest(tag),
         ]
     }
 }
@@ -59,10 +85,11 @@ fn endpoint_order(region: &str) -> Vec<&'static str> {
 fn build_updater(
     app: &tauri::AppHandle,
     region: &str,
+    channel: &str,
 ) -> Result<tauri_plugin_updater::Updater, String> {
-    let endpoints = endpoint_order(region)
+    let endpoints = endpoint_order(app, region, channel)
         .into_iter()
-        .map(|url| tauri::Url::parse(url).map_err(|e| format!("invalid updater endpoint: {e}")))
+        .map(|url| tauri::Url::parse(&url).map_err(|e| format!("invalid updater endpoint: {e}")))
         .collect::<Result<Vec<_>, String>>()?;
 
     let mut builder = app
@@ -89,8 +116,9 @@ fn build_updater(
 pub async fn updater_check(
     app: tauri::AppHandle,
     region: String,
+    channel: String,
 ) -> Result<Option<UpdateCheckResult>, String> {
-    let updater = build_updater(&app, &region)?;
+    let updater = build_updater(&app, &region, &channel)?;
     let update = updater.check().await.map_err(|e| e.to_string())?;
 
     Ok(update.map(|update| UpdateCheckResult {
@@ -99,6 +127,7 @@ pub async fn updater_check(
         body: update.body.clone(),
         date: update.date.map(|date| date.to_string()),
         download_host: update.download_url.host_str().unwrap_or("").to_string(),
+        channel,
     }))
 }
 
@@ -244,8 +273,12 @@ fn is_retryable_install_error(message: &str) -> bool {
 /// Progress/speed arrive as `updater://progress`; `updater://started` resets
 /// the UI and `updater://retrying` marks a source switch.
 #[tauri::command]
-pub async fn updater_install(app: tauri::AppHandle, region: String) -> Result<(), String> {
-    let updater = build_updater(&app, &region)?;
+pub async fn updater_install(
+    app: tauri::AppHandle,
+    region: String,
+    channel: String,
+) -> Result<(), String> {
+    let updater = build_updater(&app, &region, &channel)?;
     let update = updater
         .check()
         .await

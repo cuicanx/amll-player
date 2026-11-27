@@ -113,13 +113,14 @@ import {
 	updateInfoAtom,
 	updateProgressAtom,
 	updateSpeedAtom,
+	updateChannelAtom,
 	upstreamUpdateAtom,
 } from "../../states/appAtoms.ts";
 import {
 	checkUpdateAtom,
 	checkUpstreamUpdateAtom,
 	installUpdateAtom,
-	UPDATE_RELEASE_PAGE,
+	releasePageFor,
 } from "../../states/updater.ts";
 import { restartApp } from "../../utils/player.ts";
 import {
@@ -2349,6 +2350,8 @@ const AboutSettings = () => {
 	const updateError = useAtomValue(updateErrorAtom);
 	const installAttempts = useAtomValue(installAttemptsAtom);
 	const upstreamRelease = useAtomValue(upstreamUpdateAtom);
+	const [updateChannel, setUpdateChannel] = useAtom(updateChannelAtom);
+	const setUpdateInfo = useSetAtom(updateInfoAtom);
 	const checkUpdate = useSetAtom(checkUpdateAtom);
 	const installUpdate = useSetAtom(installUpdateAtom);
 	const checkUpstreamUpdate = useSetAtom(checkUpstreamUpdateAtom);
@@ -2435,6 +2438,50 @@ const AboutSettings = () => {
 			</p>
 
 			<ContributorsSection />
+
+			<Separator size="4" my="3" />
+			<div id="update-channel">
+				<SettingEntry
+					label={t("page.about.updateChannel.label", "更新通道")}
+					description={t(
+						"page.about.updateChannel.description",
+						"正式版稳定可靠；测试版更新更快但可能不稳定。切换后会立即重新检查更新。",
+					)}
+				>
+					<Select.Root
+						value={updateChannel}
+						onValueChange={(value) => {
+							const next = value as "stable" | "dev";
+							setUpdateChannel(next);
+							setUpdateInfo(false);
+							setTimeout(() => void checkUpdate(), 50);
+						}}
+					>
+						<Select.Trigger />
+						<Select.Content>
+							<Select.Item value="stable">
+								{t("page.about.updateChannel.stable", "正式版")}
+							</Select.Item>
+							<Select.Item value="dev">
+								{t("page.about.updateChannel.dev", "测试版")}
+							</Select.Item>
+						</Select.Content>
+					</Select.Root>
+				</SettingEntry>
+				<Text as="div" size="1" color="gray" mt="1">
+					{t(
+						"page.about.updateChannel.current",
+						"当前通道：{{channel}}",
+						{
+							channel:
+								updateChannel === "stable"
+									? t("page.about.updateChannel.stable", "正式版")
+									: t("page.about.updateChannel.dev", "测试版"),
+						},
+					)}
+				</Text>
+			</div>
+
 			<Suspense>
 				{updateInfo && (
 					<>
@@ -2517,7 +2564,12 @@ const AboutSettings = () => {
 							<Button
 								variant="ghost"
 								onClick={() => {
-									openLink(UPDATE_RELEASE_PAGE);
+									openLink(
+										releasePageFor(
+											updateChannel,
+											appVersion.state === "hasData" ? appVersion.data : undefined,
+										),
+									);
 								}}
 							>
 								{t("page.about.updateManualDownload", "打开发布页")}

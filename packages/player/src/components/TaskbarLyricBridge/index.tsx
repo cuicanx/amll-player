@@ -15,7 +15,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { useAtomValue, useStore } from "jotai";
-import { type FC, useEffect, useRef } from "react";
+import { type FC, useCallback, useEffect, useRef } from "react";
 import {
 	taskbarLyricAlignSettingAtom,
 	taskbarLyricModeSettingAtom,
@@ -68,12 +68,35 @@ export const TaskbarLyricBridge: FC = () => {
 		mode: { mode: "auto" } as TaskbarLyricModePayload,
 	});
 
+	// Push the complete cached state in one shot. Used both when the taskbar
+	// window first opens and when it asks for a refresh after registering its
+	// listeners. Sending every field (even an empty metadata object) is fine:
+	// the taskbar page treats it as "no song yet" and updates on the next one.
+	const pushAll = useCallback(() => {
+		const cache = stateCache.current;
+		emit(METADATA_EVENT, cache.metadata).catch(console.error);
+		emit(PLAY_STATUS_EVENT, cache.playStatus).catch(console.error);
+		emit(POSITION_EVENT, cache.position).catch(console.error);
+		emit(THEME_EVENT, cache.theme).catch(console.error);
+		emit(ALIGN_EVENT, cache.align).catch(console.error);
+		emit(MODE_EVENT, cache.mode).catch(console.error);
+	}, []);
+
 	useEffect(() => {
-		invoke("open_taskbar_lyric").catch(console.error);
+		// open_taskbar_lyric creates the WebView asynchronously. The taskbar
+		// page emits REQUEST_UPDATE_EVENT once its listeners are ready; if that
+		// request fires before this bridge subscribed, no state would ever
+		// arrive for a song that was already loaded at startup. Seed the window
+		// proactively after a short delay as well.
+		invoke("open_taskbar_lyric")
+			.then(() => {
+				setTimeout(pushAll, 400);
+			})
+			.catch(console.error);
 		return () => {
 			invoke("close_taskbar_lyric").catch(console.error);
 		};
-	}, []);
+	}, [pushAll]);
 
 	useEffect(() => {
 		const payload: TaskbarLyricMetadataPayload = {
@@ -139,22 +162,13 @@ export const TaskbarLyricBridge: FC = () => {
 
 	useEffect(() => {
 		const unlistenRequest = listen(REQUEST_UPDATE_EVENT, () => {
-			if (stateCache.current.metadata.musicName !== undefined) {
-				emit(METADATA_EVENT, stateCache.current.metadata).catch(console.error);
-				emit(PLAY_STATUS_EVENT, stateCache.current.playStatus).catch(
-					console.error,
-				);
-				emit(POSITION_EVENT, stateCache.current.position).catch(console.error);
-				emit(THEME_EVENT, stateCache.current.theme).catch(console.error);
-				emit(ALIGN_EVENT, stateCache.current.align).catch(console.error);
-				emit(MODE_EVENT, stateCache.current.mode).catch(console.error);
-			}
+			pushAll();
 		});
 
 		return () => {
 			unlistenRequest.then((fn) => fn());
 		};
-	}, []);
+	}, [pushAll]);
 
 	useEffect(() => {
 		const unlistenPrev = listen(CTRL_PREV_EVENT, () => {

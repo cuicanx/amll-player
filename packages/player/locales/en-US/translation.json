@@ -163,7 +163,14 @@
 			"noOtherContributors": "No other contributors yet",
 			"releaseNotes": "What's new",
 			"releaseNotesEmpty": "This release has no notes attached.",
-			"updatePreparing": "Connecting to the update source…"
+			"updatePreparing": "Connecting to the update source…",
+			"updateChannel": {
+				"label": "Update channel",
+				"description": "Stable is reliable; dev updates faster but may be unstable. Switching re-checks for updates immediately.",
+				"stable": "Stable",
+				"dev": "Dev",
+				"current": "Current channel: {{channel}}"
+			}
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics Developer Page",

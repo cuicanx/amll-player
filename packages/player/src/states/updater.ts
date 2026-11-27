@@ -10,6 +10,7 @@ import {
 	isCheckingUpdateAtom,
 	isInstallingUpdateAtom,
 	type UpdateInfo,
+	updateChannelAtom,
 	updateErrorAtom,
 	updateInfoAtom,
 	updateProgressAtom,
@@ -32,9 +33,12 @@ const LOG_TAG = chalk.bgHex("#FFAA00").hex("#FFFFFF")(" UPDATER ");
 export const UPDATE_ENDPOINT =
 	"https://github.com/cuicanx/amll-player/releases/download/main-player-dev/latest.json";
 
-/** Human-facing release page of the primary source (manual fallback). */
-export const UPDATE_RELEASE_PAGE =
-	"https://github.com/cuicanx/amll-player/releases/tag/main-player-dev";
+/** Human-facing release page for the selected channel (manual fallback). */
+export function releasePageFor(channel: "dev" | "stable", version?: string): string {
+	// Stable tag is derived from the running version so it never goes stale.
+	const tag = channel === "stable" ? `v${version ?? "1.0.2"}` : "main-player-dev";
+	return `https://github.com/cuicanx/amll-player/releases/tag/${tag}`;
+}
 
 /**
  * Upstream channel. Used ONLY by the informational hint, never for checking,
@@ -107,9 +111,13 @@ export const checkUpdateAtom = atom(null, async (get, set) => {
 		// exit node is outside mainland China is served by the official source
 		// instead of the proxy.
 		const region = await detectUpdateRegion();
-		const update = await invoke<UpdateInfo | null>("updater_check", { region });
-		console.log(LOG_TAG, "检查更新返回结果", region, update);
-		set(updateInfoAtom, update ?? false);
+		const channel = get(updateChannelAtom);
+		const update = await invoke<UpdateInfo | null>("updater_check", {
+			region,
+			channel,
+		});
+		console.log(LOG_TAG, "检查更新返回结果", region, channel, update);
+		set(updateInfoAtom, update ? { ...update, channel } : false);
 	} catch (e) {
 		console.warn(LOG_TAG, "检查更新失败", e);
 		// Previously this only logged to the console, so the UI looked like
@@ -195,7 +203,8 @@ export const installUpdateAtom = atom(null, async (get, set) => {
 			// Re-detect here as well: a failed attempt is very often a network
 			// change (VPN toggled), so the retry must hit the right source.
 			const region = await detectUpdateRegion(true);
-			await invoke("updater_install", { region });
+			const channel = get(updateChannelAtom);
+			await invoke("updater_install", { region, channel });
 			set(updateProgressAtom, 1);
 			// The NSIS installer normally takes over and exits the process. If
 			// it does not (some environments), restart explicitly after a grace
