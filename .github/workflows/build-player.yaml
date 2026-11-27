@@ -108,19 +108,17 @@ jobs:
           # CHANGELOG.md; never paste commit hashes or "first release" lines
           # here - they repeat on every version and add no value.
           releaseBody: |
-            ### 新增
-            - 设置-关于页可切换正式版/测试版更新通道，更新日志按通道分别推送。
-            - 主译互换支持按歌曲单独设置，设置页可开启全局强制生效。
-            - Android 签名安装包与更新镜像加速。
-
             ### 修复
-            - 任务栏歌词启动时已有歌曲不显示封面与信息的问题。
-            - 打开任意歌曲歌词页自动开启并保存主译互换的问题。
-            - 更新校验失败与关于页国内网络加载失败。
-            - 内嵌翻译歌词无法使用主译互换、清缓存后封面丢失。
+            - Android 启动即闪退（TLS 验证器未初始化），并兼容企业自签 CA。
+            - 符号链接环导致的无限扫描与文件描述符耗尽。
+            - 沙盒路径含特殊字符时数据库打不开。
+            - 缓存目录解析失败时误操作当前工作目录的风险。
+            - Android FUSE/SAF 上 Mmap 失败导致歌词索引不可用。
+            - 任务栏歌词启动时已有歌曲不显示封面与信息。
 
             ### 优化
-            - 更新说明重新排版，支持代码与长内容展开，去掉模板文字。
+            - 历史说明文档统一归档，新增索引。
+            - git 依赖锁定到精确 commit，构建可复现。
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -287,19 +285,17 @@ jobs:
           # duplicated bilingual boilerplate used to show up in the in-app
           # update panel; CHANGELOG.md is the single place for details.
           releaseBody: |
-            ### 新增
-            - 设置-关于页可切换正式版/测试版更新通道，更新日志按通道分别推送。
-            - 主译互换支持按歌曲单独设置，设置页可开启全局强制生效。
-            - Android 签名安装包与更新镜像加速。
-
             ### 修复
-            - 任务栏歌词启动时已有歌曲不显示封面与信息的问题。
-            - 打开任意歌曲歌词页自动开启并保存主译互换的问题。
-            - 更新校验失败与关于页国内网络加载失败。
-            - 内嵌翻译歌词无法使用主译互换、清缓存后封面丢失。
+            - Android 启动即闪退（TLS 验证器未初始化），并兼容企业自签 CA。
+            - 符号链接环导致的无限扫描与文件描述符耗尽。
+            - 沙盒路径含特殊字符时数据库打不开。
+            - 缓存目录解析失败时误操作当前工作目录的风险。
+            - Android FUSE/SAF 上 Mmap 失败导致歌词索引不可用。
+            - 任务栏歌词启动时已有歌曲不显示封面与信息。
 
             ### 优化
-            - 更新说明重新排版，支持代码与长内容展开，去掉模板文字。
+            - 历史说明文档统一归档，新增索引。
+            - git 依赖锁定到精确 commit，构建可复现。
           prerelease: true
           args: ${{ matrix.args }}
         env:
