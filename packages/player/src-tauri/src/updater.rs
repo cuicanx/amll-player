@@ -5,39 +5,29 @@ use sha2::{Digest, Sha256};
 use tauri::{Emitter, Manager};
 use tauri_plugin_updater::UpdaterExt;
 
-/// Release tag that backs each update channel. `dev` is the rolling
-/// development build; `stable` is the latest tagged formal release. Both
-/// publish their own signed `latest.json` / `latest-mirror.json`.
+/// Dev channel follows the rolling pre-release tag.
 const DEV_TAG: &str = "main-player-dev";
 
-/// The stable tag always matches the app version (`version.json` is the single
-/// source of truth and CI keeps tauri.conf.json in sync). Deriving it avoids
-/// hard-coding a version that would go stale on the next release.
-fn stable_tag(app: &tauri::AppHandle) -> String {
-    format!("v{}", app.config().version.as_deref().unwrap_or("0.0.0"))
-}
-
-fn channel_tag(app: &tauri::AppHandle, channel: &str) -> String {
-    if channel == "stable" {
-        stable_tag(app)
+/// Manifest URLs for a channel.
+///
+/// Stable MUST use GitHub's `releases/latest/download` alias. Deriving the URL
+/// from the running version (the previous approach) fetched that version's own
+/// manifest, so a v1.0.3 install asked v1.0.3's manifest whether an update
+/// existed and was always told "no". The `latest` alias always resolves to
+/// the newest non-prerelease release, which is exactly what stable needs.
+fn manifest_urls(channel: &str) -> (String, String, String) {
+    let path = if channel == "stable" {
+        "releases/latest/download".to_string()
     } else {
-        DEV_TAG.to_string()
-    }
-}
-
-/// Official manifest URL for a channel.
-fn official_manifest(tag: &str) -> String {
-    format!("https://github.com/cuicanx/amll-player/releases/download/{tag}/latest.json")
-}
-
-/// Mirrored manifest: identical signature, but download URLs rewritten to
-/// `gh-proxy.com` direct links.
-fn mirror_manifest(tag: &str) -> String {
-    format!("https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/{tag}/latest-mirror.json")
-}
-
-fn official_manifest_via_mirror(tag: &str) -> String {
-    format!("https://gh-proxy.com/https://github.com/cuicanx/amll-player/releases/download/{tag}/latest.json")
+        format!("releases/download/{DEV_TAG}")
+    };
+    let base = format!("https://github.com/cuicanx/amll-player/{path}");
+    let mirrored = format!("https://gh-proxy.com/{base}");
+    (
+        format!("{base}/latest.json"),
+        format!("{mirrored}/latest-mirror.json"),
+        format!("{mirrored}/latest.json"),
+    )
 }
 
 /// Must stay byte-for-byte identical to `plugins.updater.pubkey` in
@@ -65,21 +55,12 @@ struct UpdateProgressPayload {
     speed: Option<u64>,
 }
 
-fn endpoint_order(app: &tauri::AppHandle, region: &str, channel: &str) -> Vec<String> {
-    let tag = channel_tag(app, channel);
-    let tag = tag.as_str();
+fn endpoint_order(region: &str, channel: &str) -> Vec<String> {
+    let (official, mirror, official_via_mirror) = manifest_urls(channel);
     if region == "global" {
-        vec![
-            official_manifest(tag),
-            mirror_manifest(tag),
-            official_manifest_via_mirror(tag),
-        ]
+        vec![official, mirror, official_via_mirror]
     } else {
-        vec![
-            mirror_manifest(tag),
-            official_manifest_via_mirror(tag),
-            official_manifest(tag),
-        ]
+        vec![mirror, official_via_mirror, official]
     }
 }
 
@@ -88,7 +69,7 @@ fn build_updater(
     region: &str,
     channel: &str,
 ) -> Result<tauri_plugin_updater::Updater, String> {
-    let endpoints = endpoint_order(app, region, channel)
+    let endpoints = endpoint_order(region, channel)
         .into_iter()
         .map(|url| tauri::Url::parse(&url).map_err(|e| format!("invalid updater endpoint: {e}")))
         .collect::<Result<Vec<_>, String>>()?;

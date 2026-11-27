@@ -51,7 +51,9 @@
 .body {
 	max-height: 360px;
 	overflow-y: auto;
-	overscroll-behavior: contain;
+	/* Let wheel scrolling chain to the settings page once this box reaches
+	   its end. `contain` trapped the wheel here and made the page feel stuck. */
+	overscroll-behavior: auto;
 	padding-right: 4px;
 }
 
