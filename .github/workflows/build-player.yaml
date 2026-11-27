@@ -537,13 +537,22 @@ jobs:
           path: build-dist/*
 
       - name: 发布 Android 安装包至 GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ github.ref_name }}-player-dev
-          prerelease: true
-          files: build-dist/*
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}-player-dev
+        run: |
+          set -euo pipefail
+          # action-gh-release resolves the Release against the branch ref on
+          # push events and fails with "not accessible by integration".
+          # gh CLI uploads directly to the tag, which the desktop job created.
+          if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$REPO" --prerelease \
+              --title "AMLL Player $TAG" --notes "Android development build" || true
+          fi
+          gh release upload "$TAG" build-dist/* --repo "$REPO" --clobber
+          echo "Android artifacts uploaded to $TAG"
 
   build-tauri-ios:
     name: 构建 Tauri iOS 版本
