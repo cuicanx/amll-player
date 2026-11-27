@@ -99,6 +99,9 @@ jobs:
         with:
           projectPath: packages/player
           tagName: ${{ github.ref_name }}
+          # Stable release ships ONE artifact for ONE platform: the Windows
+          # NSIS installer. Dev channel keeps the full multi-platform matrix.
+          args: --bundles nsis
           uploadUpdaterJson: true
           releaseName: AMLL Player ${{ github.ref_name }} 正式版
           # Keep release notes short and user-facing. Details live in

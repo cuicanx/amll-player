@@ -1,6 +1,7 @@
-// mimalloc uses mmap/madvise patterns that iOS restricts; the system allocator
-// is safer there. All other platforms keep the performance allocator.
-#[cfg(not(target_os = "ios"))]
+// mimalloc's mmap/madvise patterns are restricted on iOS and known to crash
+// some Android builds at startup. Desktop keeps the performance allocator;
+// mobile falls back to the system allocator.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 

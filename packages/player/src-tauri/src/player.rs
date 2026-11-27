@@ -67,10 +67,13 @@ pub fn init_local_player<R: Runtime>(app: AppHandle<R>) {
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
             while crate::ANDROID_NDK_READY.get().is_none() {
                 if std::time::Instant::now() > deadline {
+                    // Opening cpal/AAudio without an initialized JavaVM context
+                    // aborts the process on Android. Bail out of this thread and
+                    // let the UI stay up instead of crashing at startup.
                     tracing::error!(
-                        "Timed out waiting for Android NDK context; proceeding anyway."
+                        "Timed out waiting for Android NDK context; audio disabled."
                     );
-                    break;
+                    return;
                 }
                 std::thread::sleep(std::time::Duration::from_millis(10));
             }
