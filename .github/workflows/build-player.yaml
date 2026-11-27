@@ -108,17 +108,16 @@ jobs:
           # CHANGELOG.md; never paste commit hashes or "first release" lines
           # here - they repeat on every version and add no value.
           releaseBody: |
+            ### 新增
+            - 正式版附带 Android 安装包。
+            - 设置语言新增猫娘语和文言文，移除越南语。
+
             ### 修复
-            - Android 启动即闪退（TLS 验证器未初始化），并兼容企业自签 CA。
+            - 更新通道显示英文代号，部分设置项缺少翻译。
+            - Android 启动即闪退（TLS 验证器未初始化）。
             - 符号链接环导致的无限扫描与文件描述符耗尽。
             - 沙盒路径含特殊字符时数据库打不开。
-            - 缓存目录解析失败时误操作当前工作目录的风险。
-            - Android FUSE/SAF 上 Mmap 失败导致歌词索引不可用。
-            - 任务栏歌词启动时已有歌曲不显示封面与信息。
-
-            ### 优化
-            - 历史说明文档统一归档，新增索引。
-            - git 依赖锁定到精确 commit，构建可复现。
+            - Android FUSE/SAF 上歌词索引不可用。
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -285,17 +284,16 @@ jobs:
           # duplicated bilingual boilerplate used to show up in the in-app
           # update panel; CHANGELOG.md is the single place for details.
           releaseBody: |
+            ### 新增
+            - 正式版附带 Android 安装包。
+            - 设置语言新增猫娘语和文言文，移除越南语。
+
             ### 修复
-            - Android 启动即闪退（TLS 验证器未初始化），并兼容企业自签 CA。
+            - 更新通道显示英文代号，部分设置项缺少翻译。
+            - Android 启动即闪退（TLS 验证器未初始化）。
             - 符号链接环导致的无限扫描与文件描述符耗尽。
             - 沙盒路径含特殊字符时数据库打不开。
-            - 缓存目录解析失败时误操作当前工作目录的风险。
-            - Android FUSE/SAF 上 Mmap 失败导致歌词索引不可用。
-            - 任务栏歌词启动时已有歌曲不显示封面与信息。
-
-            ### 优化
-            - 历史说明文档统一归档，新增索引。
-            - git 依赖锁定到精确 commit，构建可复现。
+            - Android FUSE/SAF 上歌词索引不可用。
           prerelease: true
           args: ${{ matrix.args }}
         env:
@@ -538,6 +536,29 @@ jobs:
           fi
           gh release upload "$TAG" build-dist/* --repo "$REPO" --clobber
           echo "Android artifacts uploaded to $TAG"
+
+      - name: 正式版也附带 Android 安装包
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # The stable Release is created in parallel by build-release-desktop.
+          # Wait for it, then attach the signed APK so the formal release has
+          # both the Windows exe and the Android installer.
+          for i in $(seq 1 30); do
+            if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then break; fi
+            sleep 10
+          done
+          gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || {
+            echo "stable release not found" >&2; exit 1;
+          }
+          # Only APKs - the AAB is for Play Store and useless to sideloaders.
+          find build-dist -name '*.apk' -print0 | xargs -0 -r gh release upload "$TAG" --repo "$REPO" --clobber
+          echo "Android APKs attached to stable release $TAG"
 
   build-tauri-ios:
     name: 构建 Tauri iOS 版本

@@ -2457,7 +2457,13 @@ const AboutSettings = () => {
 							setTimeout(() => void checkUpdate(), 50);
 						}}
 					>
-						<Select.Trigger />
+						<Select.Trigger>
+							<Select.Value>
+								{updateChannel === "stable"
+									? t("page.about.updateChannel.stable", "正式版")
+									: t("page.about.updateChannel.dev", "测试版")}
+							</Select.Value>
+						</Select.Trigger>
 						<Select.Content>
 							<Select.Item value="stable">
 								{t("page.about.updateChannel.stable", "正式版")}
@@ -2471,7 +2477,7 @@ const AboutSettings = () => {
 				<Text as="div" size="1" color="gray" mt="1">
 					{t(
 						"page.about.updateChannel.current",
-						"当前通道：{{channel}}",
+						"当前通道：{channel}",
 						{
 							channel:
 								updateChannel === "stable"

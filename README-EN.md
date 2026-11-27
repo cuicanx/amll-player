@@ -4,63 +4,73 @@
 
 English / [简体中文](./README.md)
 
-An independent lyrics page player that obtains audio playback information through local music files/WebSocket Server.
+A standalone lyric player. Plays local songs or online search results, shows the lyrics in its own window, and can sit in the Windows taskbar.
 
 </div>
 
-## Maintainer & Contributors
+## What it does
 
-This edition is **maintained by [cuicanx](https://github.com/cuicanx)**, who also contributes code, bug fixes, performance work and release builds. The maintained repository is [cuicanx/amll-player](https://github.com/cuicanx/amll-player).
+- Plays local audio files and picks up embedded or sidecar lyrics (LRC, QRC, TTML, and more)
+- Searches and streams from several providers, with playlists and local downloads
+- Swaps translation and main lyric lines, per-song offset, custom fonts and backgrounds
+- Taskbar mode shows cover, title and the current line, with playback controls
+- Stable / dev update channels in Settings, each with its own release notes
+- Mainland China networks reach the update source directly, without a dead proxy left behind by a VPN client
 
-The project originated from the [amll-dev](https://github.com/amll-dev) AMLL ecosystem (Apple Music-like Lyrics); that upstream work remains the technical background and is gratefully acknowledged. Development and releases of this edition are handled independently by the current maintainer.
+## Downloads
 
-| Role | |
-| --- | --- |
-| Main maintainer | [cuicanx](https://github.com/cuicanx) |
-| Contributor | [cuicanx](https://github.com/cuicanx) |
-| Upstream project | [amll-dev/amll-player](https://github.com/amll-dev/amll-player) |
+See [Releases](https://github.com/cuicanx/amll-player/releases). Stable releases ship a Windows installer and an Android APK; the dev channel also has Linux and macOS builds.
 
-## List of functions/features：
+If the updater cannot reach GitHub, download manually or switch to the dev channel and check again.
 
-- Communicate with any client that implements the AMLL WS Protocol, synchronize the progress of the playback information, and get the corresponding lyrics for playback display
-- Support reading local audio files for playback, or loading local lyrics files
-- Support loading various lyric formats
-- High performance – no software issues that affect the display of lyrics
-- Expected support for playback state transfer protocols：[SMTC (Windows)](https://learn.microsoft.com/en-us/uwp/api/windows.media.systemmediatransportcontrols?view=winrt-26100) / [MPRIS (Linux/XDG)](https://www.freedesktop.org/wiki/Specifications/mpris-spec/) / [MPNowPlayingInfoCenter (macOS)](https://developer.apple.com/documentation/mediaplayer/mpnowplayinginfocenter)
+## Recent changes
 
-## Install and use
+### 1.0.4
+- Fixed the Android startup crash: the TLS verifier was not initialized; it now uses the system certificate store.
+- Fixed symlink-loop scans and database paths containing special characters.
+- The lyric index no longer depends on mmap on Android, so FUSE storage works.
+- Old release notes moved to `docs/history/` with an index.
 
-Since the player is still compatible, development builds are published on the [maintained repository's Releases page](https://github.com/cuicanx/amll-player/releases/tag/main-player-dev), produced by its [GitHub Action](https://github.com/cuicanx/amll-player/actions/workflows/build-player.yaml).
+### 1.0.3
+- Added stable / dev update channel switch in the About page.
+- Fixed taskbar lyrics not showing the cover and track info for music already playing at startup.
+- Android builds are properly signed; mirror manifests are generated separately per channel.
+- Pinned git dependencies to exact commits.
 
-## Why is there this？
+### 1.0.2
+- Lyric translation swap can be set per song.
+- Release notes are reformatted and collapsible.
+- Fixed contributor avatars failing to load on mainland networks.
 
-The lyrics player is equivalent to software like external subtitles, and the lyrics are played in an environment independent of the plug-in environment.
+Full history: [CHANGELOG.md](./CHANGELOG.md).
 
-The original design separated the lyrics page from the plug-in environment: benchmarks showed that embedding it as a plug-in caused frame drops and intermittent stuttering in the host browser framework, so the playback page became an independent desktop program while the plug-in only transmits playback information.
+## Background
 
-So if you also have a little stuttering, you can try using this lyric player, and the performance should be improved.
+This started as a plugin in the AMLL ecosystem, where lyrics were rendered inside the host browser and dropped frames often. It became a standalone app: the plugin only passes playback info, and rendering runs on its own.
 
+Forked from [amll-dev/amll-player](https://github.com/amll-dev/amll-player), now maintained by [cuicanx](https://github.com/cuicanx).
 
-### Building the AMLL Player desktop application
+## Build
+
+Desktop (Windows / Linux / macOS):
 
 ```bash
 cd packages/player
-pnpm tauri build          # Production build
-pnpm tauri dev            # Development mode
+pnpm install
+pnpm tauri build
 ```
 
-### Acknowledgements
+Android:
 
--   [cuicanx](https://github.com/cuicanx) — current maintainer and contributor
--   [woshizja/sound-processor](https://github.com/woshizja/sound-processor)
--   [FFmpeg](http://ffmpeg.org/)
--   And many other frameworks and libraries used by AMLL, thank you very much!
+```bash
+pnpm tauri android build --apk --split-per-abi
+```
 
-### Special Thanks
+Stable releases are built by [build-player.yaml](./.github/workflows/build-player.yaml) on a `v*` tag. The version lives in `version.json` at the repo root; a script syncs it everywhere else.
 
-<div align="center">
-<image src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg"></image>
-<div>
-Thanks to <a href=https://jb.gg/OpenSourceSupport>JetBrains</a> for their development tools that provide great support to the AMLL project
-</div>
-</div>
+## Credits
+
+- [amll-dev](https://github.com/amll-dev) — upstream project
+- [woshizja/sound-processor](https://github.com/woshizja/sound-processor)
+- [FFmpeg](https://ffmpeg.org/)
+- JetBrains for the development tools license

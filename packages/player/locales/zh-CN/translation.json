@@ -169,7 +169,7 @@
 				"description": "正式版稳定可靠；测试版更新更快但可能不稳定。切换后会立即重新检查更新。",
 				"stable": "正式版",
 				"dev": "测试版",
-				"current": "当前通道：{{channel}}"
+				"current": "当前通道：{channel}"
 			}
 		},
 		"amll-dev": {

@@ -339,8 +339,19 @@ export const availableLanguagesAtom = atom((get) => {
 	const currentLang = get(languageAtom);
 	const resources = i18n.options.resources ?? {};
 
+	// Custom locales are not known to Intl.DisplayNames; give them readable
+	// names so they don't show up as raw language tags in the settings list.
+	const customLanguageNames: Record<string, string> = {
+		"zh-CN-cat": "猫娘语",
+		"zh-Hans-LIT": "文言文",
+		cimode: "本地化 ID",
+	};
+
 	const languages = Object.keys(resources)
 		.map((langId) => {
+			if (customLanguageNames[langId]) {
+				return { label: customLanguageNames[langId], value: langId };
+			}
 			try {
 				const name =
 					new Intl.DisplayNames(currentLang, { type: "language" }).of(langId) ||

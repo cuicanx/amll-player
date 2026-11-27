@@ -161,7 +161,16 @@
 			"noOtherContributors": "その他の貢献者はまだいません",
 			"releaseNotes": "更新内容",
 			"releaseNotesEmpty": "このリリースには説明がありません。",
-			"updatePreparing": "更新元に接続しています…"
+			"updatePreparing": "更新元に接続しています…",
+			"contributorsTitle": "コントリビューター",
+			"loadingContributors": "コントリビューター一覧を読み込み中…",
+			"updateChannel": {
+				"label": "更新チャンネル",
+				"description": "正式版は安定、テスト版は更新が早いですが不安定な場合があります。切り替えるとすぐに更新を確認します。",
+				"stable": "正式版",
+				"dev": "テスト版",
+				"current": "現在のチャンネル：{channel}"
+			}
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 開発者ページ",
@@ -381,7 +390,11 @@
 					"label": "启用音译歌词与翻译歌词互换"
 				},
 				"enableLyricTranslationLine": "显示翻译歌词",
-				"subtitle": "歌词内容"
+				"subtitle": "歌词内容",
+				"swapMainTranslationGlobal": {
+					"label": "主訳と訳詞を入れ替える（全体）",
+					"description": "有効にするとすべての曲で訳詞を主行として表示します。曲ごとの設定より優先されます。"
+				}
 			},
 			"lyricFont": {
 				"fontFamily": {
@@ -524,7 +537,15 @@
 				"cleanCache": "キャッシュを削除",
 				"cleanLogs": "ログを削除",
 				"refresh": "更新",
-				"cleaned": "{count} 個のファイルを削除し、{size} を解放しました"
+				"cleaned": "{count} 個のファイルを削除し、{size} を解放しました",
+				"onlineCache": "オンライン曲のキャッシュ",
+				"onlineCacheDetail": "ダウンロードしたオンライン曲の音声とカバー",
+				"onlineCacheCleaned": "オンラインキャッシュ {count} ファイルを削除し、{size} を解放しました",
+				"autoClear": "オンライン曲キャッシュの自動削除",
+				"autoClearDetail": "一定期間使われていないオンライン曲のキャッシュとカバーを自動で削除します",
+				"autoClearNever": "削除しない",
+				"autoClearDays": "{count} 日",
+				"autoClearDone": "{count} ファイルを自動削除し、{size} を解放しました"
 			},
 			"logLevel": {
 				"label": "起動時ログレベル",
@@ -564,7 +585,10 @@
 				"romanLyricDataTip": "请提供 LyRiC 格式的歌词数据，将会根据时间戳与一致或靠近的原文歌词配对成为音译",
 				"translationLyricData": "翻译歌词数据",
 				"translationLyricDataTip": "请提供 LyRiC 格式的歌词数据，将会根据时间戳与一致或靠近的原文歌词配对成为译文",
-				"ttmlLyricTip": "TTML 歌词可同时包含翻译与音译数据。"
+				"ttmlLyricTip": "TTML 歌词可同时包含翻译与音译数据。",
+				"offsetLabel": "歌詞オフセット（ミリ秒、正の値で遅れる）",
+				"swapTranslationToMain": "訳詞を主歌詞に切り替える",
+				"swapMainTranslation": "主訳入れ替え"
 			},
 			"metadata": {
 				"changeCoverToImageOrVideo": "更换封面图为图片 / 视频",
@@ -582,6 +606,38 @@
 				"noClients": "无",
 				"openNetworkAddress": "开放网络地址",
 				"tip": "连接到客户端后，可能需要切换一次歌曲方可同步歌曲信息状态。如需对外部网络开放，请将 Host 设置成 0.0.0.0。"
+			}
+		},
+		"online": {
+			"modeTag": "オンラインモード",
+			"placeholder": "オンライン曲を検索、Enter で決定……",
+			"search": "検索",
+			"searchHistory": "検索履歴",
+			"resultCount": "{count} 件見つかりました",
+			"empty": "結果がありません。別のキーワードをお試しください",
+			"searchFailed": "検索失敗：{error}",
+			"via": "「{via}」で解決しました",
+			"loading": "再生の準備中…",
+			"playerNotReady": "プレイヤーがまだ準備できていません。少し待ってください",
+			"playFailed": "再生できません：{error}",
+			"saved": "プレイリストに追加しました",
+			"saveFailed": "保存失敗：{error}",
+			"downloadPreparing": "ダウンロードの準備中…",
+			"downloadTitle": "曲を保存",
+			"downloadCancelled": "ダウンロードをキャンセルしました",
+			"downloaded": "{path} に保存しました",
+			"downloadFailed": "ダウンロード失敗：{error}",
+			"column": {
+				"name": "曲名",
+				"singer": "アーティスト",
+				"album": "アルバム",
+				"duration": "長さ"
+			},
+			"menu": {
+				"play": "再生",
+				"download": "ダウンロード",
+				"save": "プレイリストに追加",
+				"noPlaylist": "プレイリストがありません。先に作成してください"
 			}
 		}
 	},

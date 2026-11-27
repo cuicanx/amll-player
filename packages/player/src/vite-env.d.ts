@@ -16,8 +16,9 @@ declare module "virtual:i18next-loader" {
 	const resources: {
 		"en-US": { translation: typeof translation };
 		"ja-JP": { translation: typeof translation };
-		"vi-VN": { translation: typeof translation };
 		"zh-CN": { translation: typeof translation };
+		"zh-CN-cat": { translation: typeof translation };
+		"zh-Hans-LIT": { translation: typeof translation };
 		"zh-TW": { translation: typeof translation };
 	};
 	export default resources;

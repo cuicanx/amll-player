@@ -161,7 +161,16 @@
 			"noOtherContributors": "尚無其他貢獻者",
 			"releaseNotes": "更新內容",
 			"releaseNotesEmpty": "此版本沒有附帶更新說明，可直接安裝。",
-			"updatePreparing": "正在連線更新來源…"
+			"updatePreparing": "正在連線更新來源…",
+			"contributorsTitle": "貢獻者",
+			"loadingContributors": "正在載入貢獻者清單…",
+			"updateChannel": {
+				"label": "更新通道",
+				"description": "正式版穩定可靠；測試版更新較快但可能不穩定。切換後會立即重新檢查更新。",
+				"stable": "正式版",
+				"dev": "測試版",
+				"current": "目前通道：{channel}"
+			}
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 開發者頁面",
@@ -381,7 +390,11 @@
 					"label": "啟用音譯歌詞与翻譯歌詞互換"
 				},
 				"enableLyricTranslationLine": "顯示翻譯歌詞",
-				"subtitle": "歌詞內容"
+				"subtitle": "歌詞內容",
+				"swapMainTranslationGlobal": {
+					"label": "主譯互換（全域強制）",
+					"description": "開啟後所有歌曲都顯示譯詞為主行，優先於歌曲內的個別設定"
+				}
 			},
 			"lyricFont": {
 				"fontFamily": {
@@ -524,7 +537,15 @@
 				"cleanCache": "清理快取",
 				"cleanLogs": "清理日誌",
 				"refresh": "重新整理",
-				"cleaned": "已清理 {count} 個檔案，釋放 {size}"
+				"cleaned": "已清理 {count} 個檔案，釋放 {size}",
+				"onlineCache": "線上歌曲快取",
+				"onlineCacheDetail": "下載的線上歌曲音訊與封面",
+				"onlineCacheCleaned": "已清理線上快取 {count} 個檔案，釋放 {size}",
+				"autoClear": "自動清除線上歌曲快取",
+				"autoClearDetail": "超過所選時長未使用的線上歌曲快取與封面會被自動刪除",
+				"autoClearNever": "不清理",
+				"autoClearDays": "{count} 天",
+				"autoClearDone": "已自動清理 {count} 個檔案，釋放 {size}"
 			},
 			"logLevel": {
 				"label": "啟動除錯 LOG 等級",
@@ -564,7 +585,10 @@
 				"romanLyricDataTip": "請提供 LyRiC 格式的歌詞數據，將會根據時間戳與一致或靠近的原文歌詞配對成為音譯",
 				"translationLyricData": "翻譯歌詞數據",
 				"translationLyricDataTip": "請提供 LyRiC 格式的歌詞數據，將會根據時間戳與一致或靠近的原文歌詞配對成為譯文",
-				"ttmlLyricTip": "TTML 歌詞可同時包含翻譯与音譯數據。"
+				"ttmlLyricTip": "TTML 歌詞可同時包含翻譯与音譯數據。",
+				"offsetLabel": "歌詞偏移（毫秒，正值延後）",
+				"swapTranslationToMain": "一鍵將翻譯歌詞設為主歌詞",
+				"swapMainTranslation": "主譯互換"
 			},
 			"metadata": {
 				"changeCoverToImageOrVideo": "更換封面圖為圖片 / 影片",
@@ -582,6 +606,38 @@
 				"noClients": "無",
 				"openNetworkAddress": "開放網路位址",
 				"tip": "連接到客戶端後，可能需要切換一次歌曲方可同步歌曲資訊狀態。如需對外部網路開放，請將 Host 設定成 0.0.0.0。"
+			}
+		},
+		"online": {
+			"modeTag": "線上模式",
+			"placeholder": "搜尋線上歌曲，按 Enter 開始……",
+			"search": "搜尋",
+			"searchHistory": "搜尋歷史",
+			"resultCount": "找到 {count} 首",
+			"empty": "沒有找到結果，換個關鍵詞試試",
+			"searchFailed": "搜尋失敗：{error}",
+			"via": "已透過「{via}」解析",
+			"loading": "正在準備播放…",
+			"playerNotReady": "播放器尚未就緒，請稍後再試",
+			"playFailed": "無法播放：{error}",
+			"saved": "已收藏到歌單",
+			"saveFailed": "收藏失敗：{error}",
+			"downloadPreparing": "正在準備下載…",
+			"downloadTitle": "儲存歌曲",
+			"downloadCancelled": "已取消下載",
+			"downloaded": "已儲存到 {path}",
+			"downloadFailed": "下載失敗：{error}",
+			"column": {
+				"name": "歌曲名稱",
+				"singer": "歌手",
+				"album": "專輯",
+				"duration": "時長"
+			},
+			"menu": {
+				"play": "播放",
+				"download": "下載",
+				"save": "收藏到歌單",
+				"noPlaylist": "還沒有歌單，請先建立一個"
 			}
 		}
 	},

@@ -169,7 +169,7 @@
 				"description": "Stable is reliable; dev updates faster but may be unstable. Switching re-checks for updates immediately.",
 				"stable": "Stable",
 				"dev": "Dev",
-				"current": "Current channel: {{channel}}"
+				"current": "Current channel: {channel}"
 			}
 		},
 		"amll-dev": {
@@ -586,7 +586,9 @@
 				"translationLyricData": "Translated Lyrics",
 				"translationLyricDataTip": "Paste LyRiC type of lyric content here, we will pair as translation by timestamp if they are the same or similar.",
 				"ttmlLyricTip": "TTML lyric could contain translation and Romanized translation in a single file.",
-				"swapMainTranslation": "Swap main / translation"
+				"swapMainTranslation": "Swap main / translation",
+				"offsetLabel": "Lyric offset (ms, positive delays)",
+				"swapTranslationToMain": "Set translation as the main lyric"
 			},
 			"metadata": {
 				"changeCoverToImageOrVideo": "Change cover image as image / video",
