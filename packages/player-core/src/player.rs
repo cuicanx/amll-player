@@ -461,7 +461,26 @@ impl AudioPlayer {
 
         let source_stream: Box<dyn CustomMediaSource> =
             if song_data.file_path.starts_with("http://") || song_data.file_path.starts_with("https://") {
-                let bytes = reqwest::get(&song_data.file_path)
+                // On Android, reqwest::get() would use rustls-platform-verifier
+                // and abort the process. Build a client with WebPKI roots there.
+                #[cfg(target_os = "android")]
+                let http_client = {
+                    let mut roots = rustls::RootCertStore::empty();
+                    roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+                    let tls = rustls::ClientConfig::builder()
+                        .with_root_certificates(roots)
+                        .with_no_client_auth();
+                    reqwest::Client::builder()
+                        .use_preconfigured_tls(tls)
+                        .build()
+                        .context("创建 Android HTTP 客户端失败")?
+                };
+                #[cfg(not(target_os = "android"))]
+                let http_client = reqwest::Client::new();
+
+                let bytes = http_client
+                    .get(&song_data.file_path)
+                    .send()
                     .await
                     .with_context(|| format!("下载 {} 失败", song_data.file_path))?
                     .bytes()

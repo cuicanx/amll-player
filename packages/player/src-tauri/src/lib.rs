@@ -46,6 +46,7 @@ mod extension_window;
 mod taskbar_lyric;
 #[cfg(target_os = "windows")]
 mod theme_watcher;
+mod tls_client;
 
 #[tauri::command]
 fn restart_app<R: Runtime>(app: AppHandle<R>) {

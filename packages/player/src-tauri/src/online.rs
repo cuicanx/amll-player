@@ -59,7 +59,8 @@ fn make_client(no_proxy: bool) -> reqwest::Client {
     if no_proxy {
         builder = builder.no_proxy();
     }
-    builder.build().unwrap_or_default()
+    // Android needs an explicit TLS config; see tls_client for why.
+    crate::tls_client::finish(builder).unwrap_or_default()
 }
 
 /// Send a request, then retry once without the system proxy.

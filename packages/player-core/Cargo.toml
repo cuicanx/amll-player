@@ -38,6 +38,12 @@ reqwest = { version = "0.13", default-features = false, features = [
     "stream",
 ] }
 
+[target.'cfg(target_os = "android")'.dependencies]
+# reqwest::get() on Android uses rustls-platform-verifier, which aborts without
+# JNI_OnLoad. Build a client with WebPKI roots instead (see player.rs).
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+webpki-roots = "0.26"
+
 [dev-dependencies]
 tracing-subscriber = "0.3"
 windows = { version = "0.62", features = [
