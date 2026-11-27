@@ -19,19 +19,14 @@ pub fn finish(builder: reqwest::ClientBuilder) -> Result<reqwest::Client, reqwes
         // while still honouring user-trusted certificates.
         let mut root_store = rustls::RootCertStore::empty();
         root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-        match rustls_native_certs::load_native_certs() {
-            Ok(certs) => {
-                let (added, ignored) = root_store.add_parsable_certificates(certs);
-                tracing::info!(
-                    "Android TLS roots: WebPKI + {added} system CA(s) ({ignored} unparsable)"
-                );
-            }
-            Err(err) => {
-                // System store unavailable: public-web hosts still work via
-                // WebPKI roots. Never fail startup over this.
-                tracing::warn!("failed to load Android system CA store: {err}");
-            }
-        }
+        // load_native_certs() returns CertificateResult (certs + per-cert
+        // errors), not a Result. Bad entries must not fail startup.
+        let system_certs = rustls_native_certs::load_native_certs();
+        let (added, ignored) = root_store.add_parsable_certificates(system_certs.certs);
+        tracing::info!(
+            "Android TLS roots: WebPKI + {added} system CA(s) ({ignored} unparsable, {} load errors)",
+            system_certs.errors.len()
+        );
         let tls_config = rustls::ClientConfig::builder()
             .with_root_certificates(root_store)
             .with_no_client_auth();
