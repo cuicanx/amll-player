@@ -64,6 +64,7 @@ import { ReleaseNotes } from "../../components/ReleaseNotes/index.tsx";
 import { formatSpeed } from "../../states/updater.ts";
 import {
 	detectUpdateRegion,
+	githubCandidates,
 	mirrorUrl,
 	peekUpdateRegion,
 } from "../../utils/update-region.ts";
@@ -2124,33 +2125,55 @@ function writeContributorCache(items: Contributor[]): void {
  */
 async function fetchContributorsFast(): Promise<unknown[] | null> {
 	const region = await detectUpdateRegion();
-	const primary = region === "global" ? CONTRIBUTORS_API : mirrorUrl(CONTRIBUTORS_API);
-	const fallback = region === "global" ? mirrorUrl(CONTRIBUTORS_API) : CONTRIBUTORS_API;
-	const controller = new AbortController();
-	const request = async (url: string) => {
-		const response = await fetch(url, {
-			signal: controller.signal,
-			headers: { Accept: "application/vnd.github+json" },
-		});
-		if (!response.ok) throw new Error(`HTTP ${response.status}`);
-		const data = await response.json();
-		if (!Array.isArray(data)) throw new Error("unexpected payload");
-		return data as unknown[];
+	const candidates = githubCandidates(CONTRIBUTORS_API, region);
+	// Every request gets its own controller so one hung transport cannot be
+	// starved by another's abort, and a single hard deadline covers the whole
+	// operation - on a throttled mainland link a stalled socket must not keep
+	// the About page in its loading state indefinitely.
+	const controllers = candidates.map(() => new AbortController());
+	const timers: number[] = [];
+	const request = async (url: string, index: number) => {
+		const timer = window.setTimeout(() => controllers[index].abort(), 6000);
+		timers.push(timer);
+		try {
+			const response = await fetch(url, {
+				signal: controllers[index].signal,
+				headers: { Accept: "application/vnd.github+json" },
+			});
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			const data = await response.json();
+			if (!Array.isArray(data)) throw new Error("unexpected payload");
+			return data as unknown[];
+		} finally {
+			window.clearTimeout(timer);
+		}
 	};
 
-	const fallbackDelay = new Promise<never>((_, reject) => {
-		window.setTimeout(() => reject(new Error("fallback")), 1200);
-	});
-
 	try {
-		const data = await Promise.any([
-			request(primary),
-			Promise.race([fallbackDelay, request(fallback)]),
-		]);
-		controller.abort();
+		// First transport leads; each later one starts after a short delay so the
+		// preferred source wins when reachable, but a dead one cannot stall us.
+		const data = await Promise.any(
+			candidates.map((url, index) =>
+				index === 0
+					? request(url, index)
+					: new Promise<unknown[]>((resolve, reject) => {
+							const delay = window.setTimeout(async () => {
+								try {
+									resolve(await request(url, index));
+								} catch (err) {
+									reject(err);
+								}
+							}, index === 1 ? 1200 : 2400);
+							timers.push(delay);
+						}),
+			),
+		);
+		for (const controller of controllers) controller.abort();
 		return data;
 	} catch {
 		return null;
+	} finally {
+		for (const timer of timers) window.clearTimeout(timer);
 	}
 }
 
@@ -2164,16 +2187,26 @@ async function fetchContributorsFast(): Promise<unknown[] | null> {
  * render and remount every avatar (losing the error fallback each time).
  */
 const ContributorAvatar: FC<{ item: Contributor }> = ({ item }) => {
-	const [failed, setFailed] = useState(false);
-	const showImage = Boolean(item.avatar) && !failed;
+	const candidates = React.useMemo(
+		() => githubCandidates(item.avatar, peekUpdateRegion()),
+		[item.avatar],
+	);
+	// Walk the candidate list on each load error. Only after every transport
+	// has failed do we fall back to initials, so a single dead mirror does not
+	// leave an empty avatar. `key` resets the index whenever the source changes.
+	const [attempt, setAttempt] = useState(0);
+	React.useEffect(() => setAttempt(0), [item.avatar]);
+	const src = candidates[attempt];
 	return (
 		<span className={about.avatar}>
-			{showImage ? (
+			{src ? (
 				<img
+					key={src}
 					className={about.avatarImage}
-					src={avatarFor(item.avatar)}
+					src={src}
 					alt=""
-					onError={() => setFailed(true)}
+					loading="lazy"
+					onError={() => setAttempt((n) => n + 1)}
 				/>
 			) : (
 				<span className={about.avatarFallback}>

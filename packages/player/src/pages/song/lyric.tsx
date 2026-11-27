@@ -263,10 +263,30 @@ export const LyricTabContent: FC = () => {
 							</Callout.Root>
 					) : (
 						<>
-							{/* The translation data editor is intentionally gone.
-							    "主译互换" is a pure playback-display toggle next to
-							    the offset controls above; it never edits or rewrites
-							    the stored lyric/translation text. */}
+							<Option
+								label={t(
+									"page.song.lyric.translationLyricData",
+									"翻译歌词数据",
+								)}
+							>
+								<Callout.Root>
+									<Callout.Text>
+										<Trans i18nKey="page.song.lyric.translationLyricDataTip">
+											请提供 LyRiC
+											格式的歌词数据，将会根据时间戳与一致或靠近的原文歌词配对成为译文
+										</Trans>
+									</Callout.Text>
+								</Callout.Root>
+								<TextArea
+									value={translatedLyricContent}
+									style={{
+										minHeight: "10rem",
+									}}
+									onChange={(v) =>
+										setTranslatedLyricContent(v.currentTarget.value)
+									}
+								/>
+							</Option>
 							<Option label="音译歌词数据">
 								<Callout.Root>
 									<Callout.Text>

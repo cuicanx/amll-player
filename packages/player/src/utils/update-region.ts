@@ -165,6 +165,32 @@ export function mirrorUrl(url: string): string {
 }
 
 /**
+ * Mirrors known to serve raw GitHub avatars / API payloads from mainland China.
+ * Kept as a list so the About page can fall through them one by one instead of
+ * showing a broken image the moment the first mirror hiccups.
+ */
+const GITHUB_MIRRORS = [
+	"https://ghfast.top",
+	"https://gh-proxy.com",
+	"https://ghproxy.net",
+] as const;
+
+/**
+ * Ordered candidate URLs for a GitHub resource, region-aware and de-duplicated.
+ *
+ * Overseas / VPN users try the official URL first; mainland users try mirrors
+ * first, but the official URL is always kept as the last resort. The result is
+ * used by both the avatar <img> fallback chain and the contributor fetch.
+ */
+export function githubCandidates(url: string, region: UpdateRegion): string[] {
+	if (!url) return [];
+	const mirrored = GITHUB_MIRRORS.map((m) => `${m}/${url}`);
+	const candidates =
+		region === "global" ? [url, ...mirrored] : [...mirrored, url];
+	return [...new Set(candidates)];
+}
+
+/**
  * Ordered candidate URLs for a GitHub resource. The region decides which one
  * is tried first; the other stays as a fallback so a single dead transport
  * never breaks avatars or the contributor list.

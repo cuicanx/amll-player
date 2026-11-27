@@ -333,15 +333,29 @@ jobs:
           const { execSync } = require("node:child_process");
           const repo = process.env.REPO, tag = process.env.TAG;
           const rel = JSON.parse(execSync(`gh release view ${tag} --repo ${repo} --json assets`).toString());
-          const msi = rel.assets.map((a) => a.name).find((n) => n.endsWith(".msi"));
           const src = JSON.parse(fs.readFileSync("latest.json", "utf8"));
           const base = `https://gh-proxy.com/https://github.com/${repo}/releases/download/${tag}/`;
-          for (const platform of Object.values(src.platforms || {})) {
-            if (msi) platform.url = base + encodeURIComponent(msi);
+          // Each platform carries its OWN signature. Pointing every platform at
+          // the .msi made windows-x86_64-nsis (setup.exe) verify the exe signature
+          // against msi bytes -> "更新校验失败". Resolve the matching asset per
+          // platform via the asset id in the official URL so signature and bytes
+          // always describe the same file.
+          const byId = new Map((rel.assets || []).map((a) => [String(a.id), a.name]));
+          const rewritten = [];
+          for (const [key, platform] of Object.entries(src.platforms || {})) {
+            const idMatch = /(?:\\/|%2F)assets\\/(\\d+)/.exec(platform.url || "");
+            const name = idMatch ? byId.get(idMatch[1]) : undefined;
+            if (name) {
+              platform.url = base + encodeURIComponent(name);
+              rewritten.push(`${key} -> ${name}`);
+            }
+          }
+          if (rewritten.length === 0) {
+            throw new Error("无法解析任何平台的资产名，拒绝生成错误的镜像清单");
           }
           src.notes = (src.notes || "") + "\n\n（镜像下载地址：国内网络无需 VPN）";
           fs.writeFileSync("latest-mirror.json", JSON.stringify(src, null, 2));
-          console.log("latest-mirror.json ->", msi);
+          console.log("latest-mirror.json 已重写:\n" + rewritten.join("\n"));
           '
           gh release upload "$TAG" latest-mirror.json --repo "$REPO" --clobber
 

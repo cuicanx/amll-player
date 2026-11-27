@@ -291,6 +291,7 @@ pub fn run() {
             online::online_cache_auto_clean,
             online::online_export_song,
             online::online_cover_cache,
+            online::online_cover_exists,
             online::online_lyric,
             online::online_pic,
             online::dev_log,

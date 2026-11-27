@@ -124,6 +124,55 @@ function shiftLyricLines(lines: LyricLine[], offsetMs: number): LyricLine[] {
 }
 
 /**
+ * Merge "inline bilingual" LRC lines.
+ *
+ * A large number of Chinese-hosted LRC files carry the translation inside the
+ * SAME file as a second line sharing the original line's timestamp, e.g.
+ *
+ *   [00:20.51]この橋の向こうに
+ *   [00:20.51]在这座桥的另一端
+ *
+ * `parseLrc` turns both into independent main lines, so the translation never
+ * reaches `translatedLyric` and the "主译互换" toggle appears to do nothing
+ * (`swapMainTranslationLines` skips lines without a translation).
+ *
+ * Fold the duplicate-timestamp row into the preceding row's
+ * `translatedLyric`. This also makes those files render the way AMLL intends:
+ * one main line with a translation sub-line. Only LRC is folded; formats that
+ * already carry structured translation data (yrc/qrc/eslrc/ttml) are left
+ * untouched. Returns a new array; input is never mutated.
+ */
+function mergeInlineBilingualLrc(lines: LyricLine[]): LyricLine[] {
+	if (lines.length < 2) return lines;
+	const textOf = (line: LyricLine) =>
+		line.words.map((w) => w.word).join("").trim();
+
+	// Group rows by timestamp (±1ms for the classic 2-vs-3 digit rounding).
+	// Bilingual LRC files usually list ALL original lines first and ALL
+	// translations afterwards, so matching neighbours is not enough.
+	const groups = new Map<number, LyricLine[]>();
+	for (const line of lines) {
+		const key = Math.round(line.startTime);
+		const existing = groups.get(key);
+		if (existing) existing.push(line);
+		else groups.set(key, [line]);
+	}
+	// A translation row is folded into the first row of its timestamp group.
+	const consumed = new Set<LyricLine>();
+	for (const group of groups.values()) {
+		if (group.length < 2) continue;
+		const primary = group[0];
+		for (const extra of group.slice(1)) {
+			const extraText = textOf(extra);
+			if (!extraText) continue;
+			if (!primary.translatedLyric.trim()) primary.translatedLyric = extraText;
+			consumed.add(extra);
+		}
+	}
+	return lines.filter((line) => !consumed.has(line));
+}
+
+/**
  * Final safety net before handing lines to AMLL. It mirrors the core's
  * `assertValidLyricTimestamps` exactly: every line, word and ruby must have a
  * finite, non-negative `startTime` and an `endTime >= startTime`.
@@ -253,7 +302,14 @@ export const useLyricParser = (
 				}
 			}
 
-			const shiftedLines = shiftLyricLines(parsedLyricLines, offsetMs);
+			// LRC files with inline translations (two rows sharing a timestamp)
+			// must be folded before any offset is applied, so the translation
+			// lands on the correct main line.
+			const bilingualLines =
+				format === "lrc"
+					? mergeInlineBilingualLrc(parsedLyricLines)
+					: parsedLyricLines;
+			const shiftedLines = shiftLyricLines(bilingualLines, offsetMs);
 			const compatibleLyricLines: CoreLyricLine[] = shiftedLines.map(
 				(line) => ({
 					...line,

@@ -1265,6 +1265,22 @@ pub async fn online_cover_cache(app: tauri::AppHandle, url: String) -> Result<St
     Ok(file.to_string_lossy().to_string())
 }
 
+/// Check whether a previously cached cover file still exists on disk.
+///
+/// "Clear online cache" deletes the cache directory but leaves each song's
+/// `cover_path` pointing at the now-missing file. The UI would otherwise keep
+/// rendering a black cover forever because the path still looks like a valid
+/// local absolute path. Returns `false` for the empty path and for anything
+/// that is not a non-empty file, so callers can trigger a re-download.
+#[tauri::command]
+pub fn online_cover_exists(path: String) -> bool {
+    if path.is_empty() || path.starts_with("http://") || path.starts_with("https://") {
+        return false;
+    }
+    let file = std::path::Path::new(&path);
+    file.is_file() && file.metadata().map(|m| m.len() > 0).unwrap_or(false)
+}
+
 //#endregion
 
 //#region lyric / cover
