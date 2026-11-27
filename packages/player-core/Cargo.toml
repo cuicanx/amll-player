@@ -30,7 +30,8 @@ tokio = { version = "^1", features = [
 tracing = "0.1"
 parking_lot = "0.12"
 ffmpeg_audio = { version = "0.2", features = ["tracing"] }
-now-playing-controls = { git = "https://github.com/apoint123/now-playing-controls.git" }
+# Pinned to the exact commit recorded in Cargo.lock for reproducible builds.
+now-playing-controls = { git = "https://github.com/apoint123/now-playing-controls.git", rev = "8237429431ca57285ed52c71216fafef2ef3378f" }
 tokio-util = "0.7.18"
 reqwest = { version = "0.13", default-features = false, features = [
     "rustls",

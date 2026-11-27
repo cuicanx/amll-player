@@ -101,7 +101,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           # Stable release ships ONE artifact for ONE platform: the Windows
           # NSIS installer. Dev channel keeps the full multi-platform matrix.
-          args: --bundles nsis
+          args: --bundles nsis -- --locked
           uploadUpdaterJson: true
           releaseName: AMLL Player ${{ github.ref_name }} 正式版
           # Keep release notes short and user-facing. Details live in
@@ -109,17 +109,18 @@ jobs:
           # here - they repeat on every version and add no value.
           releaseBody: |
             ### 新增
+            - 设置-关于页可切换正式版/测试版更新通道，更新日志按通道分别推送。
             - 主译互换支持按歌曲单独设置，设置页可开启全局强制生效。
-            - 更新说明重新排版，长内容可展开查看。
+            - Android 签名安装包与更新镜像加速。
 
             ### 修复
-            - 关于页贡献者头像和列表在国内网络下加载失败。
-            - 部分情况下更新校验失败。
-            - 内嵌翻译歌词无法使用主译互换。
-            - 清除缓存后部分在线歌曲封面丢失。
+            - 任务栏歌词启动时已有歌曲不显示封面与信息的问题。
+            - 打开任意歌曲歌词页自动开启并保存主译互换的问题。
+            - 更新校验失败与关于页国内网络加载失败。
+            - 内嵌翻译歌词无法使用主译互换、清缓存后封面丢失。
 
             ### 优化
-            - 更新说明去掉与用户无关的模板文字。
+            - 更新说明重新排版，支持代码与长内容展开，去掉模板文字。
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -137,21 +138,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Only Windows x64 is built while iterating - Linux/macOS builds are
+          # disabled to keep each debug cycle short. Re-enable by uncommenting
+          # the blocks below when doing a dedicated cross-platform release test.
           - platform: windows-latest
-            args: ""
+            args: "-- --locked"
             name: windows
             arch: x86_64
             artifact_name_suffix: windows-x64
             package_extension: zip
             os_runner: windows-latest
-          - platform: ubuntu-latest
-            args: ""
-            name: linux
-            arch: x86_64
-            artifact_name_suffix: linux-x64
-            package_extension: tar.gz
-            os_runner: ubuntu-latest
-          # Windows ARM64: keep disabled until an ARM runner is confirmed.
+          # - platform: ubuntu-latest
+          #   args: ""
+          #   name: linux
+          #   arch: x86_64
+          #   artifact_name_suffix: linux-x64
+          #   package_extension: tar.gz
+          #   os_runner: ubuntu-latest
           # - platform: windows-latest
           #   args: "--target aarch64-pc-windows-msvc"
           #   name: windows
@@ -159,15 +162,13 @@ jobs:
           #   artifact_name_suffix: windows-arm64
           #   package_extension: zip
           #   os_runner: windows-latest
-          - platform: macos-latest
-            args: "--target aarch64-apple-darwin"
-            name: macOS
-            arch: aarch64
-            artifact_name_suffix: macos-arm64
-            package_extension: tar.gz
-            os_runner: macos-15
-          # macOS x64 stays disabled: arm64 covers current Apple hardware and
-          # halves CI cost. Re-enable when an Intel build is actually needed.
+          # - platform: macos-latest
+          #   args: "--target aarch64-apple-darwin"
+          #   name: macOS
+          #   arch: aarch64
+          #   artifact_name_suffix: macos-arm64
+          #   package_extension: tar.gz
+          #   os_runner: macos-15
           # - platform: macos-latest
           #   args: "--target x86_64-apple-darwin"
           #   name: macOS
@@ -287,17 +288,18 @@ jobs:
           # update panel; CHANGELOG.md is the single place for details.
           releaseBody: |
             ### 新增
+            - 设置-关于页可切换正式版/测试版更新通道，更新日志按通道分别推送。
             - 主译互换支持按歌曲单独设置，设置页可开启全局强制生效。
-            - 更新说明重新排版，长内容可展开查看。
+            - Android 签名安装包与更新镜像加速。
 
             ### 修复
-            - 关于页贡献者头像和列表在国内网络下加载失败。
-            - 部分情况下更新校验失败。
-            - 内嵌翻译歌词无法使用主译互换。
-            - 清除缓存后部分在线歌曲封面丢失。
+            - 任务栏歌词启动时已有歌曲不显示封面与信息的问题。
+            - 打开任意歌曲歌词页自动开启并保存主译互换的问题。
+            - 更新校验失败与关于页国内网络加载失败。
+            - 内嵌翻译歌词无法使用主译互换、清缓存后封面丢失。
 
             ### 优化
-            - 更新说明去掉与用户无关的模板文字。
+            - 更新说明重新排版，支持代码与长内容展开，去掉模板文字。
           prerelease: true
           args: ${{ matrix.args }}
         env:
@@ -474,7 +476,9 @@ jobs:
           else
             echo "WARNING: no NDK sysroot found; bindgen may use host headers" >&2
           fi
-          pnpm -F player tauri android build --target aarch64 --target x86_64 --split-per-abi
+          # `-- --locked` is forwarded to cargo so Cargo.lock (with the pinned
+          # git revs) is authoritative - no silent dependency drift in CI.
+          pnpm -F player tauri android build --target aarch64 --target x86_64 --split-per-abi -- --locked
 
       - name: 整理并重命名 Android 构建包
         run: |

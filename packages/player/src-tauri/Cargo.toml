@@ -1,6 +1,6 @@
 [package]
 name = "amll-player"
-version = "1.0.2"
+version = "1.0.3"
 description = "AMLL Player - cuicanx maintained edition"
 authors = ["cuicanx <https://github.com/cuicanx>"]
 license = ""
@@ -99,7 +99,9 @@ objc2-foundation = "^0.3"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 webview2-com = "0.38"
-taskbar-lyric = { git = "https://github.com/apoint123/taskbar-lyric.git", features = [
+# Pinned to the exact commit recorded in Cargo.lock. Without `rev`, a cargo
+# update would silently pull upstream HEAD and change behaviour between builds.
+taskbar-lyric = { git = "https://github.com/apoint123/taskbar-lyric.git", rev = "bd7ee3a66d28af8a857d2ce2b26a3c78fa0058fa", features = [
 	"tracing",
 ] }
 windows = { version = "0.62", features = [
