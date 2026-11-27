@@ -343,7 +343,7 @@ jobs:
           const byId = new Map((rel.assets || []).map((a) => [String(a.id), a.name]));
           const rewritten = [];
           for (const [key, platform] of Object.entries(src.platforms || {})) {
-            const idMatch = /(?:\\/|%2F)assets\\/(\\d+)/.exec(platform.url || "");
+            const idMatch = /(?:\/|%2F)assets\/(\d+)/.exec(platform.url || "");
             const name = idMatch ? byId.get(idMatch[1]) : undefined;
             if (name) {
               platform.url = base + encodeURIComponent(name);
