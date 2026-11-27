@@ -35,17 +35,12 @@ where
     F: Fn(&Path) -> T + Send + Sync,
 {
     let extensions: HashSet<String> = AUDIO_EXTENSIONS.iter().map(|s| s.to_string()).collect();
+
+    let walker = WalkDir::new(&folder).follow_links(false);
+    // Symlinks are not followed: a link loop would recurse forever and exhaust
+    // file descriptors (especially damaging on mobile).
     let results = Mutex::new(Vec::new());
     let processed = AtomicU32::new(0);
-
-    // Do NOT follow symlinks: a symlink loop makes the walker recurse forever
-    // and exhaust file descriptors. jwalk's own thread count caps both CPU
-    // usage and open descriptors - keep it small on mobile where the device
-    // throttles under sustained parallel IO.
-    let mut walker = WalkDir::new(folder).follow_links(false);
-    #[cfg(target_os = "android")]
-    let mut walker = walker.num_threads(2);
-    let walker = &mut walker;
 
     walker
         .into_iter()
@@ -54,19 +49,24 @@ where
             if cancel_token.load(Ordering::Relaxed) {
                 return None;
             }
+
             let entry = entry_result.ok()?;
+            let path = entry.path();
+
             if !entry.file_type().is_file() {
                 return None;
             }
-            let path = entry.path();
+
             let is_valid = path
                 .extension()
                 .and_then(|ext| ext.to_str())
                 .is_some_and(|ext| extensions.contains(&ext.to_lowercase()));
-            if is_valid { Some(path.to_path_buf()) } else { None }
+
+            if is_valid { Some(path) } else { None }
         })
         .for_each(|path| {
             let result = processor(&path);
+
             let count = processed.fetch_add(1, Ordering::Relaxed) + 1;
             results.lock().unwrap().push(result);
             on_progress(count);
