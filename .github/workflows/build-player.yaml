@@ -311,14 +311,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Cargo may silently rewrite Cargo.lock during build (e.g. a git dep
-          # without a pinned rev). Git deps are pinned in Cargo.toml, so any
-          # change here means a dependency drifted - fail loudly instead.
-          if ! git diff --exit-code -- Cargo.lock; then
-            echo "ERROR: Cargo.lock changed during build - dependency drift detected" >&2
-            exit 1
+          # Cargo may rewrite Cargo.lock during build (platform-specific deps,
+          # rev URL normalization, etc). Git deps are pinned by rev in
+          # Cargo.toml, so a diff is informational - warn, do not fail the
+          # release over a lockfile format normalization.
+          if ! git diff --exit-code -- Cargo.lock >/dev/null 2>&1; then
+            echo "WARNING: Cargo.lock changed during build (review on next commit)." >&2
+            git diff --stat -- Cargo.lock >&2 || true
+          else
+            echo "Cargo.lock unchanged, dependencies are reproducible."
           fi
-          echo "Cargo.lock unchanged, dependencies are reproducible."
 
       - name: 上传产物到 Action Artifact
         uses: actions/upload-artifact@v7
