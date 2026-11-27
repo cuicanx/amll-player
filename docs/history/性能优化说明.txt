@@ -1,0 +1,272 @@
+================================================================
+ AMLL Player 性能优化版（基于 v1 内嵌歌词修复版）
+ 基线: v1-bugfix  |  工作目录: v1-perf  |  日期: 2026-11-14
+================================================================
+
+【零、结论与边界】
+
+本次只削减"无谓的每帧工作与合成开销"，不关闭任何画质开关：
+歌词行模糊 / 缩放 / 弹簧动画、逐字渐变、WebGL 背景 60 FPS、
+背景渲染倍率 1.0、播放列表 blur(5vh) 全部保持原样。
+所有动画的最终静止状态与参数端点不变。
+
+因此"首次打开全屏页掉帧"与"稳定态占用高"改善来自消除浪费，
+不是降低渲染质量；"列表滑动与过渡"改善来自减少滚动帧内的强制重排
+与补充合成器友好的进出场动画。
+
+本机无 GUI 自动化环境，无法直接测帧率。可复现的替代证据是：
+对基线版与优化版用同一套指标定义各测一次（见【四】），
+并用静态断言锁定画面不变式。真机实测条目列在【六】。
+
+
+【一、根因诊断（代码证据）】
+
+A. 全屏歌曲页首次打开大幅掉帧 / 稳定态占用高
+
+ A-1 每帧 React 重渲染扇出
+     components/TaskbarLyricBridge/index.tsx
+     原用 useAtomValue(musicPlayingPositionAtom) 订阅歌词时钟，
+     而该 atom 由 LocalMusicContext 的 rAF 每帧写入（毫秒级）。
+     结果：开启任务栏歌词时，该组件约 60 次/秒 render + effect 调度，
+     尽管 emit 只有 200ms 节流 —— 节流发生在 effect 内部，
+     React 的调度成本已经付掉了。
+
+ A-2 暂停时仍在跑的 60fps 循环
+     components/LocalMusicContext/index.tsx 的 updateLoop 无播放状态门控：
+     isPlaying=false 时依然 requestAnimationFrame(updateLoop)，
+     只是不写 atom。空循环仍阻止主线程空闲，并唤醒订阅者链。
+
+ A-3 首次打开瞬间的合成层叠加
+     App.module.css 的 .body::after（100vw×100vh 遮罩 opacity 0.5s）
+     与 components/AMLLWrapper/index.module.css 的 .lyricPage
+     （100vw×100vh translateY + border-radius）在同一帧起效。
+     说明：上游库其实已经通过
+     staticMode={lyricBackgroundStaticMode || !isLyricPageOpened}
+     在页面关闭时让渲染循环趋于静止（mesh 停止 requestTick、
+     pixi 停止 ticker），所以"隐藏态仍跑 60fps WebGL"并不成立。
+     真正剩下的开销是：这棵 100vw×100vh 子树（canvas + 全量歌词
+     DOM）即使在屏幕外仍保留在渲染树中并参与合成/绘制计算，
+     且首次打开瞬间遮罩与位移两层大合成层同帧激活。
+
+ A-4 高频事件的同步开销
+     utils/useCursorAutoHide.ts 每次 mousemove 都 clearTimeout +
+     setState + setTimeout，触发 AMLLWrapper 整棵子树 reconcile；
+     NowPlayingBar 的 ResizeObserver 每次都 getBoundingClientRect()
+     后写 body 级 CSS 变量（全局样式失效 + 强制同步布局）；
+     WSProtocolMusicContext 的 FFT rAF 未在卸载时 cancelAnimationFrame。
+
+B. 歌曲列表滑动掉帧 / 过渡不丝滑
+
+ B-1 滚动帧内的布局抖动（头号原因）
+     pages/playlist/index.tsx 用 useScroll + useMotionTemplate 把
+     scrollY 每像素写进 width 与 gap（都是 layout 属性）。
+     头部与虚拟列表是 flex 兄弟：头部尺寸变化 → 列表容器高度变化
+     → ViewportList 同帧重新测量全部行 → 写布局/读布局互抢。
+     另有一处 gap={playlistInfoGapSize.get()} 与 inline style.gap 重复。
+
+ B-2 每行一个全局监听 + 每行独立 IPC
+     utils/use-db-query.ts 每个 hook 实例都注册一个 Tauri
+     "db-row-changed" 监听；一次数据库写入（扫描/导入/播放计数）
+     会让所有可见行同时 refetch。列表行 PlaylistSongCard 还各自
+     db.songs.get(songId) 跨进程取数，Skeleton→内容 行高突变
+     再次触发虚拟列表重测量。
+
+ B-3 父组件变化导致整表重渲染
+     全项目 0 处 React.memo；useSongCover 以整个 Song 对象为依赖，
+     任何 refetch 产生新对象引用都会让所有可见行重跑 layout effect。
+
+ B-4 过渡动画使用不可高效插值的属性
+     NowPlayingBar 对 backdrop-filter 本身做 0.2s transition；
+     播放队列弹层是纯条件渲染、零进出场动画；队列行 hover 无过渡。
+     路由与 Tab 切换为硬切（本次未改，属功能范围外的观感项）。
+
+
+【二、逐项优化：针对的问题 → 手法 → 预期效果】
+
+编号 | 针对问题 | 手法 | 预期效果 | 画面影响
+-----+----------+------+----------+---------
+ P1  | A-1      | TaskbarLyricBridge 改用 store.sub() 直接订阅 + 200ms
+     |          | 节流 emit，完全不走 React 渲染 |
+     |          | 消除约 60 次/秒的组件 render 与 effect 调度 | 无
+ P2  | A-2      | position rAF 由 store.sub(musicPlayingAtom) 启停；
+     |          | 恢复播放时从权威 atom 重新对齐时间戳 |
+     |          | 暂停/未播放时主线程彻底空闲；播放中写入表达式与
+     |          | 节奏逐字不变 | 无（逐字歌词动画完全一致）
+ P3  | A-3      | .lyricPage 隐藏态 visibility:hidden，并把可见性
+     |          | 翻转延迟到 0.5s 滑出动画结束；遮罩淡入错峰 60ms |
+     |          | 隐藏期间跳过 100vw×100vh 子树的绘制与合成；首次打开时
+     |          | 两层大合成层不再同帧激活 | 无（滑出/滑入动画保留）
+ P4  | A-4      | 鼠标事件按帧合并 + passive 监听；ResizeObserver
+     |          | 写入按帧合并且值不变时跳过；FFT rAF 补取消 |
+     |          | 高频指针不再驱动整棵歌词子树 reconcile；
+     |          | 消除重复的全文档样式失效与残留帧 | 无
+ P5  | B-1      | scrollY 量化到 4px 再写入；删除重复的 gap 快照；
+     |          | 滚动容器加 overscroll-behavior:contain 与
+     |          | contain:layout paint |
+     |          | 滚动帧内 reflow 次数约降为 1/4，且头部重排不再
+     |          | 外溢到页面；clamp 端点不变 | 无（偏差 < 1 CSS px）
+ P6  | B-2      | "db-row-changed" 收敛为单个模块级监听，
+     |          | 同一微任务内的事件合并为一次 flush |
+     |          | N 个可见行从 N 个 Tauri 监听降为 1 个；
+     |          | 写入风暴时每行只 refetch 一次 | 无
+ P7  | B-3      | PlaylistSongCard / SongCard 包 memo；
+     |          | useSongCover 依赖收窄为 coverPath，并加异步过期保护 |
+     |          | 父组件状态变化不再整表重渲染；虚拟行复用时
+     |          | 不会画上别的歌的封面 | 无（并修正一处潜在串图）
+ P8  | B-4      | 移除对 backdrop-filter 本身的过渡（blur 效果保留）；
+     |          | 队列弹层新增 transform/opacity 进场 0.22s；
+     |          | 队列行 hover 加 0.15s 背景过渡 |
+     |          | 进出场与 hover 更顺滑，且动画不触发布局重排 | 静止态一致，
+     |          |                                          过渡更平滑
+
+刻意未做的改动（避免牺牲画质或改变观感）：
+ - 没有关闭歌词模糊 / 弹簧 / 缩放 / 逐字渐变；
+ - 没有降低背景 FPS、渲染倍率或启用静态模式；
+ - 没有把 width 动画改成 transform:scale（会改变文字排版观感）；
+ - 没有改 border-radius 展开动画（它是可见的视觉设计）；
+ - 没有动路由/Tab 的硬切（属于功能改动，不在本次性能范围内）。
+
+
+【三、画面与功能一致性证据】
+
+ 1. 画质开关逐项比对：blur / spring / backgroundFPS / playlistCardBlur
+    在基线与优化版均为 1（未被关闭）。
+ 2. 全屏页静止态：translateY(0%)、border-radius 0、0.5s 同款 easing、
+    遮罩最终 opacity 0.75 均未变。
+ 3. 滚动头部 clamp 的两个端点表达式（6em/12em、space-1/space-4）
+    逐字保留，只把输入 scrollY 换成量化值。
+ 4. 歌词时钟写入表达式 store.set(..., nextPosition) 在两版均为 1 处，
+    逐字动画数据链未改。
+ 5. 强约束：除【二】声明的 15 个文件外，其余 200+ 个文件与基线
+    **逐字节相同**；脚本会拒绝任何未声明的改动（V6/V7）。
+
+
+【四、验证结果（可复现）】
+
+ 入口：node v1-perf/tests/verify-all.cjs   → 8/8 组通过
+ 单独跑性能审计：node v1-perf/tests/perf-audit.cjs → 19/19
+
+ 分组                                        结果
+  Rust 真实单元测试（WASI 执行）              22/22
+  Rust 调用点类型契约                        通过
+  Rust 语法解析（5 文件）                    通过
+  前端跨模块回归（歌词修复功能）              27/27
+  TS/TSX 语法 + 类型 + 接口契约（12 文件）    32/32
+  性能基线 / 优化断言 / 画面不变式            19/19
+
+ 同一套指标在两版上的实测值（节选，* 为发生变化）：
+   metric                         v1-bugfix   v1-perf
+   perFrameAtomSubscriptions            1         0   *
+   directStoreSubscription             0         1   *
+   dbListenerSingleton                 0         1   *
+   uncancelledFftLoop                  1         0   *
+   pauseAwarePositionLoop              0         1   *
+   perFramePositionWrites              1         1     (刻意保持不变)
+   hiddenStateSkipsPaint               0         1   *
+   quantizedScrollY                    0         1   *
+   duplicateGapSnapshots               1         0   *
+   memoizedRows                        0         2   *
+   nonCompositorTransitions            3         2   *
+   lyricBlurSwitch / Spring / FPS       1         1     (刻意保持不变)
+   playlistCardBlur                    1         1     (刻意保持不变)
+
+ 注：nonCompositorTransitions 从 3 降到 2，剩余 1 处是
+     .lyricPage 的 border-radius 过渡（可见的视觉设计，故保留）。
+
+
+【五、云端构建】
+
+ 仓库   https://github.com/cuicanx/amll-player （fork, main）
+ 提交   7b20e9e0c6dc232cc2a028679b62b9c104aa02ba
+ 工作流 https://github.com/cuicanx/amll-player/actions/runs/43592911927
+ 发布页 https://github.com/cuicanx/amll-player/releases/tag/main-player-dev
+ 产物   releases/性能版/
+        AMLL.Player_0.0.1+1138_x64-setup.exe   7,818,026 B
+          SHA-256 b3250a48a687f2dad9154881ee965be908e2a24f9dced128e24c122357fe7efb
+        AMLL.Player_0.0.1+1138_x64_en-US.msi  10,629,120 B
+          SHA-256 1bedec889e789ccbf217f40e740af2418f304d6fa41ec63c63ac1215d9e3c0f7
+        另附 setup.exe.sig（更新包签名）
+ 构建   本次 Windows x64 / ARM64、Linux x64、macOS x64、iOS 均成功；
+        Android 仍因上游 ffmpeg_audio_sys 的 __float128 绑定问题失败；
+        macOS ARM64 任务耗时较长，不影响 Windows 产物。
+
+ 注：GitHub Release 的 main-player-dev 标签会被新构建覆盖，
+     旧版安装包已保存在本地 releases/ 目录，不会被删除。
+ 本次因本机代理对 github.com 的 git 端点返回 CONNECT 502，
+     改由 GitHub Git Data API 落地提交（脚本 .gh-tools/push-via-api.cjs）。
+
+
+【六、复测清单】
+
+ 必须人工复测（只有真机能判定，属观感/帧率判定）：
+  1. 冷启动后首次点开封面进入全屏歌词页，观察是否还有明显掉帧尖峰，
+     以及恢复到稳定所需时间。
+  2. 全屏页停留 10 秒，用任务管理器观察 CPU/GPU 占用是否下降。
+  3. 歌单页快速上下滑动，对比优化前的顺滑度；特别留意滚动时
+     封面缩小是否仍然连贯、列表是否有跳动。
+  4. 打开/关闭全屏页各一次，确认滑出动画完整（不是瞬间消失）。
+  5. 打开播放队列弹层，确认新增的淡入上移过渡观感。
+
+ 可选确认（自动化已覆盖，正常不必重跑）：
+  - 歌词逐字高亮仍与音频同步（P2 未改播放中写入节奏）；
+  - 内嵌歌词仍自动显示（v1 的 27 项回归通过）；
+  - 扫描导入后列表能自动刷新（P6 事件合并已断言）；
+  - 画质开关（模糊/弹簧/背景 FPS）仍生效且默认值未变。
+
+ 已知限制：
+  - 未做真机 FPS 采样，性能结论基于代码路径削减 + 静态指标对照；
+  - Android 仍会因上游 ffmpeg_audio_sys 的 __float128 绑定问题失败，
+    与本次改动无关；
+  - 路由/Tab 切换仍是硬切，若需要进一步"丝滑"可在下一轮补
+    transform/opacity 路由过渡（属新增视觉设计，需另行确认）。
+
+
+【七、背景渲染器：三者是否等价 / 怎么选】
+
+ 依据：从 npm 包 @applemusic-like-lyrics/core@0.6.0 与
+ react-full@0.5.0 的 sourcemap 还原出的原始 TypeScript 源码
+ （本机 _amllpkg/srcs/），非推测。
+
+  维度                mesh（网格渐变，默认）  pixi（PixiJS）      css-bg
+  --------------------+----------------------+--------------------+-------------------
+  实现                 WebGL1 + 自定义 GLSL   PixiJS WebGL      一个 div 的
+                       网格渐变，封面取色     4 个封面 Sprite    background 样式
+                       生成控制点             旋转/漂浮          （默认 #111111）
+  Canvas / WebGL        有                    有                  无
+  封面响应              取色 + 切歌交叉淡入   采样封面纹理        完全不响应
+  音频低频跳动          有（u_volume uniform） NOOP               无
+  滤镜                  每帧 2 pass            6~8 层 BlurFilter  无
+                        （FBO + 合成）        + 3 ColorMatrix
+                                              + 2~3 BulgePinch
+                                              + 末层 Blur
+  每帧循环              rAF                   Pixi ticker         零
+  FPS/倍率/静态模式      可调                  可调                设置页直接隐藏
+  视觉风格              Apple Music 渐变网格   旋转模糊封面        纯色 / 自定义 CSS
+
+ 结论：功能与性能都不等价。
+  - css-bg 是库里定义的「没有可用渲染器时的降级分支」，不是平级选项：
+    resolveBackgroundRenderer 会先尝试指定渲染器 → 回退 mesh → 最后才
+    回退 css-bg。选它等于砍掉整个动态背景，与"不牺牲视觉效果"冲突。
+  - pixi 性价比最差：滤镜链最重（全屏多 pass 模糊 + 形变），
+    却少了低频跳动；且 rebuildFilters 里用 Math.random() 决定
+    BulgePinch 数量，视觉输出本身不确定。
+  - mesh 是默认也是功能最全的：唯一支持鼓点跳动，滤镜负担最轻，
+    视觉最贴近 Apple Music。
+
+ 推荐（在"不牺牲画质"的前提下再省性能）：
+   保持 mesh，不要改渲染器，改这三个可调项：
+     背景渲染倍率 1.0 → 0.5~0.75
+       （库基类注释明确写 0.75「既没有明显瑕疵也不会特别吃性能」；
+        实际像素量 = clientSize × devicePixelRatio × scale，
+        降到 0.5 约为 1/4 像素量，视觉几乎无差）
+     背景最高帧数 60 → 30
+       （基类默认就是 30，本项目设置页默认给到 60）
+     静态模式 保持关闭
+       （开启会停掉背景跳动，直接损失"惊艳视觉效果"）
+   如果机器实在吃力，退而求其次的顺序是：
+     mesh + 上述参数 → isolation（库里有，UI 未暴露，程序化四点渐变、
+     不采样纹理，但同样没有低频跳动） → pixi → css-bg。
+
+ 注意：本次性能优化版没有改动渲染器默认值或任何画质开关，
+       以上属于用户侧可调的额外收益，不是代码改动。
+================================================================

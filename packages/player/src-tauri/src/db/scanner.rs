@@ -34,9 +34,41 @@ where
     T: Send,
     F: Fn(&Path) -> T + Send + Sync,
 {
+    // Mobile CPUs throttle hard under sustained parallel IO. A small local
+    // thread pool avoids pegging every core (and the battery) on Android.
+    #[cfg(target_os = "android")]
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(2)
+        .build()
+        .expect("failed to build scan thread pool");
+
+    #[cfg(target_os = "android")]
+    let results = pool.install(|| {
+        scan_entries(&folder, cancel_token, on_progress, &processor)
+    });
+    #[cfg(not(target_os = "android"))]
+    let results = scan_entries(&folder, cancel_token, on_progress, &processor);
+
+    results
+}
+
+fn scan_entries<P, T, F>(
+    folder: P,
+    cancel_token: &Arc<AtomicBool>,
+    on_progress: &(dyn Fn(u32) + Send + Sync),
+    processor: &F,
+) -> Vec<T>
+where
+    P: AsRef<Path>,
+    T: Send,
+    F: Fn(&Path) -> T + Send + Sync,
+{
     let extensions: HashSet<String> = AUDIO_EXTENSIONS.iter().map(|s| s.to_string()).collect();
 
-    let walker = WalkDir::new(&folder).follow_links(true);
+    // Do NOT follow symlinks: a symlink loop makes the walker recurse forever
+    // and exhaust file descriptors. `max_open` caps concurrently open handles,
+    // which matters on mobile where the per-process limit is much lower.
+    let walker = WalkDir::new(folder).follow_links(false).max_open(16);
     let results = Mutex::new(Vec::new());
     let processed = AtomicU32::new(0);
 
@@ -47,24 +79,19 @@ where
             if cancel_token.load(Ordering::Relaxed) {
                 return None;
             }
-
             let entry = entry_result.ok()?;
-            let path = entry.path();
-
             if !entry.file_type().is_file() {
                 return None;
             }
-
+            let path = entry.path();
             let is_valid = path
                 .extension()
                 .and_then(|ext| ext.to_str())
                 .is_some_and(|ext| extensions.contains(&ext.to_lowercase()));
-
             if is_valid { Some(path) } else { None }
         })
         .for_each(|path| {
             let result = processor(&path);
-
             let count = processed.fetch_add(1, Ordering::Relaxed) + 1;
             results.lock().unwrap().push(result);
             on_progress(count);

@@ -40,7 +40,18 @@ pub struct StorageCleanResult {
 fn resolve(app: &AppHandle, name: &str) -> std::path::PathBuf {
     app.path()
         .resolve(name, BaseDirectory::AppData)
-        .unwrap_or_else(|_| app.path().app_data_dir().unwrap_or_default().join(name))
+        .unwrap_or_else(|_| {
+            // An empty PathBuf would make dir_size()/clear_dir() operate on the
+            // CURRENT WORKING DIRECTORY - a real risk of deleting user files.
+            // Fall back to the executable's directory instead, and never return
+            // a relative/empty path from here.
+            tracing::warn!("failed to resolve AppData/{name}, using exe directory");
+            std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+                .unwrap_or_else(|| std::env::temp_dir())
+                .join(name)
+        })
 }
 
 fn dir_size(path: &std::path::Path, count: &mut u64) -> u64 {
@@ -64,7 +75,12 @@ fn dir_size(path: &std::path::Path, count: &mut u64) -> u64 {
 
 #[tauri::command]
 pub fn storage_usage(app: AppHandle) -> StorageUsage {
-    let app_data = app.path().app_data_dir().unwrap_or_default();
+    let app_data = app.path().app_data_dir().unwrap_or_else(|_| {
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_else(|| std::env::temp_dir())
+    });
     let mut count = 0u64;
     let total = dir_size(&app_data, &mut count);
     // Count files for each category too, so the UI never shows a bare "0B"

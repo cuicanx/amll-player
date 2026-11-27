@@ -9,8 +9,31 @@ use super::model::{LyricSearchResult, SearchFilter, TtmlEntry};
 
 const BLOCK_MAGIC: [u8; 4] = *b"ttml";
 
+/// File bytes for the lyric index. mmap is fastest, but Android's FUSE/SAF
+/// filesystems (and some network mounts) reject mmap. Fall back to an owned
+/// Vec so lyric lookup keeps working there instead of failing wholesale.
+enum MappedData {
+    Mapped(Mmap),
+    Owned(Vec<u8>),
+}
+
+impl MappedData {
+    fn len(&self) -> usize {
+        match self {
+            Self::Mapped(m) => m.len(),
+            Self::Owned(v) => v.len(),
+        }
+    }
+    fn as_slice(&self) -> &[u8] {
+        match self {
+            Self::Mapped(m) => m.as_ref(),
+            Self::Owned(v) => v.as_ref(),
+        }
+    }
+}
+
 pub struct TtmlDbReader {
-    mmap: Mmap,
+    data: MappedData,
     path: std::path::PathBuf,
     modified: Option<std::time::SystemTime>,
 }
@@ -18,19 +41,34 @@ pub struct TtmlDbReader {
 impl TtmlDbReader {
     pub fn new(file_path: &std::path::Path) -> Result<Self> {
         let file = File::open(file_path)?;
-        let mmap = unsafe { Mmap::map(&file)? };
+        let data = match unsafe { Mmap::map(&file) } {
+            Ok(mmap) => MappedData::Mapped(mmap),
+            Err(err) => {
+                // FUSE/SAF on mobile can reject mmap; read into memory instead.
+                warn!(
+                    "mmap failed for {}: {err}; falling back to owned buffer",
+                    file_path.display()
+                );
+                let bytes = std::fs::read(file_path)?;
+                MappedData::Owned(bytes)
+            }
+        };
         let modified = std::fs::metadata(file_path)
             .and_then(|meta| meta.modified())
             .ok();
 
         info!(
-            "Mapped database file: {} ({} bytes)",
+            "Loaded lyric index: {} ({} bytes, {})",
             file_path.display(),
-            mmap.len()
+            data.len(),
+            match &data {
+                MappedData::Mapped(_) => "mmap",
+                MappedData::Owned(_) => "owned",
+            }
         );
 
         Ok(Self {
-            mmap,
+            data,
             path: file_path.to_path_buf(),
             modified,
         })
@@ -166,7 +204,7 @@ impl TtmlDbReader {
 
     fn iter_entries(&self) -> TtmlEntryIterator<'_> {
         TtmlEntryIterator {
-            mmap: &self.mmap,
+            data: &self.data,
             cursor: 0,
             current_block_entries: &[],
         }
@@ -220,7 +258,7 @@ fn extract_matched_lines(text: &str, keyword: &str, context_lines: usize) -> Vec
 }
 
 struct TtmlEntryIterator<'a> {
-    mmap: &'a Mmap,
+    data: &'a MappedData,
     cursor: usize,
     current_block_entries: &'a [Archived<TtmlEntry>],
 }
@@ -234,7 +272,7 @@ impl<'a> Iterator for TtmlEntryIterator<'a> {
             return Some(first);
         }
 
-        let total_size = self.mmap.len();
+        let total_size = self.data.len();
 
         loop {
             if self.cursor + 8 > total_size {
@@ -244,7 +282,7 @@ impl<'a> Iterator for TtmlEntryIterator<'a> {
                 return None;
             }
 
-            let magic = &self.mmap[self.cursor..self.cursor + 4];
+            let magic = &self.data.as_slice()[self.cursor..self.cursor + 4];
             if magic != BLOCK_MAGIC {
                 warn!("Invalid magic at offset {}, stopping", self.cursor);
                 return None;
@@ -252,7 +290,7 @@ impl<'a> Iterator for TtmlEntryIterator<'a> {
             self.cursor += 4;
 
             let mut len_bytes = [0u8; 4];
-            len_bytes.copy_from_slice(&self.mmap[self.cursor..self.cursor + 4]);
+            len_bytes.copy_from_slice(&self.data.as_slice()[self.cursor..self.cursor + 4]);
             let payload_len = u32::from_le_bytes(len_bytes) as usize;
             self.cursor += 4;
 
@@ -264,7 +302,7 @@ impl<'a> Iterator for TtmlEntryIterator<'a> {
                 return None;
             }
 
-            let payload = &self.mmap[self.cursor..self.cursor + payload_len];
+            let payload = &self.data.as_slice()[self.cursor..self.cursor + payload_len];
             self.cursor += payload_len;
 
             // safety: 歌词索引文件是我们自己生成的，并且有魔数验证

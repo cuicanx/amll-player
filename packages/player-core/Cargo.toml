@@ -42,6 +42,7 @@ reqwest = { version = "0.13", default-features = false, features = [
 # reqwest::get() on Android uses rustls-platform-verifier, which aborts without
 # JNI_OnLoad. Build a client with WebPKI roots instead (see player.rs).
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
+rustls-native-certs = "0.8"
 webpki-roots = "0.26"
 
 [dev-dependencies]

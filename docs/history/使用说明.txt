@@ -1,0 +1,200 @@
+================================================================
+ AMLL Player 版本一（Bug 修复版） 使用说明
+ 上游: https://github.com/amll-dev/amll-player  (main, 2026-09-20)
+================================================================
+
+※ 本目录已叠加「性能优化版」。性能优化的逐项说明、根因、
+  指标对照与复测清单见同目录的  性能优化说明.txt  ，
+  一键验证用 node v1-perf/tests/verify-all.cjs（8/8 组）。
+  下方【一】~【五】描述的是内嵌歌词 Bug 修复本身，两者互不冲突。
+
+【零、已产出可直接安装的成品包】（2026-11-13 追加）
+
+  已通过 GitHub Actions 云端构建出 Windows 安装包，放在上一层
+  目录的 releases/ 里：
+
+    AMLL.Player_0.0.1+1137_x64-setup.exe   7.5 MB  推荐，双击即装
+    AMLL.Player_0.0.1+1137_x64_en-US.msi   11 MB  备选
+
+  安装步骤、SHA-256 校验值、已知限制见 releases/安装说明.txt。
+
+  构建提交 53216b8c9bdbcc84a1f1c868b96d0c1c6e2ee410，
+  与本地 v1-bugfix/ 的修复内容完全一致。已核对：
+  在构建产物二进制中检索到新增模块 lyric_meta 的符号
+  （extract_embedded_lyric / normalize_meta_key / get_meta_ci /
+  resolve_lyric）以及被 LLVM 内联成寄存器立即数的歌词键名常量，
+  确认新代码确实编译进了成品。
+
+  构建结果：Windows x64 / Windows ARM64 / Linux x64 /
+  macOS x64 / macOS ARM64 / iOS 全部成功。
+  Android 失败，原因是上游依赖 ffmpeg_audio_sys v0.1.2 在为
+  aarch64-linux-android 生成 FFmpeg 绑定时报
+  "__float128 is not supported on this target"，属上游既有缺陷，
+  与本次歌词修复无关。
+
+  云端仓库：https://github.com/cuicanx/amll-player （fork）
+  预发布页：https://github.com/cuicanx/amll-player/releases/tag/main-player-dev
+
+【一、这个版本解决了什么】
+
+症状：音乐文件已内嵌歌词，但播放时不显示；必须进入「歌曲 ->
+元数据 -> 重新从文件中读取元数据」逐首手动操作才出现。
+
+根因（三条，编号对应下方修复项）：
+ 1. 主因 - 两条数据入口实现不一致。
+    通过「扫描文件夹 / 文件夹歌单刷新」入库时走
+    packages/player/src-tauri/src/db/scanner.rs::process_file，
+    该函数只用 find_lyric_file() 查同名外挂歌词文件，把已经打开的
+    AudioReader.metadata() 里的内嵌歌词整个丢弃，写进 songs 表的
+    lyric / lyric_format 都是空串。播放时 LocalMusicContext 的
+    LyricContext 从 db.songs.get(musicId) 读到空串，
+    useLyricParser 返回 hasLyrics=false，进而 setHideLyricView(true)。
+    而设置页那条路径调用 read_local_music_metadata -> build_audio_info
+    -> get_meta("lyrics")，能拿到内嵌歌词并写回数据库，于是"手动重读
+    就好了"。这正是症状的直接来源。
+ 2. 次因 - 元数据键名覆盖不全。ffmpeg_audio 0.2.0 的 extract_dict
+    原样保留 FFmpeg 的 AVDictionary 键名、不做归一化：ID3v2 常见
+    lyrics / USLT / USLT:eng / TXXX:LYRICS，FLAC/OGG 常见大写
+    LYRICS / UNSYNCED LYRICS，MP4 常见 ©lyr。原代码只认小写字面量
+    "lyrics"；scanner 里连 title/artist/album 都用了大小写敏感的
+    metadata.get("title")。
+ 3. 次因 - 歌词格式被硬编码为 "lrc"。内嵌 TTML / QRC / YRC / ESLRC /
+    LYS 时被强行交给 parseLrc()，解析出 0 行，等同于不显示。
+
+修复：
+ [F1] 新增零依赖共享模块 packages/player-core/src/lyric_meta.rs：
+      键名归一化（大小写/分隔符/语言后缀）、大小写不敏感取值、
+      内嵌歌词候选优先级排序（并显式排除 LYRICIST 等"作词者"字段）、
+      内容格式嗅探 resolve_lyric() 统一"外挂文件优先 / 内嵌兜底"。
+ [F2] scanner.rs 改用 resolve_lyric() 与 get_meta_ci()；
+      utils.rs::build_audio_info 改用同一套共享逻辑；
+      music_info.rs 用 detect_lyric_format() 取代硬编码 "lrc"。
+      => 新导入 / 重新扫描的歌曲入库即带歌词。
+ [F3] 播放时懒加载自愈：LocalMusicContext 在检测到 songs.lyric 为空
+      且是本地文件时，自动调用 readLocalMusicMetadata 回填数据库。
+      update_song 发出 db-row-changed -> useDbQuery 重新查询 ->
+      useLyricParser 渲染，同一次播放内即显示。
+      每首歌每次会话只尝试一次；无内嵌歌词时不写脏数据。
+      => 已经导入过的历史歌曲无需任何手动操作。
+ [F4] 设置页"重新从文件中读取元数据"不再硬写 "lrc"，改用嗅探结果。
+
+验证（本机实测，2026-11-13）：
+  - Rust 真实单元测试        22 / 22 通过（真实产品函数，WASI 执行）
+  - Rust 调用点类型契约检查   1 / 1  通过（真实签名 + 运行断言）
+  - Rust 语法解析检查         5 / 5  文件通过
+  - 前端跨模块回归测试       27 / 27 通过
+  - TS/TSX 语法/类型/契约    14 / 14 通过
+  - 一键汇总                 7 / 7  组通过
+ 合计 69 项断言 / 检查，0 失败。
+
+----------------------------------------------------------------
+【二、目录与入口清单】
+
+  工作区根/
+   ├ upstream/                上游原版快照（只读基线，用于对比）
+   ├ v1-bugfix/               ★ 版本一完整工程（可直接构建）
+   │   ├ packages/            改动后的源码
+   │   ├ tests/               ★ 全部验证脚本
+   │   └ 使用说明.txt         本文件
+   ├ v1-bugfix.patch          相对 upstream 的标准 unified diff
+   ├ .rust-tools/             隔离的 Rust 验证工具链（约 749 MB）
+   ├ .verify-tools/           隔离的 TS 验证工具（约 34 MB）
+   └ _archive/                分析过程的临时产物（已归档，非交付物）
+
+   注：两个 tools 目录只服务于一键验证，可整体删除，不影响
+   v1-bugfix/ 工程本身；删除后如需复现验证，运行 install 脚本重装。
+
+  验证入口（任选其一）：
+   A. 双击   v1-bugfix/tests/验证全部.cmd
+   B. 命令行 node v1-bugfix/tests/verify-all.cjs
+   C. 工具缺失时先 node v1-bugfix/tests/install-verify-tools.cjs
+
+  单个测试也可单独跑：
+   - node --experimental-wasi-unstable-preview1 v1-bugfix/tests/run-rust-tests.cjs
+   - node --experimental-strip-types v1-bugfix/tests/frontend-regression.test.mjs
+   - node v1-bugfix/tests/check-types.cjs
+
+----------------------------------------------------------------
+【三、分场景使用步骤】
+
+场景 1：只想验证改动是对的（不需要编译整个 App）
+  1) 双击「验证全部.cmd」
+  2) 看到 "总计: 7/7 组检查通过" 且末尾无 FAIL 即通过。
+
+场景 2：把修复应用到自己的 amll-player 仓库
+  1) cd <你的 amll-player 仓库根目录>
+  2) patch -p1 < <工作区>/v1-bugfix.patch
+     （Windows 无 patch 时，直接把 v1-bugfix/packages 覆盖过去，
+       或用 git apply -p1 v1-bugfix.patch）
+  3) 按「改动文件清单」核对 12 个文件。
+
+场景 3：构建并实际播放（需要 Rust + pnpm 完整开发环境）
+  1) 本机需 Rust stable、pnpm 11.7.0、Tauri 2 的系统依赖、
+     以及 FFmpeg 开发库（ffmpeg_audio_sys 构建需要）。
+  2) cd v1-bugfix && pnpm install
+  3) cd packages/player && pnpm tauri dev
+  4) 导入一首带内嵌歌词的本地音乐（FLAC/MP3/M4A 均可），直接播放。
+
+场景 4：老用户（库里已有大量无歌词记录）
+  不需要做任何事。修复后首次播放每首歌时会自动回填，
+  之后写入数据库，第二次起无任何额外开销。
+
+----------------------------------------------------------------
+【四、"是否完成"的判定】
+
+  ✅ 已完成（本版交付范围）：
+     - 源码修复 8 个文件（含 2 个新增模块）
+     - 可复现自动化验证 69 项，全部通过
+     - 补丁 + 完整工程 + 使用说明
+
+  ⚠ 未完成 / 不属于本版：
+     - 未在本机编译出可运行的 Tauri 桌面程序：本机无 Cargo/FFmpeg/
+       MSVC 链接器，完整构建条件不具备。验证采用「真实 Rust 单元
+       测试 + 真实调用点类型检查 + TS 语法/类型/契约检查」替代。
+     - 未做真机播放截图。
+     - 版本二（与 LX Music 联动）尚未实现，按你的要求留到下一步。
+
+  ▶ 必须人工复测（只有影响功能时才需要，请你在有构建环境时做）：
+     1. 用一首确实带内嵌歌词的本地文件，通过「扫描文件夹」导入，
+        不点任何设置，直接播放 -> 歌词应自动出现。
+     2. 用版本升级前就已存在的歌单（lyric 为空）直接播放
+        -> 歌词应自动出现，且控制台有「已自动恢复内嵌歌词」日志。
+     3. 内嵌 TTML 的文件 -> 应以逐字歌词呈现，而非空白。
+  ▶ 可选确认（纯显示层，不需要你复测，已由自动化覆盖）：
+     同名 .lrc 外挂文件仍优先于内嵌歌词；
+     无歌词文件不会被写入空数据；
+     设置页手动重读仍可用。
+
+----------------------------------------------------------------
+【五、改动文件清单（15 个 = 源码 8 + 验证脚本 7，另加本说明文件）】
+
+ 新增
+   packages/player-core/src/lyric_meta.rs        共享元数据/歌词解析
+   packages/player/src/utils/lyric-recovery.ts   自愈策略纯函数
+   tests/rust_typecheck.rs                      Rust 调用点类型契约
+   tests/run-rust-tests.cjs                     WASI 单元测试执行器
+   tests/frontend-regression.test.mjs            前端跨模块回归
+   tests/check-types.cjs                        TS/TSX 静态检查
+   tests/verify-all.cjs                         一键验证
+   tests/install-verify-tools.cjs               验证工具安装
+   tests/验证全部.cmd                            双击验证入口
+ 修改
+   packages/player-core/src/lib.rs              导出 lyric_meta 模块
+   packages/player-core/src/utils.rs            build_audio_info 共享化
+   packages/player/src-tauri/src/db/scanner.rs   ★ 扫描时读取内嵌歌词
+   packages/player/src-tauri/src/music_info.rs  格式嗅探 / 跳过空外挂
+   packages/player/src/components/LocalMusicContext/index.tsx  播放时自愈
+   packages/player/src/pages/song/metadata.tsx  不再硬编码 lrc
+
+----------------------------------------------------------------
+【六、版本二（LX Music 联动）预研备注】
+
+ 已确认上游背景：amll-player 是作者把原 BetterNCM 插件里的
+ Apple-Music-like Lyrics 歌词组件拆出来的独立 Tauri 程序；相关仓库
+ applemusic-like-lyrics（React/Vue 组件本体）、ws-protocol（WS 协议库）、
+ AMLL-WS-Connector（BetterNCM 插件实现）、amll-player-plugin-template
+ 均属同一组织 amll-dev。仓库内已有 WSProtocolMusicContext /
+ server.rs 的 WS 协议实现，是天然的联动衔接点。
+ 内嵌可行性、音源接管与播放状态同步机制将在版本二展开。
+
+================================================================

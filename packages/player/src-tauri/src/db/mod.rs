@@ -26,7 +26,12 @@ pub async fn init_database(app: &AppHandle) -> Result<DatabaseConnection, String
             .map_err(|e| format!("Failed to create database directory: {e}"))?;
     }
 
-    let db_url = format!("sqlite:{}?mode=rwc", db_path.display());
+    // '?' starts the query string and '#' the fragment in a URL. A sandbox
+    // path containing either would silently truncate the DB filename. Encode
+    // only those two - leaving ':' and '\\' intact keeps Windows drive paths
+    // working with sqlx's sqlite URL parser.
+    let path_str = db_path.to_string_lossy().replace('?', "%3F").replace('#', "%23");
+    let db_url = format!("sqlite:{path_str}?mode=rwc");
 
     let db = Database::connect(&db_url)
         .await

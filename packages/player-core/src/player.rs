@@ -467,6 +467,10 @@ impl AudioPlayer {
                 let http_client = {
                     let mut roots = rustls::RootCertStore::empty();
                     roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+                    // Honour enterprise/user-installed CAs from the system store.
+                    if let Ok(certs) = rustls_native_certs::load_native_certs() {
+                        let _ = roots.add_parsable_certificates(certs);
+                    }
                     let tls = rustls::ClientConfig::builder()
                         .with_root_certificates(roots)
                         .with_no_client_auth();
