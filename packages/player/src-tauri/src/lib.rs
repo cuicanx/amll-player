@@ -28,6 +28,9 @@ mod player;
 mod screen_capture;
 mod server;
 mod ttml_db;
+// The updater plugin is a desktop-only dependency (see Cargo.toml). Compiling
+// this module on Android/iOS would fail on `UpdaterExt` / `Updater`.
+#[cfg(not(mobile))]
 mod updater;
 mod utils;
 mod window;
@@ -295,7 +298,9 @@ pub fn run() {
             online::online_lyric,
             online::online_pic,
             online::dev_log,
+            #[cfg(not(mobile))]
             updater::updater_check,
+            #[cfg(not(mobile))]
             updater::updater_install,
             db::commands::update_song,
             db::commands::get_playlist_songs,

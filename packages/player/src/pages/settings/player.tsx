@@ -105,6 +105,7 @@ import {
 	preferredQualityAtom,
 	type PreferredQuality,
 	showStatJSFrameAtom,
+	swapLyricGlobalAtom,
 	taskbarLyricAlignSettingAtom,
 	taskbarLyricModeSettingAtom,
 	taskbarLyricThemeSettingAtom,
@@ -624,6 +625,17 @@ const LyricContentSettings = () => {
 					"仅上面两者启用后有效",
 				)}
 				configAtom={enableLyricSwapTransRomanLineAtom}
+			/>
+			<SwitchSettings
+				label={t(
+					"page.settings.lyricContent.swapMainTranslationGlobal.label",
+					"主译互换（全局强制）",
+				)}
+				description={t(
+					"page.settings.lyricContent.swapMainTranslationGlobal.description",
+					"开启后所有歌曲都显示译词为主行，优先于歌曲内的单独设置",
+				)}
+				configAtom={swapLyricGlobalAtom}
 			/>
 
 			<Box height="1em" />

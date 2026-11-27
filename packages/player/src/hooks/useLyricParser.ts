@@ -10,7 +10,7 @@ import {
 import chalk from "chalk";
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
-import { languageAtom, swapLyricMainTranslationAtom } from "../states/appAtoms";
+import { languageAtom, swapLyricGlobalAtom } from "../states/appAtoms";
 import { handleTTMLParsing } from "../utils/ttml-parser";
 
 const LYRIC_LOG_TAG = chalk.bgHex("#FF4444").hex("#FFFFFF")(" LYRIC ");
@@ -147,9 +147,9 @@ function mergeInlineBilingualLrc(lines: LyricLine[]): LyricLine[] {
 	const textOf = (line: LyricLine) =>
 		line.words.map((w) => w.word).join("").trim();
 
-	// Group rows by timestamp (±1ms for the classic 2-vs-3 digit rounding).
-	// Bilingual LRC files usually list ALL original lines first and ALL
-	// translations afterwards, so matching neighbours is not enough.
+	// Group rows by exact timestamp. Bilingual LRC files usually list ALL
+	// original lines first and ALL translations afterwards, so matching
+	// neighbours is not enough - a timestamp map is required.
 	const groups = new Map<number, LyricLine[]>();
 	for (const line of lines) {
 		const key = Math.round(line.startTime);
@@ -252,9 +252,13 @@ export const useLyricParser = (
 	translatedLrc?: string,
 	romanLrc?: string,
 	offsetMs = 0,
+	perSongSwap?: boolean | null,
 ): LyricParserResult => {
 	const displayLanguage = useAtomValue(languageAtom);
-	const swapMainTranslation = useAtomValue(swapLyricMainTranslationAtom);
+	const globalSwap = useAtomValue(swapLyricGlobalAtom);
+	// Global switch wins; otherwise the song's own choice decides. null means
+	// the song was never configured, which leaves the original line order.
+	const swapMainTranslation = globalSwap || perSongSwap === true;
 
 	return useMemo(() => {
 		if (!lyricStr || !format) {
@@ -392,6 +396,7 @@ export const useLyricParser = (
 		translatedLrc,
 		romanLrc,
 		offsetMs,
+		perSongSwap,
 		displayLanguage,
 		swapMainTranslation,
 	]);

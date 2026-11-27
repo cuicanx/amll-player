@@ -216,14 +216,24 @@ export const enableTaskbarLyricAtom = atomWithStorage(
 export const audioQualityDialogOpenedAtom = atom(false);
 
 /**
- * Display-only "swap main lyric / translation" toggle.
+ * Global "force swap main lyric / translation" switch (settings page).
  *
- * This is NOT song data: it never writes to the lyrics database. When enabled
- * the translated line is rendered as the large main line and the original
- * lyric becomes the sub line. It is a global playback preference so it is
- * available on every song without editing any lyric text.
+ * When ON it overrides every per-song choice. When OFF, each song uses its own
+ * `swapTranslation` value from the database (null = no swap). Kept as a
+ * separate key so existing users' per-song preferences are never overwritten.
  */
-export const swapLyricMainTranslationAtom = atomWithStorage(
+export const swapLyricGlobalAtom = atomWithStorage(
+	"amll-player.swapLyricGlobal",
+	false,
+);
+
+/**
+ * Legacy global toggle from older builds. Kept ONLY to migrate an existing
+ * user's choice into the new model: on first run its value is written as the
+ * per-song default for songs that have no explicit value. New code must not
+ * read this atom for rendering.
+ */
+export const swapLyricLegacyAtom = atomWithStorage(
 	"amll-player.swapLyricMainTranslation",
 	false,
 );

@@ -29,6 +29,7 @@ import {
 	showStatJSFrameAtom,
 } from "./states/appAtoms.ts";
 import { useInitializeWindow } from "./utils/useInitializeWindow.ts";
+import { platform } from "@tauri-apps/plugin-os";
 
 const ExtensionContext = lazy(() => import("./components/ExtensionContext"));
 const AMLLWrapper = lazy(() => import("./components/AMLLWrapper"));
@@ -40,6 +41,10 @@ function App() {
 	const musicContextMode = useAtomValue(musicContextModeAtom);
 	const isDarkTheme = useAtomValue(isDarkThemeAtom);
 	const hasBackground = useAtomValue(hasBackgroundAtom);
+	// Desktop-only integrations. The updater plugin, global shortcut plugin and
+	// taskbar-lyric bridge are not compiled on mobile (see Cargo.toml), so they
+	// must not be mounted there - mounting them would call missing commands.
+	const isDesktop = !["android", "ios"].includes(platform());
 
 	const migration = useMigration();
 
@@ -52,7 +57,7 @@ function App() {
 			{musicContextMode === MusicContextMode.Local && (
 				<LocalMusicContext key={MusicContextMode.Local} />
 			)}
-			{enableTaskbarLyric && <TaskbarLyricBridge />}
+			{isDesktop && enableTaskbarLyric && <TaskbarLyricBridge />}
 			{musicContextMode === MusicContextMode.WSProtocol && (
 				<WSProtocolMusicContext
 					key={MusicContextMode.WSProtocol}
@@ -60,8 +65,8 @@ function App() {
 				/>
 			)}
 
-			<UpdateContext />
-			<ShotcutContext />
+			{isDesktop && <UpdateContext />}
+			{isDesktop && <ShotcutContext />}
 			<ThemeManager />
 			<Suspense>
 				<ExtensionContext />

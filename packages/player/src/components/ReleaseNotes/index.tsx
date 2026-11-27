@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { FC, ReactNode } from "react";
+import { type FC, type ReactNode, useEffect, useState } from "react";
 import styles from "./index.module.css";
 
 type Block =
@@ -7,6 +7,7 @@ type Block =
 	| { type: "list"; ordered: boolean; items: string[] }
 	| { type: "paragraph"; text: string }
 	| { type: "quote"; text: string }
+	| { type: "code"; text: string; lang: string }
 	| { type: "divider" };
 
 const HEADING_RE = /^\s{0,3}(#{1,6})\s+(.*)$/;
@@ -15,31 +16,14 @@ const NUMBERED_RE = /^\s*\d+[.)]\s+(.*)$/;
 const DIVIDER_RE = /^\s*(-{3,}|\*{3,}|_{3,})\s*$/;
 const QUOTE_RE = /^\s*>\s?(.*)$/;
 
-/**
- * A short standalone line with no sentence punctuation is almost always a
- * section title in a hand-written changelog ("品牌", "F11 无边框全屏", …).
- * Git release bodies written as plain text relied on that visual convention
- * without any markup, and dropping them into one paragraph is what made the
- * notes look like an undifferentiated wall of text.
- */
-function looksLikeSectionTitle(line: string): boolean {
-	const text = line.trim();
-	if (!text) return false;
-	if (text.length > 24) return false;
-	// A line carrying inline markup is body text with emphasis, not a heading.
-	if (/\*\*|__|~~|`|\[[^\]]+\]\(/.test(text)) return false;
-	if (/[。.,，、:：;；!！?？)】\]]$/.test(text)) return false;
-	if (/^(latest|development|更新|本次)/i.test(text) && text.length > 10) {
-		return false;
-	}
-	return true;
-}
-
 function parse(body: string): Block[] {
 	const blocks: Block[] = [];
 	const lines = body.replace(/\r\n?/g, "\n").split("\n");
 	let paragraph: string[] = [];
 	let list: { ordered: boolean; items: string[] } | null = null;
+	let code: string[] | null = null;
+	let codeLang = "";
+	const FENCE_RE = /^\s*```\s*([A-Za-z0-9_+-]*)\s*$/;
 
 	const flushParagraph = () => {
 		if (paragraph.length === 0) return;
@@ -59,6 +43,25 @@ function parse(body: string): Block[] {
 
 	for (const raw of lines) {
 		const line = raw.replace(/\s+$/, "");
+		// Fenced code blocks take priority: their contents must not be parsed
+		// as headings, lists or emphasis even if they contain those patterns.
+		const fence = FENCE_RE.exec(line);
+		if (fence) {
+			if (code) {
+				blocks.push({ type: "code", text: code.join("\n"), lang: codeLang });
+				code = null;
+				codeLang = "";
+			} else {
+				flushAll();
+				code = [];
+				codeLang = fence[1] || "";
+			}
+			continue;
+		}
+		if (code) {
+			code.push(raw);
+			continue;
+		}
 		if (!line.trim()) {
 			flushAll();
 			continue;
@@ -105,14 +108,13 @@ function parse(body: string): Block[] {
 			continue;
 		}
 		flushList();
-		if (looksLikeSectionTitle(line)) {
-			flushParagraph();
-			blocks.push({ type: "heading", level: 3, text: line.trim() });
-			continue;
-		}
+		// Only real Markdown headings become headings. Previously a short
+		// sentence with no punctuation was guessed to be a title, which turned
+		// ordinary changelog lines into false section headers.
 		paragraph.push(line.trim());
 	}
 	flushAll();
+	if (code) blocks.push({ type: "code", text: code.join("\n"), lang: codeLang });
 	return blocks;
 }
 
@@ -199,6 +201,11 @@ export const ReleaseNotes: FC<ReleaseNotesProps> = ({
 	emptyHint,
 }) => {
 	const blocks = body ? parse(body) : [];
+	const collapsible = blocks.length > 8;
+	const [expanded, setExpanded] = useState(false);
+	// Reset the expand state when the release notes change (a new update check).
+	useEffect(() => setExpanded(false), [body]);
+
 	return (
 		<div className={styles.card}>
 			<div className={styles.cardHeader}>
@@ -211,7 +218,9 @@ export const ReleaseNotes: FC<ReleaseNotesProps> = ({
 				) : null}
 				{version ? <span className={styles.versionChip}>{version}</span> : null}
 			</div>
-			<div className={styles.body}>
+			<div
+				className={`${styles.body}${collapsible && !expanded ? ` ${styles.collapsed}` : ""}`}
+			>
 				{blocks.length === 0 ? (
 					<span className={styles.empty}>{emptyHint}</span>
 				) : (
@@ -233,6 +242,15 @@ export const ReleaseNotes: FC<ReleaseNotesProps> = ({
 									<p key={key} className={styles.quote}>
 										{renderInline(block.text, key)}
 									</p>
+								);
+							case "code":
+								return (
+									<pre key={key} className={styles.codeBlock}>
+										{block.lang ? (
+											<span className={styles.codeLang}>{block.lang}</span>
+										) : null}
+										<code>{block.text}</code>
+									</pre>
 								);
 							case "divider":
 								return <hr key={key} className={styles.divider} />;
@@ -261,6 +279,15 @@ export const ReleaseNotes: FC<ReleaseNotesProps> = ({
 					})
 				)}
 			</div>
+			{collapsible ? (
+				<button
+					type="button"
+					className={styles.toggle}
+					onClick={() => setExpanded((value) => !value)}
+				>
+					{expanded ? "收起" : "展开全部"}
+				</button>
+			) : null}
 		</div>
 	);
 };

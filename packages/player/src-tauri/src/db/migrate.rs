@@ -131,6 +131,9 @@ pub async fn migrate_songs_batch(
             cover_path: Set(cover_path),
             modified_at: Set(None),
             lyric_offset_ms: Set(item.lyric_offset_ms),
+            // The legacy Dexie export has no per-song swap flag; leave it unset
+            // so the global setting applies until the user chooses otherwise.
+            swap_translation: Set(None),
         };
 
         match song::Entity::insert(active)
@@ -148,6 +151,7 @@ pub async fn migrate_songs_batch(
                         song::Column::RomanLrc,
                         song::Column::CoverPath,
                         song::Column::LyricOffsetMs,
+                        song::Column::SwapTranslation,
                     ])
                     .to_owned(),
             )

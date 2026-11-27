@@ -24,6 +24,9 @@ pub struct Model {
     /// Per-song lyric timing correction in milliseconds. Positive values show
     /// lyrics later; negative values show them earlier.
     pub lyric_offset_ms: Option<i32>,
+    /// Per-song override for swapping the main and translated lyric lines.
+    /// NULL = no explicit choice (fall back to the global setting).
+    pub swap_translation: Option<bool>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

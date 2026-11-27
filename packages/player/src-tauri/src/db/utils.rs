@@ -88,6 +88,8 @@ pub async fn upsert_song(
                     song::Column::RomanLrc,
                     song::Column::CoverPath,
                     song::Column::ModifiedAt,
+                    song::Column::LyricOffsetMs,
+                    song::Column::SwapTranslation,
                 ])
                 .to_owned(),
         )

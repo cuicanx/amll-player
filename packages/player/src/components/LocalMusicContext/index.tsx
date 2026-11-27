@@ -296,6 +296,7 @@ const LyricContext: FC = () => {
 		song?.translatedLrc ?? undefined,
 		song?.romanLrc ?? undefined,
 		song?.lyricOffsetMs ?? 0,
+		song?.swapTranslation ?? null,
 	);
 
 	useEffect(() => {

@@ -1,6 +1,7 @@
 import "./styles.css";
 import "react-toastify/dist/ReactToastify.css";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { platform } from "@tauri-apps/plugin-os";
 import { Provider } from "jotai";
 import { createRoot } from "react-dom/client";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
@@ -31,50 +32,56 @@ const ErrorRender = (props: FallbackProps) => {
 	);
 };
 
-addEventListener("on-system-titlebar-click-close", async () => {
-	const win = getCurrentWindow();
-	await win.close();
-});
+// Desktop-only window chrome. Mobile WebViews have no resizable window and
+// calling getCurrentWindow()/maximize() there throws at module load time.
+if (!["android", "ios"].includes(platform())) {
+	addEventListener("on-system-titlebar-click-close", async () => {
+		const win = getCurrentWindow();
+		await win.close();
+	});
 
-addEventListener("on-system-titlebar-click-resize", async () => {
+	addEventListener("on-system-titlebar-click-resize", async () => {
+		const win = getCurrentWindow();
+		if (await win.isMaximizable()) {
+			if (await win.isMaximized()) {
+				await win.unmaximize();
+				setSystemTitlebarResizeAppearance(
+					SystemTitlebarResizeAppearance.Maximize,
+				);
+			} else {
+				await win.maximize();
+				setSystemTitlebarResizeAppearance(
+					SystemTitlebarResizeAppearance.Restore,
+				);
+			}
+		}
+	});
+
 	const win = getCurrentWindow();
-	if (await win.isMaximizable()) {
+	async function checkWindow() {
 		if (await win.isMaximized()) {
-			await win.unmaximize();
-			setSystemTitlebarResizeAppearance(
-				SystemTitlebarResizeAppearance.Maximize,
-			);
-		} else {
-			await win.maximize();
 			setSystemTitlebarResizeAppearance(SystemTitlebarResizeAppearance.Restore);
+		} else {
+			setSystemTitlebarResizeAppearance(SystemTitlebarResizeAppearance.Maximize);
 		}
 	}
-});
+	void checkWindow();
+	initWindowResizeHandling();
+	// PERF: onResized fires at drag frequency. Mark the document so CSS can drop
+	// layout transitions while dragging, and coalesce the async isMaximized()
+	// check to one run after the drag settles.
+	let resizeSettleTimer: ReturnType<typeof setTimeout>;
+	win.onResized(() => {
+		markWindowResizing();
+		clearTimeout(resizeSettleTimer);
+		resizeSettleTimer = setTimeout(() => void checkWindow(), 120);
+	});
 
-const win = getCurrentWindow();
-async function checkWindow() {
-	if (await win.isMaximized()) {
-		setSystemTitlebarResizeAppearance(SystemTitlebarResizeAppearance.Restore);
-	} else {
-		setSystemTitlebarResizeAppearance(SystemTitlebarResizeAppearance.Maximize);
-	}
+	addEventListener("on-system-titlebar-click-minimize", async () => {
+		const win = getCurrentWindow();
+		await win.minimize();
+	});
 }
-checkWindow();
-initWindowResizeHandling();
-// PERF: onResized fires at drag frequency. Mark the document so CSS can drop
-// layout transitions while dragging, and coalesce the async isMaximized()
-// check to one run after the drag settles.
-let resizeSettleTimer: ReturnType<typeof setTimeout>;
-win.onResized(() => {
-	markWindowResizing();
-	clearTimeout(resizeSettleTimer);
-	resizeSettleTimer = setTimeout(checkWindow, 120);
-});
-
-addEventListener("on-system-titlebar-click-minimize", async () => {
-	const win = getCurrentWindow();
-	await win.minimize();
-});
 
 /**
  * Run the scheduled online-cache cleanup once per application start.

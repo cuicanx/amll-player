@@ -1,653 +1,657 @@
 {
-  "amll": {
-    "audioQuality": {
-      "channels": "音频通道数量",
-      "codec": "Audio codec",
-      "sampleFormat": "Sample format",
-      "sampleRate": "Sample rate",
-      "title": "Audio Quality Details",
-      "subtitle": "Decoding parameters of the current track",
-      "channelUnit": "ch"
-    },
-    "contextMenu": {
-      "editMusicOverrideMessage": "Edit Track Override Data",
-      "exitLyricPage": "Exit Lyrics Page",
-      "forwardSong": "Next Song",
-      "openRecorder": "打开捕获面板",
-      "openScreenshotTool": "打开截图工具",
-      "pauseOrResume": "Pause / Resume",
-      "play": "播放",
-      "rewindSong": "Previous Song",
-      "toggleFullscreen": "Fullscreen / Exit fullscreen",
-      "toggleLyrics": "Lyrics",
-      "windowAlwaysOnTop": "窗口置顶",
-      "enterFullscreen": "Enter fullscreen",
-      "exitFullscreen": "Exit fullscreen"
-    },
-    "loadAudioError": "The player backend encountered an error when loading the audio file:\n{error}",
-    "migrationDialog": {
-      "completedDesc": "Successfully imported {count} items.",
-      "completedDescDefault": "Migration completed.",
-      "completedDescWithFailures": "Successfully imported {count} items, {failed} failed.",
-      "completedTitle": "Migration Complete",
-      "deleteOldData": "Delete",
-      "deleteOldDataLabel": "Delete legacy data to free up disk space? You will not be able to use the old version's data.",
-      "deleteOldDataOnSkip": "Also delete legacy data",
-      "description": "Legacy AMLL Player playlist data detected. Would you like to migrate?",
-      "doNotClose": "Do not close the app during migration",
-      "dontAskAgain": "Don't ask again",
-      "errorListTitle": "The following items failed to migrate:",
-      "failedDesc": "An error occurred during migration:",
-      "failedItems": "（{count} items failed）",
-      "failedRetryHint": "You can retry next time you launch the app.",
-      "failedTitle": "Migration Failed",
-      "keepOldData": "Keep",
-      "phaseDone": "Migration complete",
-      "phasePlaylists": "Migrating playlists",
-      "phaseSongs": "Migrating songs",
-      "preparing": "Preparing",
-      "progressPlaylists": "Playlists {current}/{total}",
-      "progressSongs": "Songs {current}/{total}",
-      "skip": "Skip",
-      "start": "Start Migration",
-      "summary": "Will migrate {songs} songs and {playlists} playlists.",
-      "title": "Data Migration"
-    },
-    "openMenuViaRightClick": "Please right-click anywhere to open menu",
-    "qualityTag": {
-      "hires": "Hi-Res Lossless",
-      "lossless": "Lossless"
-    },
-    "ttmlImportDialog": {
-      "noResults": "No results.",
-      "openButtonLabel": "Search / Import lyrics from AMLL TTML DB",
-      "searchInput": {
-        "placeholder": "Search for songs, lyrics, artists......"
-      },
-      "supportText": "AMLL TTML DB is a free and open-source lyrics' database built by the AMLL community. Want to contribute your lyrics to AMLL TTML DB? Head over to the <1>GitHub repository</1> to learn more on how to submit!",
-      "sync": {
-        "empty": "Lyrics database is empty",
-        "error": "Sync error: {error}",
-        "failed": "Sync failed: {error}",
-        "skipped": "Lyrics database is up to date",
-        "updated": "Updated {count} lyrics"
-      },
-      "tip": "Type your search keywords above, and click on a suggestion to import the lyrics into the database directly.",
-      "title": "Search / Import lyrics from AMLL TTML DB"
-    }
-  },
-  "bottom_lyric": {
-    "lyricAuthor": "Lyrics by:",
-    "songWriter": "Written by:"
-  },
-  "common": {
-    "dialog": {
-      "cancel": "Cancel",
-      "close": "Close",
-      "confirm": "Confirm",
-      "filter": {
-        "all": "All files (*.*)",
-        "js": "JavaScript files (*.js)"
-      },
-      "save": "Save"
-    },
-    "page": {
-      "back": "Back"
-    },
-    "settings": "设置"
-  },
-  "error": {
-    "backToMainPage": "回到主页",
-    "copyError": "复制错误信息",
-    "desc0": "An error occurred during execution. Please try refreshing the page. If the issue persists, please contact the developer.",
-    "desc1": "If you know how to debug, you can see more precise error messages in the developer console.",
-    "errorDetail": "Error",
-    "reloadPage": "Reload Page",
-    "title": "An error occurred"
-  },
-  "extension": {
-    "error": {
-      "invaildPluginFile": "Invalid Plugin File",
-      "missingDependency": "Missing dependencies",
-      "missingMetadata": "Missing required metadata",
-      "pluginIdConflict": "Plugin ID conflict"
-    },
-    "inject": {
-      "error": {
-        "calloutText": "Extension {id} encountered an error while injecting components/functions into the {injectPointName} element:",
-        "toastText": "Extension {id} encountered an error while injecting components/functions into the {injectPointName} element:\n{error}"
-      }
-    }
-  },
-  "name": "",
-  "newPlaylist": {
-    "buttonLabel": "New Playlist",
-    "dialog": {
-      "name": "Playlist Name",
-      "namePlaceholder": "Playlist Title",
-      "scanFailed": "Scan failed: {error}",
-      "scanning": "Scanning… 0 songs found",
-      "scanningProgress": "Scanning… {count} songs found",
-      "scanSuccess": "{imported} songs imported, {failed} failed",
-      "selectFolder": "Select a folder to scan",
-      "title": "New Playlist"
-    },
-    "mode": {
-      "empty": "Empty Playlist",
-      "folder": "Add from Folder"
-    }
-  },
-  "page": {
-    "about": {
-      "updateProgress": "Downloading update… {percent}%",
-      "updateError": "Update failed: {error}",
-      "updateRetry": "Retry",
-      "updateManualHint": "Failed repeatedly - download the installer manually from the release page",
-      "updateManualDownload": "Open release page",
-      "upstreamAvailable": "Upstream has a newer build ({version}) - view upstream release",
-      "description": "Apple Music-like Lyrics Player",
-      "upstream": "Based on the upstream AMLL (Apple Music-like Lyrics) project",
-      "maintainerLink": "Main maintainer: cuicanx (GitHub)",
-      "releaseLink": "Releases: cuicanx/amll-player",
-      "contributorsTitle": "Contributors",
-      "credits": "This edition is mainly maintained and contributed by cuicanx",
-      "downloading": "Downloading updates…… {progressText}",
-      "installing": "Installing update, player will restart, wait a minute...",
-      "installUpdate": "Install this update",
-      "loadingContributors": "Loading contributors…",
-      "newVersion": "Available update from {currentVersion} to {nextVersion}",
-      "subtitle": "About",
-      "updating": "Player will restart after update, hold on a second....",
-      "maintainerRole": "Maintainer",
-      "otherContributors": "Other contributors",
-      "noOtherContributors": "No other contributors yet",
-      "releaseNotes": "What's new",
-      "releaseNotesEmpty": "This release has no notes attached.",
-      "updatePreparing": "Connecting to the update source…"
-    },
-    "amll-dev": {
-      "title": "Apple Music Like Lyrics Developer Page",
-      "warning": "This page is for develop usage only, use it at your own risk! (Chinese only)"
-    },
-    "main": {
-      "loadingPlaylist": "Loading playlist",
-      "menu": {
-        "asWSProtocolReceiver": "As WS Protocol Receiver",
-        "asWSProtocolSenderWIP": "As WS Protocol Sender (On development)",
-        "enterWSProtocolMode": "Start WS Protocol mode",
-        "settings": "Settings"
-      },
-      "noPlaylistTip": "Nothing is here, try to create something?",
-      "playlistCard": {
-        "createTime": "Created at {createTime}",
-        "songCount": "{songAmount} Songs"
-      },
-      "playlistMenu": {
-        "delete": "Delete",
-        "play": "播放此列表",
-        "playShuffled": "以乱序播放此列表"
-      },
-      "updateAvailableTag": "Update available"
-    },
-    "playlist": {
-      "addLocalMusic": {
-        "allFiles": "All Files",
-        "dialog": {
-          "failedDescription": "The following {count, plural, other {#}} failed to be added:",
-          "failedTitle": "Some songs failed to import"
-        },
-        "filterName": "Audio File",
-        "label": "Add Music From Disk",
-        "toast": {
-          "allFailed": "{errored, plural, other {#}} songs failed to be added",
-          "parsingMusicMetadata": "Parsing metadata to add your track into playlist ({current, plural, other {#}} / {total, plural, other {#}})",
-          "partiallyFailed": "{succeed, plural, =0 {No song is} one {A song is} other {# songs}} added, but {errored, plural, =0 {no song is} one {a song is} other {# songs are}} failed to be added",
-          "success": "{count, plural, other {#}} song(s) added"
-        }
-      },
-      "cover": {
-        "changeCoverToAuto": "Use automatic cover",
-        "mediaFiles": "Media Files",
-        "uploadCoverImage": "Upload your own cover art"
-      },
-      "music": {
-        "dropdown": {
-          "editMusicOverrideData": "Edit Track Override Data",
-          "playMusic": "Play",
-          "removeFromPlaylist": "Delete from Playlist"
-        },
-        "unknownSongName": "Unknown Music ID {id}"
-      },
-      "playAll": "Play All",
-      "refresh": {
-        "failed": "Refresh failed: {error}",
-        "label": "Refresh",
-        "loading": "Refreshing playlist…",
-        "scanning": "Scanning… {count} files",
-        "success": "Refresh complete: {added} added, {updated} updated, {removed} removed"
-      },
-      "settings": {
-        "addFolder": "Add Linked Folder",
-        "confirmRemoveFolderDescription": "Are you sure you want to remove this folder? Songs added by folder scanning will be removed from the playlist. Manually added songs are not affected.",
-        "confirmRemoveFolderTitle": "Remove Linked Folder",
-        "cover": "Playlist Cover",
-        "createdAt": "Created At",
-        "label": "Settings",
-        "linkedFolders": "Linked Folders",
-        "linkFolderFailed": "Link failed: {error}",
-        "linkFolderSuccess": "Linked successfully: {imported} songs imported, {failed} failed",
-        "name": "Playlist Name",
-        "noLinkedFolders": "No folders linked to this playlist",
-        "openFolder": "Open",
-        "openFolderFailed": "Failed to open folder: {error}",
-        "playlistInfo": "Playlist Info",
-        "removeFolder": "Remove",
-        "scanningFolder": "Scanning folder…",
-        "scanningProgress": "Scanning… {count} songs found",
-        "selectFolder": "Select a folder to link",
-        "songCount": "Song Count",
-        "title": "Playlist Settings",
-        "unlinkFolderFailed": "Remove failed: {error}",
-        "unlinkFolderSuccess": "Linked folder removed",
-        "updatedAt": "Updated At"
-      },
-      "shufflePlayAll": "Shuffle",
-      "totalMusicLabel": "{count, plural, other {#}} song(s)"
-    },
-    "search": {
-      "filter": {
-        "albumName": "Album name: {keyword}",
-        "artistName": "Artist name: {keyword}",
-        "candidate": {
-          "albumName": "The album name contains {keyword}",
-          "artistName": "The artist name contains {keyword}",
-          "lyricContent": "The lyrics contain {keyword}",
-          "playlistName": "The playlist name contains {keyword}",
-          "songName": "The song name contains {keyword}"
-        },
-        "lyricContent": "Lyrics: {keyword}",
-        "placeholder": "Search for playlists, song titles, artists, and more……",
-        "playlistName": "Playlist name: {keyword}",
-        "songName": "Song name: {keyword}"
-      },
-      "noPlaylistResult": "No playlists found!",
-      "noSongResult": "No songs found!",
-      "placeholder": "Search for a song, artist, album, lyrics, playlists, or more",
-      "searchingPlaylist": "搜索播放列表中",
-      "searchPlaylistResultAmount": "搜索到 {amount} 个播放列表",
-      "searchSongResultAmount": "Found {amount} songs"
-    },
-    "settings": {
-      "general": {
-        "f11Fullscreen": {
-          "description": "When enabled, F11 toggles borderless fullscreen. Disabled by default.",
-          "label": "Enable F11 borderless fullscreen"
-        },
-        "displayLanguage": {
-          "cimode": "Localization ID",
-          "label": "Display Language"
-        },
-        "subtitle": "General",
-        "theme": {
-          "auto": "自动",
-          "dark": "深色",
-          "description": "选择应用的外观主题",
-          "label": "界面主题",
-          "light": "浅色"
-        },
-        "windowAlwaysOnTop": {
-          "description": "将应用窗口设置为始终置顶",
-          "label": "启用窗口置顶"
-        }
-      },
-      "lyricAppearance": {
-        "advanceLyricDynamicLyricTime": {
-          "description": "Advance the initial time sequence of the original lyrics line, so that the lyrics effect starts playing (word by word) just after the lyrics scroll ends. This behavior is closer to the effect of Apple Music, but in most cases, it will cause the lyrics at the end of the line to be switched to the next line before they have been played completely.",
-          "label": "Advance Lyric Timing"
-        },
-        "enableLyricLineBlurEffect": {
-          "description": "Significantly impacts performance. If you encounter performance issues, try to disable this option. Enabled by default.",
-          "label": "Enable Text Blur Effect"
-        },
-        "enableLyricLineScaleEffect": {
-          "description": "Does not impact performance. Non-playing lyrics lines will be slightly reduced in size. Enabled by default",
-          "label": "Enable Text Zooming Effect"
-        },
-        "enableLyricLineSpringAnimation": {
-          "description": "Significantly impacts performance. If you encounter any performance issues, try to disable this option. Enabled by default.",
-          "label": "Enable Text Spring Animation Effect"
-        },
-        "lyricFontSize": {
-          "descriptionResponsive": "设置歌词的字体大小",
-          "label": "歌词字体大小",
-          "menu": {
-            "extra_large": "极大",
-            "extra_small": "极小",
-            "huge": "超大",
-            "large": "大",
-            "medium": "中",
-            "small": "小",
-            "tiny": "超小"
-          }
-        },
-        "lyricWordFadeWidth": {
-          "description": "Adjust the gradient transition width of each word in lyrics, measured in the width of a full width character, with a default value of 0.5.\nIf you want to simulate the effect of Apple Music for Android, you can set it to 1.\nIf you want to simulate the effect of Apple Music for iPad, you can set it to 0.5.\nTo turn off the gradient transition effect of each word in lyrics, you can set it to 0.",
-          "label": "Gradient Transition Width of Each Word"
-        },
-        "subtitle": "Lyrics Appearance"
-      },
-      "lyricBackground": {
-        "backgroundRenderer": {
-          "label": "PixiJS Renderer"
-        },
-        "lyricBackgroundColor": {
-          "description": "等同于放入 background 样式的字符串值，默认为 #111111",
-          "label": "CSS 背景属性值"
-        },
-        "lyricBackgroundFPS": {
-          "description": "High impact on performance, but the actual cost is not significant. If you encounter performance issues, try to reduce this value. The default value is 60.",
-          "label": "Maximum FPS for Background Renderer"
-        },
-        "lyricBackgroundRenderScale": {
-          "description": "High impact on performance, but the actual cost is not significant. If you encounter performance issues, try to reduce this value. The default value is 1 which means rendering pixel by pixel.",
-          "label": "Background Resolution"
-        },
-        "lyricBackgroundStaticMode": {
-          "description": "Keep the background static except when switching song. If you encounter performance issues, consider enabling this option.\nNote: Enabling this option will disable the background bouncing effect.",
-          "label": "Static Mode"
-        },
-        "menu": {
-          "cssBackground": "CSS 背景",
-          "meshGradientRenderer": "Mesh Gradient Renderer",
-          "pixiRenderer": "PixiJS Renderer"
-        },
-        "subtitle": "Lyrics Page Background Type"
-      },
-      "lyricContent": {
-        "bottomLyricMode": {
-          "description": "Control the display of song writers and lyric authors information at the bottom of the lyrics.",
-          "label": "Bottom Lyric Info Display",
-          "menu": {
-            "none": "None",
-            "onlyLyricAuthors": "Only Lyric Authors",
-            "onlySongWriters": "Only Song Writers",
-            "preferLyricAuthors": "Prefer Lyric Authors",
-            "preferSongWriters": "Prefer Song Writers"
-          }
-        },
-        "enableLyricRomanLine": {
-          "label": "Show Romanized Translation"
-        },
-        "enableLyricSwapTransRomanLine": {
-          "description": "Only valid when the above two are enabled.",
-          "label": "Swap Translation and Romanized Translation"
-        },
-        "enableLyricTranslationLine": "Show Translation",
-        "subtitle": "Lyrics"
-      },
-      "lyricFont": {
-        "fontFamily": {
-          "description": "Font name separated by comma, equals to font-family property in CSS. Leave blank to use default settings.",
-          "label": "Font Family"
-        },
-        "fontPreview": {
-          "defaultText": "Font Preview",
-          "label": "Font Preview"
-        },
-        "fontWeight": {
-          "description": "Equals to the font-weight property in CSS, set to 0 to be controlled by system. 600 is recommended",
-          "label": "Font Weight"
-        },
-        "letterSpacing": {
-          "description": "Equals to the letter-spacing in CSS, leave blank to use the default value.",
-          "label": "Letter Spacing"
-        },
-        "subtitle": "Lyrics Font Settings",
-        "tip": "This option only affect LYRIC's font but other parts."
-      },
-      "musicInfoAppearance": {
-        "fftDataRange": {
-          "description": "The unit is Hertz, which will affect the display effect of audio visualization and background jumping rhythm effect.",
-          "label": "Audio visualization frequency range"
-        },
-        "playerControlsType": {
-          "description": "Components under the track information.",
-          "label": "Playback Controls Type",
-          "menu": {
-            "controls": "Playback Controls",
-            "fft": "Line-shaped Audio Visualizer",
-            "none": "None"
-          }
-        },
-        "showBottomControl": {
-          "description": "This is the buttons at bottom in horizontal view, or buttons under playback buttons in vertical view.",
-          "label": "Show Buttons at the Bottom"
-        },
-        "showMusicAlbum": {
-          "description": "Enabling all three options simultaneously may not be aesthetically pleasing.",
-          "label": "Show Album Title"
-        },
-        "showMusicArtists": {
-          "label": "Show Artists"
-        },
-        "showMusicName": {
-          "label": "Show Song Title"
-        },
-        "showVolumeControl": {
-          "label": "Show Volume Control"
-        },
-        "subtitle": "Music information appearance",
-        "verticalCoverLayout": {
-          "description": "Layout mode when hiding lyric component:\n- Automatic: use immersive cover layout when track cover is a video\n- Default: force default cover layout\n- Immersive: force immersive cover layout",
-          "label": "Vertical Cover Layout Mode",
-          "menu": {
-            "auto": "Automatic",
-            "forceImmersive": "Force Immersive Layout",
-            "forceNormal": "Force Normal Layout"
-          }
-        }
-      },
-      "others": {
-        "enterAmllDevPage": "Development tools",
-        "restartProgram": "Restart player",
-        "showStatJSFrame": {
-          "description": "Show fps, frame time, memory [Chromium only]. Less impact of performance.",
-          "label": "Show performance statics"
-        },
-        "subtitle": "Others"
-      },
-      "smtc": {
-        "enableMediaControls": {
-          "description": "目前只支持 Windows 的 SMTC",
-          "label": "启用内置播放器的媒体控件"
-        }
-      },
-      "taskbarLyric": {
-        "align": {
-          "auto": "Auto",
-          "description": "Align direction of the taskbar lyric",
-          "label": "Align direction",
-          "left": "Left",
-          "right": "Right"
-        },
-        "enable": {
-          "description": "Display the lyrics of the currently playing song on the Windows taskbar.",
-          "label": "Enable taskbar lyrics"
-        },
-        "mode": {
-          "auto": "Auto",
-          "double": "Double Line",
-          "label": "Number of lines displayed",
-          "single": "Single Line"
-        },
-        "openDevtools": "Open DevTools",
-        "subtitle": "Taskbar Lyrics",
-        "theme": {
-          "auto": "Follow taskbar",
-          "dark": "Dark",
-          "description": "Overrides the color theme of the taskbar lyric",
-          "label": "Theme setting",
-          "light": "Light"
-        }
-      },
-      "contextMenu": {
-        "subtitle": "Right-click menu",
-        "tip": "Choose which entries appear in the playback page's right-click menu. Disabled entries are hidden.",
-        "reset": "Reset to default",
-        "prevSong": "Previous song",
-        "prevSongDesc": "Show “Previous song” in the menu",
-        "playPause": "Play / Pause",
-        "playPauseDesc": "Show “Play / Pause” in the menu",
-        "nextSong": "Next song",
-        "nextSongDesc": "Show “Next song” in the menu",
-        "fullscreen": "Enter / Exit fullscreen",
-        "fullscreenDesc": "Show the fullscreen entry (requires F11 fullscreen in General)",
-        "alwaysOnTop": "Always on top",
-        "alwaysOnTopDesc": "Show “Always on top” in the menu",
-        "showLyrics": "Show lyrics",
-        "showLyricsDesc": "Show “Show lyrics” in the menu",
-        "editSongInfo": "Edit song override",
-        "editSongInfoDesc": "Show “Edit song override” in the menu",
-        "recordPanel": "Open capture panel",
-        "recordPanelDesc": "Show “Open capture panel” in the menu",
-        "screenshot": "Open screenshot tool",
-        "screenshotDesc": "Show “Open screenshot tool” in the menu",
-        "exitLyricPage": "Exit lyric page",
-        "exitLyricPageDesc": "Show “Exit lyric page” in the menu"
-      },
-      "storage": {
-        "subtitle": "Storage manager",
-        "tip": "Shows the disk space used by the app. Cleaning removes only disposable caches and old logs - your library, playlists, lyric database and extensions are never touched.",
-        "total": "Total used",
-        "cache": "Cache (covers)",
-        "logs": "Logs",
-        "musicCache": "Audio cache",
-        "cleanAll": "Clean all",
-        "cleanCache": "Clean cache",
-        "cleanLogs": "Clean logs",
-        "refresh": "Refresh",
-        "cleaned": "Removed {count} files, freed {size}",
-        "onlineCache": "Online song cache",
-        "onlineCacheDetail": "Downloaded online song audio and covers",
-        "onlineCacheCleaned": "Cleaned {count} online cache files, freed {size}",
-        "autoClear": "Automatically clear online song cache",
-        "autoClearDetail": "Online song cache and covers unused for longer than the selected period are deleted automatically",
-        "autoClearNever": "Never",
-        "autoClearDays": "{count} days",
-        "autoClearDone": "Automatically cleaned {count} files, freed {size}"
-      },
-      "logLevel": {
-        "label": "Startup log level",
-        "description": "Choose how much detail to record on the next launch. Restart the app to apply.",
-        "debug": "Debug",
-        "normal": "Normal",
-        "off": "Off",
-        "debugHint": "Most verbose, for diagnosing problems; logs grow quickly.",
-        "normalHint": "Default; records normal operation and important warnings.",
-        "offHint": "No logging; saves disk space but leaves no records when something goes wrong."
-      }
-    },
-    "song": {
-      "basic": {
-        "musicDuration": "Duration",
-        "musicFilePath": "File Path",
-        "musicId": "Music ID",
-        "tabs": {
-          "basic": "Basics",
-          "lyric": "Lyrics",
-          "metadata": "Metadata"
-        }
-      },
-      "lyric": {
-        "importFromFile": "Import lyrics from file",
-        "lyricData": "Lyrics Data",
-        "lyricFormat": {
-          "eslrc": "LyRiC format used by ESLyric (LRC)",
-          "lrc": "LyRiC format (LRC)",
-          "lys": "Lyricify Syllable lyrics",
-          "none": "No Lyrics",
-          "qrc": "QRC lyrics",
-          "ttml": "TTML lyrics",
-          "yrc": "YRC Lyrics"
-        },
-        "lyricFormatLabel": "Lyric format",
-        "romanLyricDataTip": "Paste LyRiC type of lyric content here, we will pair as Romanized by timestamp if they are the same or similar.",
-        "translationLyricData": "Translated Lyrics",
-        "translationLyricDataTip": "Paste LyRiC type of lyric content here, we will pair as translation by timestamp if they are the same or similar.",
-        "ttmlLyricTip": "TTML lyric could contain translation and Romanized translation in a single file.",
-        "swapMainTranslation": "Swap main / translation"
-      },
-      "metadata": {
-        "changeCoverToImageOrVideo": "Change cover image as image / video",
-        "importLyricFromFile": "Import lyrics from file",
-        "overrideSafeTip": "Properties in this page will not override into source file.",
-        "reloadMetadataFromFile": "Reload Metadata from Audio File",
-        "songAlbum": "Album",
-        "songArtists": "Artists",
-        "songName": "Title"
-      }
-    },
-    "ws": {
-      "recv": {
-        "connectedClients": "Connected client(s)",
-        "noClients": "No clients connected",
-        "openNetworkAddress": "Open network address",
-        "tip": "When connect to client, you may switch track once to synchronous data. If you want to open to external network, please set host to \"0.0.0.0\"."
-      }
-    },
-    "online": {
-      "modeTag": "Online mode",
-      "placeholder": "Search online songs, press Enter to start...",
-      "search": "Search",
-      "searchHistory": "Search history",
-      "resultCount": "{count} results",
-      "empty": "No results found, try another keyword",
-      "searchFailed": "Search failed: {error}",
-      "via": "Resolved via “{via}”",
-      "loading": "Preparing playback...",
-      "playerNotReady": "The player is not ready yet, please try again",
-      "playFailed": "Cannot play: {error}",
-      "saved": "Saved to playlist",
-      "saveFailed": "Save failed: {error}",
-      "downloadPreparing": "Preparing download...",
-      "downloadTitle": "Save song",
-      "downloadCancelled": "Download cancelled",
-      "downloaded": "Saved to {path}",
-      "downloadFailed": "Download failed: {error}",
-      "column": {
-        "name": "Title",
-        "singer": "Artist",
-        "album": "Album",
-        "duration": "Duration"
-      },
-      "menu": {
-        "play": "Play",
-        "download": "Download",
-        "save": "Save to playlist",
-        "noPlaylist": "No playlist yet, create one first"
-      }
-    }
-  },
-  "playbar": {
-    "playlist": {
-      "title": "Current Playlist"
-    }
-  },
-  "settings": {
-    "extension": {
-      "install": {
-        "title": "Please select the JavaScript plugin file to load"
-      },
-      "installPlugins": "Install Plugin(s)",
-      "openPluginDirectory": "Open plugin directory",
-      "safetyWarning": "Any plugin will be able to access and modify all of your data, including your playlists, song metadata, etc. Please make sure that the plugin source is safe and only install plugins you trust. We are not responsible for any damage(s) caused by using of using any plugins!",
-      "tab": "Manage Extensions",
-      "wipWarning": "The plug-in interface function is still under development, so please be aware that the plug-in interface may change at any time!"
-    }
-  },
-  "ws-protocol": {
-    "toast": {
-      "ttmlParseError": "解析来自 WS 发送端的 TTML 歌词时出错：{{error}}"
-    }
-  }
+	"amll": {
+		"audioQuality": {
+			"channels": "音频通道数量",
+			"codec": "Audio codec",
+			"sampleFormat": "Sample format",
+			"sampleRate": "Sample rate",
+			"title": "Audio Quality Details",
+			"subtitle": "Decoding parameters of the current track",
+			"channelUnit": "ch"
+		},
+		"contextMenu": {
+			"editMusicOverrideMessage": "Edit Track Override Data",
+			"exitLyricPage": "Exit Lyrics Page",
+			"forwardSong": "Next Song",
+			"openRecorder": "打开捕获面板",
+			"openScreenshotTool": "打开截图工具",
+			"pauseOrResume": "Pause / Resume",
+			"play": "播放",
+			"rewindSong": "Previous Song",
+			"toggleFullscreen": "Fullscreen / Exit fullscreen",
+			"toggleLyrics": "Lyrics",
+			"windowAlwaysOnTop": "窗口置顶",
+			"enterFullscreen": "Enter fullscreen",
+			"exitFullscreen": "Exit fullscreen"
+		},
+		"loadAudioError": "The player backend encountered an error when loading the audio file:\n{error}",
+		"migrationDialog": {
+			"completedDesc": "Successfully imported {count} items.",
+			"completedDescDefault": "Migration completed.",
+			"completedDescWithFailures": "Successfully imported {count} items, {failed} failed.",
+			"completedTitle": "Migration Complete",
+			"deleteOldData": "Delete",
+			"deleteOldDataLabel": "Delete legacy data to free up disk space? You will not be able to use the old version's data.",
+			"deleteOldDataOnSkip": "Also delete legacy data",
+			"description": "Legacy AMLL Player playlist data detected. Would you like to migrate?",
+			"doNotClose": "Do not close the app during migration",
+			"dontAskAgain": "Don't ask again",
+			"errorListTitle": "The following items failed to migrate:",
+			"failedDesc": "An error occurred during migration:",
+			"failedItems": "（{count} items failed）",
+			"failedRetryHint": "You can retry next time you launch the app.",
+			"failedTitle": "Migration Failed",
+			"keepOldData": "Keep",
+			"phaseDone": "Migration complete",
+			"phasePlaylists": "Migrating playlists",
+			"phaseSongs": "Migrating songs",
+			"preparing": "Preparing",
+			"progressPlaylists": "Playlists {current}/{total}",
+			"progressSongs": "Songs {current}/{total}",
+			"skip": "Skip",
+			"start": "Start Migration",
+			"summary": "Will migrate {songs} songs and {playlists} playlists.",
+			"title": "Data Migration"
+		},
+		"openMenuViaRightClick": "Please right-click anywhere to open menu",
+		"qualityTag": {
+			"hires": "Hi-Res Lossless",
+			"lossless": "Lossless"
+		},
+		"ttmlImportDialog": {
+			"noResults": "No results.",
+			"openButtonLabel": "Search / Import lyrics from AMLL TTML DB",
+			"searchInput": {
+				"placeholder": "Search for songs, lyrics, artists......"
+			},
+			"supportText": "AMLL TTML DB is a free and open-source lyrics' database built by the AMLL community. Want to contribute your lyrics to AMLL TTML DB? Head over to the <1>GitHub repository</1> to learn more on how to submit!",
+			"sync": {
+				"empty": "Lyrics database is empty",
+				"error": "Sync error: {error}",
+				"failed": "Sync failed: {error}",
+				"skipped": "Lyrics database is up to date",
+				"updated": "Updated {count} lyrics"
+			},
+			"tip": "Type your search keywords above, and click on a suggestion to import the lyrics into the database directly.",
+			"title": "Search / Import lyrics from AMLL TTML DB"
+		}
+	},
+	"bottom_lyric": {
+		"lyricAuthor": "Lyrics by:",
+		"songWriter": "Written by:"
+	},
+	"common": {
+		"dialog": {
+			"cancel": "Cancel",
+			"close": "Close",
+			"confirm": "Confirm",
+			"filter": {
+				"all": "All files (*.*)",
+				"js": "JavaScript files (*.js)"
+			},
+			"save": "Save"
+		},
+		"page": {
+			"back": "Back"
+		},
+		"settings": "设置"
+	},
+	"error": {
+		"backToMainPage": "回到主页",
+		"copyError": "复制错误信息",
+		"desc0": "An error occurred during execution. Please try refreshing the page. If the issue persists, please contact the developer.",
+		"desc1": "If you know how to debug, you can see more precise error messages in the developer console.",
+		"errorDetail": "Error",
+		"reloadPage": "Reload Page",
+		"title": "An error occurred"
+	},
+	"extension": {
+		"error": {
+			"invaildPluginFile": "Invalid Plugin File",
+			"missingDependency": "Missing dependencies",
+			"missingMetadata": "Missing required metadata",
+			"pluginIdConflict": "Plugin ID conflict"
+		},
+		"inject": {
+			"error": {
+				"calloutText": "Extension {id} encountered an error while injecting components/functions into the {injectPointName} element:",
+				"toastText": "Extension {id} encountered an error while injecting components/functions into the {injectPointName} element:\n{error}"
+			}
+		}
+	},
+	"name": "",
+	"newPlaylist": {
+		"buttonLabel": "New Playlist",
+		"dialog": {
+			"name": "Playlist Name",
+			"namePlaceholder": "Playlist Title",
+			"scanFailed": "Scan failed: {error}",
+			"scanning": "Scanning… 0 songs found",
+			"scanningProgress": "Scanning… {count} songs found",
+			"scanSuccess": "{imported} songs imported, {failed} failed",
+			"selectFolder": "Select a folder to scan",
+			"title": "New Playlist"
+		},
+		"mode": {
+			"empty": "Empty Playlist",
+			"folder": "Add from Folder"
+		}
+	},
+	"page": {
+		"about": {
+			"updateProgress": "Downloading update… {percent}%",
+			"updateError": "Update failed: {error}",
+			"updateRetry": "Retry",
+			"updateManualHint": "Failed repeatedly - download the installer manually from the release page",
+			"updateManualDownload": "Open release page",
+			"upstreamAvailable": "Upstream has a newer build ({version}) - view upstream release",
+			"description": "Apple Music-like Lyrics Player",
+			"upstream": "Based on the upstream AMLL (Apple Music-like Lyrics) project",
+			"maintainerLink": "Main maintainer: cuicanx (GitHub)",
+			"releaseLink": "Releases: cuicanx/amll-player",
+			"contributorsTitle": "Contributors",
+			"credits": "This edition is mainly maintained and contributed by cuicanx",
+			"downloading": "Downloading updates…… {progressText}",
+			"installing": "Installing update, player will restart, wait a minute...",
+			"installUpdate": "Install this update",
+			"loadingContributors": "Loading contributors…",
+			"newVersion": "Available update from {currentVersion} to {nextVersion}",
+			"subtitle": "About",
+			"updating": "Player will restart after update, hold on a second....",
+			"maintainerRole": "Maintainer",
+			"otherContributors": "Other contributors",
+			"noOtherContributors": "No other contributors yet",
+			"releaseNotes": "What's new",
+			"releaseNotesEmpty": "This release has no notes attached.",
+			"updatePreparing": "Connecting to the update source…"
+		},
+		"amll-dev": {
+			"title": "Apple Music Like Lyrics Developer Page",
+			"warning": "This page is for develop usage only, use it at your own risk! (Chinese only)"
+		},
+		"main": {
+			"loadingPlaylist": "Loading playlist",
+			"menu": {
+				"asWSProtocolReceiver": "As WS Protocol Receiver",
+				"asWSProtocolSenderWIP": "As WS Protocol Sender (On development)",
+				"enterWSProtocolMode": "Start WS Protocol mode",
+				"settings": "Settings"
+			},
+			"noPlaylistTip": "Nothing is here, try to create something?",
+			"playlistCard": {
+				"createTime": "Created at {createTime}",
+				"songCount": "{songAmount} Songs"
+			},
+			"playlistMenu": {
+				"delete": "Delete",
+				"play": "播放此列表",
+				"playShuffled": "以乱序播放此列表"
+			},
+			"updateAvailableTag": "Update available"
+		},
+		"playlist": {
+			"addLocalMusic": {
+				"allFiles": "All Files",
+				"dialog": {
+					"failedDescription": "The following {count, plural, other {#}} failed to be added:",
+					"failedTitle": "Some songs failed to import"
+				},
+				"filterName": "Audio File",
+				"label": "Add Music From Disk",
+				"toast": {
+					"allFailed": "{errored, plural, other {#}} songs failed to be added",
+					"parsingMusicMetadata": "Parsing metadata to add your track into playlist ({current, plural, other {#}} / {total, plural, other {#}})",
+					"partiallyFailed": "{succeed, plural, =0 {No song is} one {A song is} other {# songs}} added, but {errored, plural, =0 {no song is} one {a song is} other {# songs are}} failed to be added",
+					"success": "{count, plural, other {#}} song(s) added"
+				}
+			},
+			"cover": {
+				"changeCoverToAuto": "Use automatic cover",
+				"mediaFiles": "Media Files",
+				"uploadCoverImage": "Upload your own cover art"
+			},
+			"music": {
+				"dropdown": {
+					"editMusicOverrideData": "Edit Track Override Data",
+					"playMusic": "Play",
+					"removeFromPlaylist": "Delete from Playlist"
+				},
+				"unknownSongName": "Unknown Music ID {id}"
+			},
+			"playAll": "Play All",
+			"refresh": {
+				"failed": "Refresh failed: {error}",
+				"label": "Refresh",
+				"loading": "Refreshing playlist…",
+				"scanning": "Scanning… {count} files",
+				"success": "Refresh complete: {added} added, {updated} updated, {removed} removed"
+			},
+			"settings": {
+				"addFolder": "Add Linked Folder",
+				"confirmRemoveFolderDescription": "Are you sure you want to remove this folder? Songs added by folder scanning will be removed from the playlist. Manually added songs are not affected.",
+				"confirmRemoveFolderTitle": "Remove Linked Folder",
+				"cover": "Playlist Cover",
+				"createdAt": "Created At",
+				"label": "Settings",
+				"linkedFolders": "Linked Folders",
+				"linkFolderFailed": "Link failed: {error}",
+				"linkFolderSuccess": "Linked successfully: {imported} songs imported, {failed} failed",
+				"name": "Playlist Name",
+				"noLinkedFolders": "No folders linked to this playlist",
+				"openFolder": "Open",
+				"openFolderFailed": "Failed to open folder: {error}",
+				"playlistInfo": "Playlist Info",
+				"removeFolder": "Remove",
+				"scanningFolder": "Scanning folder…",
+				"scanningProgress": "Scanning… {count} songs found",
+				"selectFolder": "Select a folder to link",
+				"songCount": "Song Count",
+				"title": "Playlist Settings",
+				"unlinkFolderFailed": "Remove failed: {error}",
+				"unlinkFolderSuccess": "Linked folder removed",
+				"updatedAt": "Updated At"
+			},
+			"shufflePlayAll": "Shuffle",
+			"totalMusicLabel": "{count, plural, other {#}} song(s)"
+		},
+		"search": {
+			"filter": {
+				"albumName": "Album name: {keyword}",
+				"artistName": "Artist name: {keyword}",
+				"candidate": {
+					"albumName": "The album name contains {keyword}",
+					"artistName": "The artist name contains {keyword}",
+					"lyricContent": "The lyrics contain {keyword}",
+					"playlistName": "The playlist name contains {keyword}",
+					"songName": "The song name contains {keyword}"
+				},
+				"lyricContent": "Lyrics: {keyword}",
+				"placeholder": "Search for playlists, song titles, artists, and more……",
+				"playlistName": "Playlist name: {keyword}",
+				"songName": "Song name: {keyword}"
+			},
+			"noPlaylistResult": "No playlists found!",
+			"noSongResult": "No songs found!",
+			"placeholder": "Search for a song, artist, album, lyrics, playlists, or more",
+			"searchingPlaylist": "搜索播放列表中",
+			"searchPlaylistResultAmount": "搜索到 {amount} 个播放列表",
+			"searchSongResultAmount": "Found {amount} songs"
+		},
+		"settings": {
+			"general": {
+				"f11Fullscreen": {
+					"description": "When enabled, F11 toggles borderless fullscreen. Disabled by default.",
+					"label": "Enable F11 borderless fullscreen"
+				},
+				"displayLanguage": {
+					"cimode": "Localization ID",
+					"label": "Display Language"
+				},
+				"subtitle": "General",
+				"theme": {
+					"auto": "自动",
+					"dark": "深色",
+					"description": "选择应用的外观主题",
+					"label": "界面主题",
+					"light": "浅色"
+				},
+				"windowAlwaysOnTop": {
+					"description": "将应用窗口设置为始终置顶",
+					"label": "启用窗口置顶"
+				}
+			},
+			"lyricAppearance": {
+				"advanceLyricDynamicLyricTime": {
+					"description": "Advance the initial time sequence of the original lyrics line, so that the lyrics effect starts playing (word by word) just after the lyrics scroll ends. This behavior is closer to the effect of Apple Music, but in most cases, it will cause the lyrics at the end of the line to be switched to the next line before they have been played completely.",
+					"label": "Advance Lyric Timing"
+				},
+				"enableLyricLineBlurEffect": {
+					"description": "Significantly impacts performance. If you encounter performance issues, try to disable this option. Enabled by default.",
+					"label": "Enable Text Blur Effect"
+				},
+				"enableLyricLineScaleEffect": {
+					"description": "Does not impact performance. Non-playing lyrics lines will be slightly reduced in size. Enabled by default",
+					"label": "Enable Text Zooming Effect"
+				},
+				"enableLyricLineSpringAnimation": {
+					"description": "Significantly impacts performance. If you encounter any performance issues, try to disable this option. Enabled by default.",
+					"label": "Enable Text Spring Animation Effect"
+				},
+				"lyricFontSize": {
+					"descriptionResponsive": "设置歌词的字体大小",
+					"label": "歌词字体大小",
+					"menu": {
+						"extra_large": "极大",
+						"extra_small": "极小",
+						"huge": "超大",
+						"large": "大",
+						"medium": "中",
+						"small": "小",
+						"tiny": "超小"
+					}
+				},
+				"lyricWordFadeWidth": {
+					"description": "Adjust the gradient transition width of each word in lyrics, measured in the width of a full width character, with a default value of 0.5.\nIf you want to simulate the effect of Apple Music for Android, you can set it to 1.\nIf you want to simulate the effect of Apple Music for iPad, you can set it to 0.5.\nTo turn off the gradient transition effect of each word in lyrics, you can set it to 0.",
+					"label": "Gradient Transition Width of Each Word"
+				},
+				"subtitle": "Lyrics Appearance"
+			},
+			"lyricBackground": {
+				"backgroundRenderer": {
+					"label": "PixiJS Renderer"
+				},
+				"lyricBackgroundColor": {
+					"description": "等同于放入 background 样式的字符串值，默认为 #111111",
+					"label": "CSS 背景属性值"
+				},
+				"lyricBackgroundFPS": {
+					"description": "High impact on performance, but the actual cost is not significant. If you encounter performance issues, try to reduce this value. The default value is 60.",
+					"label": "Maximum FPS for Background Renderer"
+				},
+				"lyricBackgroundRenderScale": {
+					"description": "High impact on performance, but the actual cost is not significant. If you encounter performance issues, try to reduce this value. The default value is 1 which means rendering pixel by pixel.",
+					"label": "Background Resolution"
+				},
+				"lyricBackgroundStaticMode": {
+					"description": "Keep the background static except when switching song. If you encounter performance issues, consider enabling this option.\nNote: Enabling this option will disable the background bouncing effect.",
+					"label": "Static Mode"
+				},
+				"menu": {
+					"cssBackground": "CSS 背景",
+					"meshGradientRenderer": "Mesh Gradient Renderer",
+					"pixiRenderer": "PixiJS Renderer"
+				},
+				"subtitle": "Lyrics Page Background Type"
+			},
+			"lyricContent": {
+				"bottomLyricMode": {
+					"description": "Control the display of song writers and lyric authors information at the bottom of the lyrics.",
+					"label": "Bottom Lyric Info Display",
+					"menu": {
+						"none": "None",
+						"onlyLyricAuthors": "Only Lyric Authors",
+						"onlySongWriters": "Only Song Writers",
+						"preferLyricAuthors": "Prefer Lyric Authors",
+						"preferSongWriters": "Prefer Song Writers"
+					}
+				},
+				"enableLyricRomanLine": {
+					"label": "Show Romanized Translation"
+				},
+				"enableLyricSwapTransRomanLine": {
+					"description": "Only valid when the above two are enabled.",
+					"label": "Swap Translation and Romanized Translation"
+				},
+				"enableLyricTranslationLine": "Show Translation",
+				"subtitle": "Lyrics",
+				"swapMainTranslationGlobal": {
+					"label": "Swap main/translated lyrics (global)",
+					"description": "When on, every song shows the translation as the main line, overriding per-song settings"
+				}
+			},
+			"lyricFont": {
+				"fontFamily": {
+					"description": "Font name separated by comma, equals to font-family property in CSS. Leave blank to use default settings.",
+					"label": "Font Family"
+				},
+				"fontPreview": {
+					"defaultText": "Font Preview",
+					"label": "Font Preview"
+				},
+				"fontWeight": {
+					"description": "Equals to the font-weight property in CSS, set to 0 to be controlled by system. 600 is recommended",
+					"label": "Font Weight"
+				},
+				"letterSpacing": {
+					"description": "Equals to the letter-spacing in CSS, leave blank to use the default value.",
+					"label": "Letter Spacing"
+				},
+				"subtitle": "Lyrics Font Settings",
+				"tip": "This option only affect LYRIC's font but other parts."
+			},
+			"musicInfoAppearance": {
+				"fftDataRange": {
+					"description": "The unit is Hertz, which will affect the display effect of audio visualization and background jumping rhythm effect.",
+					"label": "Audio visualization frequency range"
+				},
+				"playerControlsType": {
+					"description": "Components under the track information.",
+					"label": "Playback Controls Type",
+					"menu": {
+						"controls": "Playback Controls",
+						"fft": "Line-shaped Audio Visualizer",
+						"none": "None"
+					}
+				},
+				"showBottomControl": {
+					"description": "This is the buttons at bottom in horizontal view, or buttons under playback buttons in vertical view.",
+					"label": "Show Buttons at the Bottom"
+				},
+				"showMusicAlbum": {
+					"description": "Enabling all three options simultaneously may not be aesthetically pleasing.",
+					"label": "Show Album Title"
+				},
+				"showMusicArtists": {
+					"label": "Show Artists"
+				},
+				"showMusicName": {
+					"label": "Show Song Title"
+				},
+				"showVolumeControl": {
+					"label": "Show Volume Control"
+				},
+				"subtitle": "Music information appearance",
+				"verticalCoverLayout": {
+					"description": "Layout mode when hiding lyric component:\n- Automatic: use immersive cover layout when track cover is a video\n- Default: force default cover layout\n- Immersive: force immersive cover layout",
+					"label": "Vertical Cover Layout Mode",
+					"menu": {
+						"auto": "Automatic",
+						"forceImmersive": "Force Immersive Layout",
+						"forceNormal": "Force Normal Layout"
+					}
+				}
+			},
+			"others": {
+				"enterAmllDevPage": "Development tools",
+				"restartProgram": "Restart player",
+				"showStatJSFrame": {
+					"description": "Show fps, frame time, memory [Chromium only]. Less impact of performance.",
+					"label": "Show performance statics"
+				},
+				"subtitle": "Others"
+			},
+			"smtc": {
+				"enableMediaControls": {
+					"description": "目前只支持 Windows 的 SMTC",
+					"label": "启用内置播放器的媒体控件"
+				}
+			},
+			"taskbarLyric": {
+				"align": {
+					"auto": "Auto",
+					"description": "Align direction of the taskbar lyric",
+					"label": "Align direction",
+					"left": "Left",
+					"right": "Right"
+				},
+				"enable": {
+					"description": "Display the lyrics of the currently playing song on the Windows taskbar.",
+					"label": "Enable taskbar lyrics"
+				},
+				"mode": {
+					"auto": "Auto",
+					"double": "Double Line",
+					"label": "Number of lines displayed",
+					"single": "Single Line"
+				},
+				"openDevtools": "Open DevTools",
+				"subtitle": "Taskbar Lyrics",
+				"theme": {
+					"auto": "Follow taskbar",
+					"dark": "Dark",
+					"description": "Overrides the color theme of the taskbar lyric",
+					"label": "Theme setting",
+					"light": "Light"
+				}
+			},
+			"contextMenu": {
+				"subtitle": "Right-click menu",
+				"tip": "Choose which entries appear in the playback page's right-click menu. Disabled entries are hidden.",
+				"reset": "Reset to default",
+				"prevSong": "Previous song",
+				"prevSongDesc": "Show “Previous song” in the menu",
+				"playPause": "Play / Pause",
+				"playPauseDesc": "Show “Play / Pause” in the menu",
+				"nextSong": "Next song",
+				"nextSongDesc": "Show “Next song” in the menu",
+				"fullscreen": "Enter / Exit fullscreen",
+				"fullscreenDesc": "Show the fullscreen entry (requires F11 fullscreen in General)",
+				"alwaysOnTop": "Always on top",
+				"alwaysOnTopDesc": "Show “Always on top” in the menu",
+				"showLyrics": "Show lyrics",
+				"showLyricsDesc": "Show “Show lyrics” in the menu",
+				"editSongInfo": "Edit song override",
+				"editSongInfoDesc": "Show “Edit song override” in the menu",
+				"recordPanel": "Open capture panel",
+				"recordPanelDesc": "Show “Open capture panel” in the menu",
+				"screenshot": "Open screenshot tool",
+				"screenshotDesc": "Show “Open screenshot tool” in the menu",
+				"exitLyricPage": "Exit lyric page",
+				"exitLyricPageDesc": "Show “Exit lyric page” in the menu"
+			},
+			"storage": {
+				"subtitle": "Storage manager",
+				"tip": "Shows the disk space used by the app. Cleaning removes only disposable caches and old logs - your library, playlists, lyric database and extensions are never touched.",
+				"total": "Total used",
+				"cache": "Cache (covers)",
+				"logs": "Logs",
+				"musicCache": "Audio cache",
+				"cleanAll": "Clean all",
+				"cleanCache": "Clean cache",
+				"cleanLogs": "Clean logs",
+				"refresh": "Refresh",
+				"cleaned": "Removed {count} files, freed {size}",
+				"onlineCache": "Online song cache",
+				"onlineCacheDetail": "Downloaded online song audio and covers",
+				"onlineCacheCleaned": "Cleaned {count} online cache files, freed {size}",
+				"autoClear": "Automatically clear online song cache",
+				"autoClearDetail": "Online song cache and covers unused for longer than the selected period are deleted automatically",
+				"autoClearNever": "Never",
+				"autoClearDays": "{count} days",
+				"autoClearDone": "Automatically cleaned {count} files, freed {size}"
+			},
+			"logLevel": {
+				"label": "Startup log level",
+				"description": "Choose how much detail to record on the next launch. Restart the app to apply.",
+				"debug": "Debug",
+				"normal": "Normal",
+				"off": "Off",
+				"debugHint": "Most verbose, for diagnosing problems; logs grow quickly.",
+				"normalHint": "Default; records normal operation and important warnings.",
+				"offHint": "No logging; saves disk space but leaves no records when something goes wrong."
+			}
+		},
+		"song": {
+			"basic": {
+				"musicDuration": "Duration",
+				"musicFilePath": "File Path",
+				"musicId": "Music ID",
+				"tabs": {
+					"basic": "Basics",
+					"lyric": "Lyrics",
+					"metadata": "Metadata"
+				}
+			},
+			"lyric": {
+				"importFromFile": "Import lyrics from file",
+				"lyricData": "Lyrics Data",
+				"lyricFormat": {
+					"eslrc": "LyRiC format used by ESLyric (LRC)",
+					"lrc": "LyRiC format (LRC)",
+					"lys": "Lyricify Syllable lyrics",
+					"none": "No Lyrics",
+					"qrc": "QRC lyrics",
+					"ttml": "TTML lyrics",
+					"yrc": "YRC Lyrics"
+				},
+				"lyricFormatLabel": "Lyric format",
+				"romanLyricDataTip": "Paste LyRiC type of lyric content here, we will pair as Romanized by timestamp if they are the same or similar.",
+				"translationLyricData": "Translated Lyrics",
+				"translationLyricDataTip": "Paste LyRiC type of lyric content here, we will pair as translation by timestamp if they are the same or similar.",
+				"ttmlLyricTip": "TTML lyric could contain translation and Romanized translation in a single file.",
+				"swapMainTranslation": "Swap main / translation"
+			},
+			"metadata": {
+				"changeCoverToImageOrVideo": "Change cover image as image / video",
+				"importLyricFromFile": "Import lyrics from file",
+				"overrideSafeTip": "Properties in this page will not override into source file.",
+				"reloadMetadataFromFile": "Reload Metadata from Audio File",
+				"songAlbum": "Album",
+				"songArtists": "Artists",
+				"songName": "Title"
+			}
+		},
+		"ws": {
+			"recv": {
+				"connectedClients": "Connected client(s)",
+				"noClients": "No clients connected",
+				"openNetworkAddress": "Open network address",
+				"tip": "When connect to client, you may switch track once to synchronous data. If you want to open to external network, please set host to \"0.0.0.0\"."
+			}
+		},
+		"online": {
+			"modeTag": "Online mode",
+			"placeholder": "Search online songs, press Enter to start...",
+			"search": "Search",
+			"searchHistory": "Search history",
+			"resultCount": "{count} results",
+			"empty": "No results found, try another keyword",
+			"searchFailed": "Search failed: {error}",
+			"via": "Resolved via “{via}”",
+			"loading": "Preparing playback...",
+			"playerNotReady": "The player is not ready yet, please try again",
+			"playFailed": "Cannot play: {error}",
+			"saved": "Saved to playlist",
+			"saveFailed": "Save failed: {error}",
+			"downloadPreparing": "Preparing download...",
+			"downloadTitle": "Save song",
+			"downloadCancelled": "Download cancelled",
+			"downloaded": "Saved to {path}",
+			"downloadFailed": "Download failed: {error}",
+			"column": {
+				"name": "Title",
+				"singer": "Artist",
+				"album": "Album",
+				"duration": "Duration"
+			},
+			"menu": {
+				"play": "Play",
+				"download": "Download",
+				"save": "Save to playlist",
+				"noPlaylist": "No playlist yet, create one first"
+			}
+		}
+	},
+	"playbar": {
+		"playlist": {
+			"title": "Current Playlist"
+		}
+	},
+	"settings": {
+		"extension": {
+			"install": {
+				"title": "Please select the JavaScript plugin file to load"
+			},
+			"installPlugins": "Install Plugin(s)",
+			"openPluginDirectory": "Open plugin directory",
+			"safetyWarning": "Any plugin will be able to access and modify all of your data, including your playlists, song metadata, etc. Please make sure that the plugin source is safe and only install plugins you trust. We are not responsible for any damage(s) caused by using of using any plugins!",
+			"tab": "Manage Extensions",
+			"wipWarning": "The plug-in interface function is still under development, so please be aware that the plug-in interface may change at any time!"
+		}
+	},
+	"ws-protocol": {
+		"toast": {
+			"ttmlParseError": "解析来自 WS 发送端的 TTML 歌词时出错：{{error}}"
+		}
+	}
 }

@@ -1,5 +1,5 @@
 import { Button, Callout, Flex, Select, Text, TextArea } from "@radix-ui/themes";
-import { useAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { listen, TauriEvent } from "@tauri-apps/api/event";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import {
@@ -13,7 +13,10 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import { ExtensionInjectPoint } from "../../components/ExtensionInjectPoint/index.tsx";
 import { TTMLImportDialog } from "../../components/TTMLImportDialog/index.tsx";
-import { swapLyricMainTranslationAtom } from "../../states/appAtoms.ts";
+import {
+	swapLyricGlobalAtom,
+	swapLyricLegacyAtom,
+} from "../../states/appAtoms.ts";
 import { db } from "../../utils/db-client.ts";
 import { getLyricFormatFromExtension, Option } from "./common.tsx";
 import { SongContext } from "./song-ctx.ts";
@@ -25,9 +28,12 @@ export const LyricTabContent: FC = () => {
 	const [translatedLyricContent, setTranslatedLyricContent] = useState("");
 	const [romanLyricContent, setRomanLyricContent] = useState("");
 	const [lyricOffsetMs, setLyricOffsetMs] = useState(0);
-	const [swapMainTranslation, setSwapMainTranslation] = useAtom(
-		swapLyricMainTranslationAtom,
-	);
+	// The button edits the PER-SONG value. The global switch (settings page)
+	// overrides it at render time; enabling it here does not fight the global.
+	const globalSwap = useAtomValue(swapLyricGlobalAtom);
+	const legacySwap = useAtomValue(swapLyricLegacyAtom);
+	const perSongSwap = song?.swapTranslation ?? null;
+	const swapMainTranslation = globalSwap || perSongSwap === true;
 	const { t } = useTranslation();
 
 	useLayoutEffect(() => {
@@ -37,6 +43,12 @@ export const LyricTabContent: FC = () => {
 			setTranslatedLyricContent(song.translatedLrc ?? "");
 			setRomanLyricContent(song.romanLrc ?? "");
 			setLyricOffsetMs(song.lyricOffsetMs ?? 0);
+			// One-time migration: older builds stored a single global boolean in
+			// localStorage. Carry that choice into this song's per-song value so
+			// nobody loses their setting after the upgrade.
+			if (song.swapTranslation == null && legacySwap) {
+				void db.songs.update(song.id, { swapTranslation: true });
+			}
 		} else {
 			setLyricFormat("none");
 			setLyricContent("");
@@ -225,14 +237,24 @@ export const LyricTabContent: FC = () => {
 						>
 							<Trans i18nKey="common.reset">重置</Trans>
 						</Button>
-						{/* Display-only toggle: never rewrites the lyric data. It only
-						    swaps which text AMLL renders as the main line vs the
-						    translation sub-line while playing. */}
+						{/* Per-song toggle: stored on the song, never rewrites the
+						    lyric text. The global settings switch overrides it. */}
 						<Button
 							size="1"
 							variant={swapMainTranslation ? "solid" : "soft"}
 							color={swapMainTranslation ? "iris" : "gray"}
-							onClick={() => setSwapMainTranslation((value) => !value)}
+							disabled={!song || globalSwap}
+							title={
+								globalSwap
+									? "设置中已开启全局强制互换，本按钮暂不可用"
+									: undefined
+							}
+							onClick={() => {
+								if (!song) return;
+								void db.songs.update(song.id, {
+									swapTranslation: !(perSongSwap === true),
+								});
+							}}
 						>
 							<Trans i18nKey="page.song.lyric.swapMainTranslation">
 								主译互换

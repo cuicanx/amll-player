@@ -8,21 +8,22 @@ import { dirname, resolve } from "node:path";
 import { exit } from "node:process";
 import { fileURLToPath } from "node:url";
 
-const tauriConfPath = resolve(
-	dirname(fileURLToPath(import.meta.url)),
-	"../src-tauri/tauri.conf.json",
-);
+const here = dirname(fileURLToPath(import.meta.url));
+const tauriConfPath = resolve(here, "../src-tauri/tauri.conf.json");
+// Single source of truth. Dev and stable must share major.minor so the
+// updater can compare versions across both channels; only the patch/build
+// number differs (commit count for dev, explicit patch for stable).
+const versionDocPath = resolve(here, "../../../version.json");
 
 console.log("Reading tauri.conf.json from", tauriConfPath);
 
 const tauriConf = JSON.parse(readFileSync(tauriConfPath, "utf-8"));
+const versionDoc = JSON.parse(readFileSync(versionDocPath, "utf-8"));
 
-console.log("tauri.conf.json content:", tauriConf);
+const baseVersion = versionDoc?.version;
 
-const baseVersion = tauriConf.version;
-
-if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(baseVersion)) {
-	console.error(`Invalid base version: ${baseVersion}`);
+if (typeof baseVersion !== "string" || !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(baseVersion)) {
+	console.error(`Invalid version in version.json: ${baseVersion}`);
 	exit(1);
 }
 

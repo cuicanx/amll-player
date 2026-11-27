@@ -49,10 +49,33 @@
 }
 
 .body {
-	max-height: 300px;
+	max-height: 360px;
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	padding-right: 4px;
+}
+
+/* Long notes are clamped instead of leaving a tiny scroll area the user may
+   not notice; "展开全部" below reveals the full text. */
+.body.collapsed {
+	max-height: 190px;
+	overflow: hidden;
+	mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+}
+
+.toggle {
+	align-self: flex-start;
+	font-size: 12px;
+	line-height: 1;
+	padding: 4px 10px;
+	border-radius: 999px;
+	color: var(--accent-11);
+	background-color: var(--accent-a3);
+	cursor: pointer;
+}
+
+.toggle:hover {
+	background-color: var(--accent-a4);
 }
 
 /* Section heading inside the notes (markdown `#` / `##` / `###`, or a
@@ -144,6 +167,27 @@
 	background-color: var(--gray-a3);
 	border: 1px solid var(--amll-glass-hairline);
 	white-space: nowrap;
+}
+
+.codeBlock {
+	position: relative;
+	font-family: var(--code-font-family, ui-monospace, "Cascadia Code", monospace);
+	font-size: 11.5px;
+	line-height: 1.6;
+	margin: 4px 0 10px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	background-color: var(--gray-a2);
+	border: 1px solid var(--amll-glass-hairline);
+	overflow-x: auto;
+	white-space: pre;
+}
+
+.codeLang {
+	display: block;
+	font-size: 10.5px;
+	opacity: 0.5;
+	margin-bottom: 4px;
 }
 
 .link {

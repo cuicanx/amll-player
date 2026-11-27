@@ -24,7 +24,9 @@
 		"longDescription": "AMLL Player（cuicanx 维护版）—— 支持内嵌歌词自动识别、WebSocket 播放联动与高帧率歌词动画的桌面歌词播放器。",
 		"windows": {
 			"nsis": {
-				"languages": ["SimpChinese"],
+				"languages": [
+					"SimpChinese"
+				],
 				"displayLanguageSelector": false
 			},
 			"wix": {
@@ -36,7 +38,7 @@
 		}
 	},
 	"productName": "AMLL Player",
-	"version": "0.0.1",
+	"version": "1.0.2",
 	"identifier": "net.stevexmh.amllplayer",
 	"plugins": {
 		"updater": {
@@ -56,7 +58,9 @@
 			"assetProtocol": {
 				"enable": true,
 				"scope": {
-					"allow": ["$APPDATA/**/*"],
+					"allow": [
+						"$APPDATA/**/*"
+					],
 					"deny": []
 				}
 			}

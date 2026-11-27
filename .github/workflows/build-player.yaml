@@ -78,22 +78,21 @@ jobs:
         run: |
           pnpm i --frozen-lockfile --ignore-scripts
 
-      # 正式版的版本号直接来自 tag（v1.0.0 -> 1.0.0），
-      # 不能再走 gen-dev-version.mjs，否则会被改写成 1.0.<commitCount>。
-      - name: 设置正式版版本号
+      # version.json is the single source of truth for the stable version.
+      # The tag must match it - otherwise someone tagged the wrong commit and
+      # we would publish a bundle whose version does not match its release name.
+      - name: 校验并设置正式版版本号
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "Release version: $VERSION"
-          node -e '
-            const fs = require("node:fs");
-            const version = process.argv[1];
-            const confPath = "packages/player/src-tauri/tauri.conf.json";
-            const conf = JSON.parse(fs.readFileSync(confPath, "utf-8"));
-            conf.version = version;
-            fs.writeFileSync(confPath, JSON.stringify(conf, null, "\t"));
-            console.log("tauri.conf.json version ->", conf.version);
-          ' "$VERSION"
+          node ./packages/player/scripts/sync-version.mjs --check
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          EXPECTED=$(node -p "require('./version.json').version")
+          if [ "$TAG_VERSION" != "$EXPECTED" ]; then
+            echo "ERROR: tag $TAG_VERSION does not match version.json ($EXPECTED)" >&2
+            exit 1
+          fi
+          node ./packages/player/scripts/sync-version.mjs
+          echo "Release version: $TAG_VERSION"
 
       - name: 构建并发布正式版
         uses: tauri-apps/tauri-action@v1
@@ -102,33 +101,22 @@ jobs:
           tagName: ${{ github.ref_name }}
           uploadUpdaterJson: true
           releaseName: AMLL Player ${{ github.ref_name }} 正式版
+          # Keep release notes short and user-facing. Details live in
+          # CHANGELOG.md; never paste commit hashes or "first release" lines
+          # here - they repeat on every version and add no value.
           releaseBody: |
-            ## AMLL Player ${{ github.ref_name }} 正式版
+            ### 新增
+            - 主译互换支持按歌曲单独设置，设置页可开启全局强制生效。
+            - 更新说明重新排版，长内容可展开查看。
 
-            > 首个正式发布版本。
+            ### 修复
+            - 关于页贡献者头像和列表在国内网络下加载失败。
+            - 部分情况下更新校验失败。
+            - 内嵌翻译歌词无法使用主译互换。
+            - 清除缓存后部分在线歌曲封面丢失。
 
-            ### 崩溃修复
-
-            - 歌词偏移量导致的白屏崩溃（代码层根治）：偏移此前只作用于行起始时间而未同步结束时间，
-              AMLL 歌词引擎会因 `startTime > endTime` 抛出 `RangeError` 直接崩溃。
-              现已补齐行级 `endTime` 偏移，并新增时间戳净化兜底（逐行、逐单词、逐注音校验）。
-
-            ### 主译互换改为纯显示层
-
-            - 删除「翻译歌词数据」编辑框，仅保留一个按钮，放在歌词偏移旁边。
-            - 点击只在播放时调换主歌词与翻译歌词的主次顺序，不修改任何歌词数据。
-
-            ### 新增功能
-
-            - 存储空间新增「自动清除在线歌曲缓存」：多档位可选（含不清理），默认 3 天。
-            - 新用户默认在线模式（不影响已有用户设置）。
-            - 在线搜索按钮固定在搜索框右侧。
-            - 平台分区栏仅在有搜索结果时显示。
-            - 在线搜索结果右键菜单新增「下载」，可自由选择保存位置。
-
-            ---
-
-            本版本对应源码提交 `${{ github.sha }}`。
+            ### 优化
+            - 更新说明去掉与用户无关的模板文字。
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -288,24 +276,22 @@ jobs:
           tagName: ${{ github.ref_name }}-player-dev
           uploadUpdaterJson: true
           releaseName: AMLL Player ${{ github.ref_name }} branch development build
-          # Structured markdown: the in-app update panel renders headings,
-          # bullets, bold and inline code, so notes need real hierarchy instead
-          # of one run-on block of text.
+          # Dev builds: short, user-facing notes only. Raw commit messages and
+          # duplicated bilingual boilerplate used to show up in the in-app
+          # update panel; CHANGELOG.md is the single place for details.
           releaseBody: |
-            ## 更新内容
+            ### 新增
+            - 主译互换支持按歌曲单独设置，设置页可开启全局强制生效。
+            - 更新说明重新排版，长内容可展开查看。
 
-            > 本构建来自 `${{ github.ref_name }}` 分支的自动构建，可能不稳定，建议仅用于测试。
+            ### 修复
+            - 关于页贡献者头像和列表在国内网络下加载失败。
+            - 部分情况下更新校验失败。
+            - 内嵌翻译歌词无法使用主译互换。
+            - 清除缓存后部分在线歌曲封面丢失。
 
-            ### 本次变更
-
-            ${{ github.event.head_commit.message }}
-
-            ---
-
-            ## What's new
-
-            Automated build of the `${{ github.ref_name }}` branch. Development builds may be unstable; use them for testing only.
-            Installers are signed; automatic updates from `0.0.1144` onward work without a manual reinstall.
+            ### 优化
+            - 更新说明去掉与用户无关的模板文字。
           prerelease: true
           args: ${{ matrix.args }}
         env:

@@ -25,6 +25,8 @@ export interface Song {
 	modifiedAt?: number | null;
 	/** Lyric timing correction in milliseconds. */
 	lyricOffsetMs?: number | null;
+	/** Per-song swap of main/translated lyric lines. null = use global setting. */
+	swapTranslation?: boolean | null;
 }
 
 interface UpdatePlaylistPayload {
@@ -42,6 +44,7 @@ interface UpdateSongPayload {
 	romanLrc?: string | null;
 	coverPath?: string | null;
 	lyricOffsetMs?: number | null;
+	swapTranslation?: boolean | null;
 }
 
 export interface CoverGcResult {

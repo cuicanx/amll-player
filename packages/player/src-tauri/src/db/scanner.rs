@@ -151,6 +151,7 @@ fn process_file(path: &std::path::Path) -> Result<ScannedSong, String> {
         cover_path: None,
         modified_at: Some(modified_at),
         lyric_offset_ms: None,
+        swap_translation: None,
     };
 
     Ok(ScannedSong { model, cover_bytes })
