@@ -465,8 +465,27 @@ jobs:
         env:
           CARGO_NDK_ANDROID_PLATFORM: 26
         run: |
+          set -euo pipefail
           export NDK_HOME=$ANDROID_NDK_HOME
           export JAVA_HOME=$JAVA_HOME_17_X64
+          # ffmpeg_audio_sys uses bindgen; without an explicit NDK sysroot it
+          # picks up host /usr/include and fails on __float128 for aarch64.
+          # Cargo may pick a different NDK than $ANDROID_NDK_HOME (the runner
+          # preinstalls several). Find the sysroot from the clang cargo will use.
+          NDK_SYSROOT=""
+          for candidate in "$ANDROID_NDK_HOME" /usr/local/lib/android/sdk/ndk/*; do
+            if [ -d "$candidate/toolchains/llvm/prebuilt/linux-x86_64/sysroot" ]; then
+              NDK_SYSROOT="$candidate/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+              break
+            fi
+          done
+          if [ -n "$NDK_SYSROOT" ]; then
+            echo "Using NDK sysroot: $NDK_SYSROOT"
+            export BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="--sysroot=$NDK_SYSROOT"
+            export BINDGEN_EXTRA_CLANG_ARGS_x86_64_linux_android="--sysroot=$NDK_SYSROOT"
+          else
+            echo "WARNING: no NDK sysroot found; bindgen may use host headers" >&2
+          fi
           pnpm -F player tauri android build --target aarch64 --target x86_64 --split-per-abi
 
       - name: 整理并重命名 Android 构建包
