@@ -37,6 +37,9 @@ jobs:
 
   build-release-desktop:
     name: 构建正式版 (Tauri 桌面版本)
+    # Explicit token scope: tag-triggered runs must be able to create Releases.
+    permissions:
+      contents: write
     # 只在推送 v* tag 时运行，产出正式版安装包并发布为非预发布 Release。
     # 与上面的开发构建完全分离：开发构建始终是 `<branch>-player-dev`
     # 预发布且版本号带 commit 计数，正式版的版本号就是 tag 上的版本号。
