@@ -94,7 +94,9 @@
 		"page": {
 			"back": "返"
 		},
-		"settings": "設"
+		"settings": "設",
+		"close": "閉",
+		"reset": "復置"
 	},
 	"error": {
 		"backToMainPage": "返主頁",
@@ -307,6 +309,19 @@
 				"windowAlwaysOnTop": {
 					"description": "令程式之窗常居最上",
 					"label": "啟窗居最上"
+				},
+				"playMode": {
+					"local": "止奏本機所藏",
+					"online": "搜網而徑奏",
+					"label": "奏樂之法",
+					"description": "止奏本機所藏者，僅奏機中所存之曲；搜網而奏者，於搜尋之頁聯網搜尋，徑行奏之。既易其式，下次啟程式時乃效。",
+					"pending": "已存，重啟乃效",
+					"restart": "即刻重啟"
+				},
+				"quality": {
+					"auto": "自擇之（三百二十千為先）",
+					"label": "線上曲目優先取下之音質",
+					"description": "奏聯網曲目時，先試此質；音源若不逮，自退而取其次。"
 				}
 			},
 			"lyricAppearance": {
@@ -547,7 +562,12 @@
 				"autoClearDetail": "在線曲目之暫存與封面，逾所選時長未用者，自刪之",
 				"autoClearNever": "不清",
 				"autoClearDays": "{count} 日",
-				"autoClearDone": "已自清 {count} 檔，騰 {size}"
+				"autoClearDone": "已自清 {count} 檔，騰 {size}",
+				"cacheDetail": "本機曲之專輯封面",
+				"musicCacheDetail": "本機所納音頻之暫存副本",
+				"logsDetail": "供診斷之舊日誌檔",
+				"cleanOnlineCache": "清線上之暫存",
+				"cleanMusicCache": "清音頻之副本"
 			},
 			"logLevel": {
 				"label": "啟時除錯 LOG 之級",
@@ -558,6 +578,34 @@
 				"debugHint": "錄最詳之訊，用資排難；日誌增長較速。",
 				"normalHint": "預設之檔，僅錄運行之狀與要警。",
 				"offHint": "不寫日誌；省磁碟之占，然生事時無錄可查。"
+			},
+			"online": {
+				"subtitle": "線上音源",
+				"checked": "試畢，可用之狀已新",
+				"imported": "已納「{name}」",
+				"importFailed": "納之不果：{error}",
+				"restored": "已復本有之音源",
+				"lxImported": "已自洛雪音樂納 {imported} 個音源（略過 {skipped} 個）",
+				"lxImportFailed": "納之不果：{error}",
+				"urlPlaceholder": "貼音源 js 之連結",
+				"available": "可用",
+				"unavailable": "不可用",
+				"updateTitle": "音源更新之告示",
+				"updateNoLog": "該音源予新更新之連結",
+				"tip": "此處理與洛雪音樂相合之自定音源。音源司解析曲目為可奏之址；搜尋則由程式自任。音源不可用時，自改用本有之直連。",
+				"importLx": "自洛雪音樂納入",
+				"importFile": "納入檔",
+				"check": "試其可用與否",
+				"restore": "復其本有之音源",
+				"importUrl": "自連結納入",
+				"hasUpdate": "有更新之告",
+				"builtin": "本有",
+				"disabled": "已停用",
+				"disable": "停用",
+				"enable": "啟用",
+				"remove": "刪",
+				"updateTip": "該音源推更新之訊，其內容乃音源作者所供。",
+				"openUpdateUrl": "觀更新之詳"
 			}
 		},
 		"song": {
@@ -640,7 +688,9 @@
 				"download": "取",
 				"save": "納入歌單",
 				"noPlaylist": "尚無歌單，請先建一單"
-			}
+			},
+			"loadingAudio": "方載線上曲目……",
+			"loadFailed": "線上曲目載之不果：{error}"
 		}
 	},
 	"playbar": {

@@ -38,7 +38,7 @@
 		}
 	},
 	"productName": "AMLL Player",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"identifier": "net.stevexmh.amllplayer",
 	"plugins": {
 		"updater": {

@@ -1,6 +1,6 @@
 [package]
 name = "amll-player"
-version = "1.0.6"
+version = "1.0.7"
 description = "AMLL Player - cuicanx maintained edition"
 authors = ["cuicanx <https://github.com/cuicanx>"]
 license = ""

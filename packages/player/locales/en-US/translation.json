@@ -94,7 +94,9 @@
 		"page": {
 			"back": "Back"
 		},
-		"settings": "Settings"
+		"settings": "Settings",
+		"close": "Close",
+		"reset": "Reset"
 	},
 	"error": {
 		"backToMainPage": "Back to home",
@@ -304,12 +306,25 @@
 					"label": "Interface theme",
 					"light": "Light"
 				},
-				"windowAlwaysOnTop": {
-					"description": "Keep the app window always on top",
-					"label": "Enable always on top"
-				}
+			"windowAlwaysOnTop": {
+				"description": "Keep the app window always on top",
+				"label": "Enable always on top"
 			},
-			"lyricAppearance": {
+			"playMode": {
+				"local": "Local Mode",
+				"online": "Online Mode",
+				"label": "Playback Mode",
+				"description": "Local mode plays only songs stored on your computer. Online mode searches for and plays songs directly from the internet in the search page. Changes take effect on the next launch.",
+				"pending": "Saved — takes effect after restart",
+				"restart": "Restart now"
+			},
+			"quality": {
+				"auto": "Auto (320k preferred)",
+				"label": "Preferred quality for online music downloads",
+				"description": "When playing online songs, try this quality first and automatically fall back when the source does not support it"
+			}
+		},
+		"lyricAppearance": {
 				"advanceLyricDynamicLyricTime": {
 					"description": "Advance the initial time sequence of the original lyrics line, so that the lyrics effect starts playing (word by word) just after the lyrics scroll ends. This behavior is closer to the effect of Apple Music, but in most cases, it will cause the lyrics at the end of the line to be switched to the next line before they have been played completely.",
 					"label": "Advance Lyric Timing"
@@ -547,7 +562,12 @@
 				"autoClearDetail": "Online song cache and covers unused for longer than the selected period are deleted automatically",
 				"autoClearNever": "Never",
 				"autoClearDays": "{count} days",
-				"autoClearDone": "Automatically cleaned {count} files, freed {size}"
+				"autoClearDone": "Automatically cleaned {count} files, freed {size}",
+				"cacheDetail": "Album covers of local songs",
+				"musicCacheDetail": "Temporary copies of locally imported audio",
+				"logsDetail": "Historical log files for diagnostics",
+				"cleanOnlineCache": "Clean online cache",
+				"cleanMusicCache": "Clean audio copies"
 			},
 			"logLevel": {
 				"label": "Startup log level",
@@ -558,6 +578,34 @@
 				"debugHint": "Most verbose, for diagnosing problems; logs grow quickly.",
 				"normalHint": "Default; records normal operation and important warnings.",
 				"offHint": "No logging; saves disk space but leaves no records when something goes wrong."
+			},
+			"online": {
+				"subtitle": "Online Sources",
+				"checked": "Check complete, availability has been updated",
+				"imported": "Imported “{name}”",
+				"importFailed": "Import failed: {error}",
+				"restored": "Built-in sources restored",
+				"lxImported": "Imported {imported} sources from LX Music ({skipped} skipped)",
+				"lxImportFailed": "Import failed: {error}",
+				"urlPlaceholder": "Paste a source JS link",
+				"available": "Available",
+				"unavailable": "Unavailable",
+				"updateTitle": "Source update notice",
+				"updateNoLog": "This source provided a new update link",
+				"tip": "Manage custom sources compatible with LX Music here. Sources resolve songs into playable URLs, while search is handled by the app itself; when a source is unavailable, the built-in direct connection is used automatically.",
+				"importLx": "Import from LX Music",
+				"importFile": "Import from file",
+				"check": "Check availability",
+				"restore": "Restore built-in sources",
+				"importUrl": "Import from URL",
+				"hasUpdate": "Update notice available",
+				"builtin": "Built-in",
+				"disabled": "Disabled",
+				"disable": "Disable",
+				"enable": "Enable",
+				"remove": "Remove",
+				"updateTip": "This source has pushed an update notice, provided by its author.",
+				"openUpdateUrl": "View update details"
 			}
 		},
 		"song": {
@@ -640,7 +688,9 @@
 				"download": "Download",
 				"save": "Save to playlist",
 				"noPlaylist": "No playlist yet, create one first"
-			}
+			},
+			"loadingAudio": "Loading online song...",
+			"loadFailed": "Failed to load online song: {error}"
 		}
 	},
 	"playbar": {

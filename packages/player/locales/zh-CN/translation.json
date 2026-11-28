@@ -94,7 +94,9 @@
 		"page": {
 			"back": "返回"
 		},
-		"settings": "设置"
+		"settings": "设置",
+		"close": "关闭",
+		"reset": "重置"
 	},
 	"error": {
 		"backToMainPage": "回到主页",
@@ -307,6 +309,19 @@
 				"windowAlwaysOnTop": {
 					"description": "将应用窗口设置为始终置顶",
 					"label": "启用窗口置顶"
+				},
+				"playMode": {
+					"local": "本地模式",
+					"online": "在线模式",
+					"label": "播放模式",
+					"description": "本地模式只播放电脑里的歌曲；在线模式在搜索页联网搜索并直接播放。切换后于下次启动生效。",
+					"pending": "已保存，重启后生效",
+					"restart": "立即重启"
+				},
+				"quality": {
+					"auto": "自动（320k 优先）",
+					"label": "在线音乐优先下载音质",
+					"description": "播放联网歌曲时优先尝试该音质，音源不支持时自动回退"
 				}
 			},
 			"lyricAppearance": {
@@ -547,7 +562,12 @@
 				"autoClearDetail": "超过所选时长未使用的在线歌曲缓存与封面会被自动删除",
 				"autoClearNever": "不清理",
 				"autoClearDays": "{count} 天",
-				"autoClearDone": "已自动清理 {count} 个文件，释放 {size}"
+				"autoClearDone": "已自动清理 {count} 个文件，释放 {size}",
+				"cacheDetail": "本地歌曲的专辑封面",
+				"musicCacheDetail": "本地导入的音频临时副本",
+				"logsDetail": "诊断用的历史日志文件",
+				"cleanOnlineCache": "清理在线缓存",
+				"cleanMusicCache": "清理音频副本"
 			},
 			"logLevel": {
 				"label": "启动调试 LOG 等级",
@@ -558,6 +578,34 @@
 				"debugHint": "记录最详细的信息，用于排查问题；日志增长较快。",
 				"normalHint": "默认档位，只记录运行状况与重要警告。",
 				"offHint": "不写日志；节省磁盘占用，出问题时无记录可查。"
+			},
+			"online": {
+				"subtitle": "在线音源",
+				"checked": "检测完成，可用状态已更新",
+				"imported": "已导入「{name}」",
+				"importFailed": "导入失败：{error}",
+				"restored": "已恢复内置音源",
+				"lxImported": "已从洛雪音乐导入 {imported} 个音源（跳过 {skipped} 个）",
+				"lxImportFailed": "导入失败：{error}",
+				"urlPlaceholder": "粘贴音源 js 链接",
+				"available": "可用",
+				"unavailable": "不可用",
+				"updateTitle": "音源更新公告",
+				"updateNoLog": "该音源提供了新的更新链接",
+				"tip": "这里管理兼容洛雪音乐的自定义音源。音源负责把歌曲解析成可播放地址，搜索由软件自身完成；音源不可用时会自动改用内置直连。",
+				"importLx": "从洛雪音乐导入",
+				"importFile": "导入文件",
+				"check": "检测可用性",
+				"restore": "恢复内置音源",
+				"importUrl": "从链接导入",
+				"hasUpdate": "有更新公告",
+				"builtin": "内置",
+				"disabled": "已停用",
+				"disable": "停用",
+				"enable": "启用",
+				"remove": "删除",
+				"updateTip": "该音源推送了更新信息，内容由音源作者提供。",
+				"openUpdateUrl": "查看更新详情"
 			}
 		},
 		"song": {
@@ -640,7 +688,9 @@
 				"download": "下载",
 				"save": "收藏到歌单",
 				"noPlaylist": "还没有歌单，请先创建一个"
-			}
+			},
+			"loadingAudio": "正在加载在线歌曲…",
+			"loadFailed": "在线歌曲加载失败：{error}"
 		}
 	},
 	"playbar": {

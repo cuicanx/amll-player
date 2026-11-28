@@ -94,7 +94,9 @@
 		"page": {
 			"back": "往回溜喵"
 		},
-		"settings": "本喵的设置"
+		"settings": "本喵的设置",
+		"close": "关掉喵",
+		"reset": "重新摆好喵"
 	},
 	"error": {
 		"backToMainPage": "回本喵的小窝喵",
@@ -307,6 +309,19 @@
 				"windowAlwaysOnTop": {
 					"description": "让本喵的窗户一直浮在最上面喵",
 					"label": "让窗户浮在最上头喵"
+				},
+				"playMode": {
+					"local": "只唱家里存着的喵",
+					"online": "联网找歌来唱喵",
+					"label": "唱歌的法子喵",
+					"description": "本地模式只唱主人电脑里存着的歌儿喵；在线模式就去搜索页联网找歌，找到直接开唱喵。换了以后要等本喵下次醒来才作数哦～",
+					"pending": "记下啦喵，等本喵醒来再算数～",
+					"restart": "这就醒过来喵！"
+				},
+				"quality": {
+					"auto": "本喵自己挑喵（320k 先来）",
+					"label": "线上歌儿优先叼回来的音质喵",
+					"description": "唱线上歌儿的时候优先试试这个音质喵，音源要是不给力，本喵就自己退而求其次～"
 				}
 			},
 			"lyricAppearance": {
@@ -547,7 +562,12 @@
 				"autoClearDetail": "超过主人选的时间没碰过的线上歌儿缓存和封面，本喵就自个儿扔掉啦喵～",
 				"autoClearNever": "不扫喵，都留着",
 				"autoClearDays": "{count} 天喵",
-				"autoClearDone": "本喵自个儿扫掉了 {count} 个，腾出 {size} 喵～"
+				"autoClearDone": "本喵自个儿扫掉了 {count} 个，腾出 {size} 喵～",
+				"cacheDetail": "主人本地歌儿的小窝脸面喵",
+				"musicCacheDetail": "从本地叼进来的歌儿，临时抄的那份儿喵",
+				"logsDetail": "本喵记的旧日记，专给抓虫子用的喵",
+				"cleanOnlineCache": "把线上攒的缓存扫掉喵",
+				"cleanMusicCache": "把临时的歌儿副本扫掉喵"
 			},
 			"logLevel": {
 				"label": "醒来时记日记有多细喵",
@@ -558,6 +578,34 @@
 				"debugHint": "记得最细喵，方便抓虫子；不过日记本长得飞快～",
 				"normalHint": "默认档喵，只记跑得顺不顺和要紧的提醒～",
 				"offHint": "不写日记喵，省地方；可出了问题就没账可查啦～"
+			},
+			"online": {
+				"subtitle": "线上音源喵",
+				"checked": "试完啦喵，能不能用本喵都记下了～",
+				"imported": "「{name}」收进来啦喵～",
+				"importFailed": "没收成喵…{error}",
+				"restored": "把原本的音源找回来喵～",
+				"lxImported": "从洛雪音乐那儿叼回来 {imported} 个音源喵（有 {skipped} 个跳过去啦喵）",
+				"lxImportFailed": "没收成喵…{error}",
+				"urlPlaceholder": "把音源的 js 链接贴这儿喵～",
+				"available": "能用喵",
+				"unavailable": "不顶用喵",
+				"updateTitle": "音源捎来的更新消息喵",
+				"updateNoLog": "这个音源给了条新的更新链接喵",
+				"tip": "这儿管着跟洛雪音乐合得来的自定义音源喵。音源就管把歌儿翻成能唱的地址，找歌是本喵自己动手喵；音源哪天不顶用了，本喵就自动改用自带的直连，绝不撂挑子～",
+				"importLx": "从洛雪音乐叼回来喵",
+				"importFile": "从文件收进来喵",
+				"check": "试试能不能用喵",
+				"restore": "把原本的音源找回来喵",
+				"importUrl": "顺着链接收进来喵",
+				"hasUpdate": "有新消息喵",
+				"builtin": "自带的喵",
+				"disabled": "歇着呢喵",
+				"disable": "让它歇会儿喵",
+				"enable": "叫醒它喵",
+				"remove": "扔掉喵",
+				"updateTip": "这个音源推了条更新消息过来喵，里头的话是音源作者写的哦～",
+				"openUpdateUrl": "去看看更新说了啥喵"
 			}
 		},
 		"song": {
@@ -640,7 +688,9 @@
 				"download": "叼回来喵",
 				"save": "藏进歌单喵",
 				"noPlaylist": "还没有歌单喵，主人先开一个嘛～"
-			}
+			},
+			"loadingAudio": "正在把线上歌儿叼过来喵～",
+			"loadFailed": "线上歌儿没叼动喵…{error}"
 		}
 	},
 	"playbar": {

@@ -94,7 +94,9 @@
 		"page": {
 			"back": "返回"
 		},
-		"settings": "設定"
+		"settings": "設定",
+		"close": "關閉",
+		"reset": "重設"
 	},
 	"error": {
 		"backToMainPage": "回到首頁",
@@ -307,6 +309,19 @@
 				"windowAlwaysOnTop": {
 					"description": "將應用程式視窗設定為永遠置頂",
 					"label": "啟用視窗置頂"
+				},
+				"playMode": {
+					"local": "本機模式",
+					"online": "線上模式",
+					"label": "播放模式",
+					"description": "本機模式只播放電腦裡的歌曲；線上模式在搜尋頁連網搜尋並直接播放。切換後於下次啟動時生效。",
+					"pending": "已儲存，重新啟動後生效",
+					"restart": "立即重新啟動"
+				},
+				"quality": {
+					"auto": "自動（320k 優先）",
+					"label": "線上音樂優先下載音質",
+					"description": "播放線上歌曲時優先嘗試該音質，音源不支援時自動回退"
 				}
 			},
 			"lyricAppearance": {
@@ -547,7 +562,12 @@
 				"autoClearDetail": "超過所選時長未使用的線上歌曲快取與封面會被自動刪除",
 				"autoClearNever": "不清理",
 				"autoClearDays": "{count} 天",
-				"autoClearDone": "已自動清理 {count} 個檔案，釋出 {size}"
+				"autoClearDone": "已自動清理 {count} 個檔案，釋出 {size}",
+				"cacheDetail": "本機歌曲的專輯封面",
+				"musicCacheDetail": "本機匯入的音訊暫存副本",
+				"logsDetail": "診斷用的歷史記錄檔",
+				"cleanOnlineCache": "清理線上快取",
+				"cleanMusicCache": "清理音訊副本"
 			},
 			"logLevel": {
 				"label": "啟動除錯 LOG 等級",
@@ -558,6 +578,34 @@
 				"debugHint": "記錄最詳細的資訊，用於排查問題；日誌成長較快。",
 				"normalHint": "預設檔位，只記錄運作狀況與重要警告。",
 				"offHint": "不寫日誌；節省磁碟佔用，出問題時無記錄可查。"
+			},
+			"online": {
+				"subtitle": "線上音源",
+				"checked": "檢測完成，可用狀態已更新",
+				"imported": "已匯入「{name}」",
+				"importFailed": "匯入失敗：{error}",
+				"restored": "已還原內建音源",
+				"lxImported": "已從洛雪音樂匯入 {imported} 個音源（跳過 {skipped} 個）",
+				"lxImportFailed": "匯入失敗：{error}",
+				"urlPlaceholder": "貼上音源 js 連結",
+				"available": "可用",
+				"unavailable": "不可用",
+				"updateTitle": "音源更新公告",
+				"updateNoLog": "該音源提供了新的更新連結",
+				"tip": "這裡管理相容洛雪音樂的自訂音源。音源負責將歌曲解析成可播放位址，搜尋由軟體自身完成；音源不可用時會自動改用內建直連。",
+				"importLx": "從洛雪音樂匯入",
+				"importFile": "匯入檔案",
+				"check": "檢測可用性",
+				"restore": "還原內建音源",
+				"importUrl": "從連結匯入",
+				"hasUpdate": "有更新公告",
+				"builtin": "內建",
+				"disabled": "已停用",
+				"disable": "停用",
+				"enable": "啟用",
+				"remove": "刪除",
+				"updateTip": "該音源推送了更新資訊，內容由音源作者提供。",
+				"openUpdateUrl": "查看更新詳情"
 			}
 		},
 		"song": {
@@ -640,7 +688,9 @@
 				"download": "下載",
 				"save": "收藏到歌單",
 				"noPlaylist": "還沒有歌單，請先建立一個"
-			}
+			},
+			"loadingAudio": "正在載入線上歌曲…",
+			"loadFailed": "線上歌曲載入失敗：{error}"
 		}
 	},
 	"playbar": {

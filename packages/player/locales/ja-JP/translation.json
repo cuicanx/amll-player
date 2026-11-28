@@ -94,7 +94,9 @@
 		"page": {
 			"back": "戻る"
 		},
-		"settings": "設定"
+		"settings": "設定",
+		"close": "閉じる",
+		"reset": "リセット"
 	},
 	"error": {
 		"backToMainPage": "ホームに戻る",
@@ -304,12 +306,25 @@
 					"label": "画面テーマ",
 					"light": "ライト"
 				},
-				"windowAlwaysOnTop": {
-					"description": "アプリのウィンドウを常に最前面に表示します",
-					"label": "ウィンドウの最前面表示を有効にする"
-				}
+			"windowAlwaysOnTop": {
+				"description": "アプリのウィンドウを常に最前面に表示します",
+				"label": "ウィンドウの最前面表示を有効にする"
 			},
-			"lyricAppearance": {
+			"playMode": {
+				"local": "ローカルモード",
+				"online": "オンラインモード",
+				"label": "再生モード",
+				"description": "ローカルモードはパソコン内の曲のみを再生します。オンラインモードは検索ページでインターネット検索し、そのまま再生します。切り替えは次回起動時に適用されます。",
+				"pending": "保存しました。再起動後に適用されます",
+				"restart": "すぐに再起動"
+			},
+			"quality": {
+				"auto": "自動（320k 優先）",
+				"label": "オンライン曲の優先ダウンロード音質",
+				"description": "オンライン曲を再生する際にこの音質を優先して試し、音源が対応しない場合は自動的に切り替わります"
+			}
+		},
+		"lyricAppearance": {
 				"advanceLyricDynamicLyricTime": {
 					"description": "元の歌詞行の開始タイミングを早め、歌詞のスクロールが終わった直後に（単語単位の）歌詞効果が始まるようにします。Apple Music に近い挙動ですが、多くの場合、行の末尾の歌詞が再生し終わる前に次の行へ切り替わります。",
 					"label": "歌詞行のタイミングを早める"
@@ -547,7 +562,12 @@
 				"autoClearDetail": "一定期間使われていないオンライン曲のキャッシュとカバーを自動で削除します",
 				"autoClearNever": "削除しない",
 				"autoClearDays": "{count} 日",
-				"autoClearDone": "{count} ファイルを自動削除し、{size} を解放しました"
+				"autoClearDone": "{count} ファイルを自動削除し、{size} を解放しました",
+				"cacheDetail": "ローカル曲のアルバムカバー",
+				"musicCacheDetail": "ローカル曲の音声一時コピー",
+				"logsDetail": "診断用の過去ログファイル",
+				"cleanOnlineCache": "オンラインキャッシュを削除",
+				"cleanMusicCache": "音声コピーを削除"
 			},
 			"logLevel": {
 				"label": "起動時ログレベル",
@@ -558,6 +578,34 @@
 				"debugHint": "最も詳細に記録します。問題調査用。ログは急増します。",
 				"normalHint": "既定。通常の動作と重要な警告のみ記録します。",
 				"offHint": "ログを記録しません。容量は節約できますが、問題時の記録が残りません。"
+			},
+			"online": {
+				"subtitle": "オンライン音源",
+				"checked": "確認が完了し、利用可能状態が更新されました",
+				"imported": "「{name}」をインポートしました",
+				"importFailed": "インポート失敗：{error}",
+				"restored": "内蔵音源を復元しました",
+				"lxImported": "洛雪音楽から {imported} 個の音源をインポートしました（{skipped} 個をスキップ）",
+				"lxImportFailed": "インポート失敗：{error}",
+				"urlPlaceholder": "音源の js リンクを貼り付け",
+				"available": "利用可能",
+				"unavailable": "利用不可",
+				"updateTitle": "音源の更新アナウンス",
+				"updateNoLog": "この音源から新しい更新リンクが提供されています",
+				"tip": "ここでは洛雪音楽と互換性のあるカスタム音源を管理します。音源は曲を再生可能なアドレスに解決し、検索はアプリ自身が行います。音源が利用できない場合は、内蔵のダイレクト接続に自動で切り替わります。",
+				"importLx": "洛雪音楽からインポート",
+				"importFile": "ファイルからインポート",
+				"check": "利用可能か確認",
+				"restore": "内蔵音源を復元",
+				"importUrl": "リンクからインポート",
+				"hasUpdate": "更新アナウンスがあります",
+				"builtin": "内蔵",
+				"disabled": "無効",
+				"disable": "無効にする",
+				"enable": "有効にする",
+				"remove": "削除",
+				"updateTip": "この音源から更新情報が配信されています。内容は音源作者が提供しています。",
+				"openUpdateUrl": "更新の詳細を見る"
 			}
 		},
 		"song": {
@@ -640,7 +688,9 @@
 				"download": "ダウンロード",
 				"save": "プレイリストに追加",
 				"noPlaylist": "プレイリストがありません。先に作成してください"
-			}
+			},
+			"loadingAudio": "オンライン曲を読み込み中…",
+			"loadFailed": "オンライン曲の読み込みに失敗しました：{error}"
 		}
 	},
 	"playbar": {

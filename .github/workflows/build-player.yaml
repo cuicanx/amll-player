@@ -109,10 +109,10 @@ jobs:
           # here - they repeat on every version and add no value.
           releaseBody: |
             ### 修复
-            - 点击关于页崩溃的问题。
-            - 英文、日文、繁中等语言大量显示中文，现已全部手写补齐。
-            - 切换语言后语言名称变成原始代号的问题。
-            - 越南语已从语言列表中移除。
+            - 设置页存储、在线音源、常规等页面在非中文下显示中文的问题。
+            - 猫娘语与文言文中 {count}、{channel} 等显示为文字的问题。
+            - 显示语言列表中出现两个「本地化 ID」的问题。
+            - 关于页崩溃。
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -280,10 +280,10 @@ jobs:
           # update panel; CHANGELOG.md is the single place for details.
           releaseBody: |
             ### 修复
-            - 点击关于页崩溃的问题。
-            - 英文、日文、繁中等语言大量显示中文，现已全部手写补齐。
-            - 切换语言后语言名称变成原始代号的问题。
-            - 越南语已从语言列表中移除。
+            - 设置页存储、在线音源、常规等页面在非中文下显示中文的问题。
+            - 猫娘语与文言文中 {count}、{channel} 等显示为文字的问题。
+            - 显示语言列表中出现两个「本地化 ID」的问题。
+            - 关于页崩溃。
           prerelease: true
           args: ${{ matrix.args }}
         env:
