@@ -277,7 +277,7 @@ jobs:
           projectPath: packages/player
           tagName: ${{ github.ref_name }}-player-dev
           uploadUpdaterJson: true
-          releaseName: AMLL Player ${{ github.ref_name }} branch development build
+          releaseName: AMLL Player ${{ github.ref_name }} 测试版
           # Dev builds: short, user-facing notes only. Raw commit messages and
           # duplicated bilingual boilerplate used to show up in the in-app
           # update panel; CHANGELOG.md is the single place for details.
@@ -528,7 +528,7 @@ jobs:
           # gh CLI uploads directly to the tag, which the desktop job created.
           if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
             gh release create "$TAG" --repo "$REPO" --prerelease \
-              --title "AMLL Player $TAG" --notes "Android development build" || true
+              --title "AMLL Player $TAG 测试版" --notes "Android 测试构建" || true
           fi
           gh release upload "$TAG" build-dist/* --repo "$REPO" --clobber
           echo "Android artifacts uploaded to $TAG"
