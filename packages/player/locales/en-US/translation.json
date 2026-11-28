@@ -187,7 +187,9 @@
 			"noPlaylistTip": "Nothing is here, try to create something?",
 			"playlistCard": {
 				"createTime": "Created at {createTime}",
-				"songCount": "{songAmount} Songs"
+				"createTimePrefix": "Created at",
+				"songCount": "{songAmount} Songs",
+				"songCountUnit": "songs"
 			},
 			"playlistMenu": {
 				"delete": "Delete",

@@ -187,7 +187,9 @@
 			"noPlaylistTip": "沒有播放清單，快去新增一個吧！",
 			"playlistCard": {
 				"createTime": "建立於 {createTime}",
-				"songCount": "{songAmount} 首歌曲"
+				"createTimePrefix": "建立於",
+				"songCount": "{songAmount} 首歌曲",
+				"songCountUnit": "首歌曲"
 			},
 			"playlistMenu": {
 				"delete": "刪除",

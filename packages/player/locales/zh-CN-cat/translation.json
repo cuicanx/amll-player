@@ -187,7 +187,9 @@
 			"noPlaylistTip": "连个歌单都没有喵！主人快去开一个嘛～",
 			"playlistCard": {
 				"createTime": "{createTime} 搭的窝喵",
-				"songCount": "{songAmount} 首歌儿喵"
+				"createTimePrefix": "搭于喵",
+				"songCount": "{songAmount} 首歌儿喵",
+				"songCountUnit": "首歌儿喵"
 			},
 			"playlistMenu": {
 				"delete": "扔掉喵",

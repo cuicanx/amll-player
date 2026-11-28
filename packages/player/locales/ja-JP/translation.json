@@ -187,7 +187,9 @@
 			"noPlaylistTip": "プレイリストがありません。新しく作成しましょう！",
 			"playlistCard": {
 				"createTime": "{createTime} に作成",
-				"songCount": "{songAmount} 曲"
+				"createTimePrefix": "作成日時",
+				"songCount": "{songAmount} 曲",
+				"songCountUnit": "曲"
 			},
 			"playlistMenu": {
 				"delete": "削除",

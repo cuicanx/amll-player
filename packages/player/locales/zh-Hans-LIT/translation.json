@@ -187,7 +187,9 @@
 			"noPlaylistTip": "尚無歌單，速建一單吧！",
 			"playlistCard": {
 				"createTime": "建於 {createTime}",
-				"songCount": "{songAmount} 曲"
+				"createTimePrefix": "建於",
+				"songCount": "{songAmount} 曲",
+				"songCountUnit": "曲"
 			},
 			"playlistMenu": {
 				"delete": "刪",

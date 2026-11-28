@@ -32,21 +32,11 @@ export const PlaylistCard = forwardRef<
 								<Text>{playlist.name}</Text>
 								<Text color="gray" size="2">
 									<Flex gap="2">
-										{t(
-											"page.main.playlistCard.songCount",
-											"{songAmount} 首歌曲",
-											{
-												songAmount,
-											},
-										)}
+										{songAmount}{" "}
+										{t("page.main.playlistCard.songCountUnit", "首歌曲")}
 										<div>-</div>
-										{t(
-											"page.main.playlistCard.createTime",
-											"创建于 {createTime}",
-											{
-												createTime,
-											},
-										)}
+										{t("page.main.playlistCard.createTimePrefix", "创建于")}{" "}
+										{createTime}
 									</Flex>
 								</Text>
 							</Flex>
