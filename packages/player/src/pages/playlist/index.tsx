@@ -21,14 +21,13 @@ import {
 	Separator,
 	Text,
 	TextField,
-	Tooltip,
 } from "@radix-ui/themes";
 import { path } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
 import { pickFilePaths, pickFolderPath } from "../../utils/file-picker.ts";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { platform } from "@tauri-apps/plugin-os";
-import { motion, useMotionTemplate, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { useAtomValue, useStore } from "jotai";
 import md5 from "md5";
 import {
@@ -137,21 +136,19 @@ export const Component: FC = () => {
 	);
 	const { t } = useTranslation();
 	const playlistViewRef = useRef<HTMLDivElement>(null);
-	const playlistViewScroll = useScroll({
-		container: playlistViewRef,
-	});
-	// PERF: these motion values are written into `width` and `gap`, which are
-	// layout properties. Writing them on every scroll pixel forced a reflow of
-	// the header on every frame, and because the header is a flex sibling of
-	// the virtualised list, the changed height made ViewportList re-measure all
-	// rows in the same frame (layout thrashing). Quantising scrollY to 4 px
-	// steps cuts those reflows by ~4x while the visual difference is below one
-	// CSS pixel; the clamp endpoints (and therefore the final look) are intact.
+	const playlistViewScroll = useScroll({ container: playlistViewRef });
 	const quantizedScrollY = useTransform(playlistViewScroll.scrollY, (value) =>
 		Math.round(value / 4) * 4,
 	);
-	const playlistCoverSize = useMotionTemplate`clamp(6em,calc(12em - ${quantizedScrollY}px),12em)`;
-	const playlistInfoGapSize = useMotionTemplate`clamp(var(--space-1), calc(var(--space-4) - ${quantizedScrollY}px / 5), var(--space-4))`;
+	// The cover keeps its shrink-on-scroll animation, but now as a transform
+	// scale inside a fixed-size slot. `width` animation used to change the
+	// header height, which changed the scroll range, which reset scrollY and
+	// caused a feedback loop (the four-song jitter). Transforms are composited
+	// and never affect layout, so the scroll range stays constant.
+	const coverScale = useTransform(quantizedScrollY, (value) =>
+		1 - Math.min(value, 96) / 192,
+	);
+	const playlistInfoGapSize = "var(--space-3)";
 	const [failedImports, setFailedImports] = useState<
 		{ path: string; error: string }[]
 	>([]);
@@ -584,12 +581,22 @@ export const Component: FC = () => {
 							<Trans i18nKey="common.page.back">返回</Trans>
 						</Button>
 					</Flex>
-					<Flex align="end" gap="3">
-						<motion.div
+					<Flex align="end" gap="3" style={{ minHeight: "12em" }}>
+						<div
 							style={{
-								width: playlistCoverSize,
+								width: "12em",
+								aspectRatio: "1",
+								flexShrink: 0,
 							}}
 						>
+							<motion.div
+								style={{
+									scale: coverScale,
+									transformOrigin: "top left",
+									width: "100%",
+									height: "100%",
+								}}
+							>
 							<ContextMenu.Root>
 								<ContextMenu.Trigger>
 									<PlaylistCover
@@ -628,7 +635,8 @@ export const Component: FC = () => {
 									</ContextMenu.Item>
 								</ContextMenu.Content>
 							</ContextMenu.Root>
-						</motion.div>
+							</motion.div>
+						</div>
 						<Flex
 							direction="column"
 							flexGrow="1"
@@ -658,8 +666,8 @@ export const Component: FC = () => {
 										},
 									)}
 								</Text>
-								<Flex gap="2" align="center" justify="between" width="100%">
-									<Flex gap="2">
+								<Flex gap="2" align="center" justify="between" width="100%" wrap="wrap">
+									<Flex gap="2" wrap="wrap" minWidth="0">
 										<Button onClick={() => onPlaylistDefault()}>
 											<PlayIcon />
 											<Trans i18nKey="page.playlist.playAll">播放全部</Trans>
@@ -682,16 +690,15 @@ export const Component: FC = () => {
 											</Button>
 										)}
 									</Flex>
-									<Tooltip content={t("page.playlist.settings.label", "设置")}>
-										<IconButton
-											variant="soft"
-											mr="5"
-											onClick={() => setPlaylistSettingsOpen(true)}
-											aria-label={t("page.playlist.settings.label", "设置")}
-										>
-											<GearIcon />
-										</IconButton>
-									</Tooltip>
+									<IconButton
+										variant="soft"
+										mr="5"
+										style={{ flexShrink: 0 }}
+										onClick={() => setPlaylistSettingsOpen(true)}
+										aria-label={t("page.playlist.settings.label", "设置")}
+									>
+										<GearIcon />
+									</IconButton>
 								</Flex>
 							</motion.div>
 						</Flex>
@@ -724,7 +731,7 @@ export const Component: FC = () => {
 										},
 									)}
 								</Text>
-								<Flex gap="2" align="center" justify="between" width="100%">
+								<Flex gap="2" align="center" justify="between" width="100%" wrap="wrap">
 									<Flex gap="2">
 										<IconButton onClick={() => onPlaylistDefault()}>
 											<PlayIcon />
@@ -738,16 +745,15 @@ export const Component: FC = () => {
 											</IconButton>
 										)}
 									</Flex>
-									<Tooltip content={t("page.playlist.settings.label", "设置")}>
-										<IconButton
-											variant="soft"
-											mr="5"
-											onClick={() => setPlaylistSettingsOpen(true)}
-											aria-label={t("page.playlist.settings.label", "设置")}
-										>
-											<GearIcon />
-										</IconButton>
-									</Tooltip>
+									<IconButton
+										variant="soft"
+										mr="5"
+										style={{ flexShrink: 0 }}
+										onClick={() => setPlaylistSettingsOpen(true)}
+										aria-label={t("page.playlist.settings.label", "设置")}
+									>
+										<GearIcon />
+									</IconButton>
 								</Flex>
 							</motion.div>
 						</Flex>

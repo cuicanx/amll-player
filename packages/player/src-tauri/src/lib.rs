@@ -229,6 +229,11 @@ fn handle_window_event(_window: &tauri::Window, _event: &tauri::WindowEvent) {
         extension_window::cleanup_destroyed_window(_window.app_handle(), _window.label());
         if _window.label() == "main" {
             extension_window::destroy_all_extension_windows(_window.app_handle());
+            // Stop background threads before process exit. Without this the
+            // low-level mouse hook and audio thread can outlive the UI and
+            // keep the process resident in Task Manager.
+            #[cfg(target_os = "windows")]
+            taskbar_lyric::mouse_forward::stop_mouse_hook();
         }
     }
 
@@ -284,6 +289,16 @@ pub fn run() {
                 ..Default::default()
             })
     }
+
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        // A second launch focuses the existing window instead of starting a
+        // new process with its own audio thread / hooks / watchers.
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }));
 
     let builder = builder
         .plugin(tauri_plugin_dialog::init())
@@ -348,6 +363,8 @@ pub fn run() {
             updater::updater_check,
             #[cfg(not(mobile))]
             updater::updater_install,
+            #[cfg(mobile)]
+            updater::updater_check_android,
             db::commands::update_song,
             db::commands::get_playlist_songs,
             db::commands::save_playlist_cover,

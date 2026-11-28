@@ -172,7 +172,9 @@
 				"stable": "Stable",
 				"dev": "Dev",
 				"current": "Current channel: {channel}"
-			}
+			},
+			"androidUpdateHint": "On Android, download the APK in your browser to install",
+			"upToDate": "Already up to date"
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics Developer Page",
@@ -306,25 +308,25 @@
 					"label": "Interface theme",
 					"light": "Light"
 				},
-			"windowAlwaysOnTop": {
-				"description": "Keep the app window always on top",
-				"label": "Enable always on top"
+				"windowAlwaysOnTop": {
+					"description": "Keep the app window always on top",
+					"label": "Enable always on top"
+				},
+				"playMode": {
+					"local": "Local Mode",
+					"online": "Online Mode",
+					"label": "Playback Mode",
+					"description": "Local mode plays only songs stored on your computer. Online mode searches for and plays songs directly from the internet in the search page. Changes take effect on the next launch.",
+					"pending": "Saved — takes effect after restart",
+					"restart": "Restart now"
+				},
+				"quality": {
+					"auto": "Auto (320k preferred)",
+					"label": "Preferred quality for online music downloads",
+					"description": "When playing online songs, try this quality first and automatically fall back when the source does not support it"
+				}
 			},
-			"playMode": {
-				"local": "Local Mode",
-				"online": "Online Mode",
-				"label": "Playback Mode",
-				"description": "Local mode plays only songs stored on your computer. Online mode searches for and plays songs directly from the internet in the search page. Changes take effect on the next launch.",
-				"pending": "Saved — takes effect after restart",
-				"restart": "Restart now"
-			},
-			"quality": {
-				"auto": "Auto (320k preferred)",
-				"label": "Preferred quality for online music downloads",
-				"description": "When playing online songs, try this quality first and automatically fall back when the source does not support it"
-			}
-		},
-		"lyricAppearance": {
+			"lyricAppearance": {
 				"advanceLyricDynamicLyricTime": {
 					"description": "Advance the initial time sequence of the original lyrics line, so that the lyrics effect starts playing (word by word) just after the lyrics scroll ends. This behavior is closer to the effect of Apple Music, but in most cases, it will cause the lyrics at the end of the line to be switched to the next line before they have been played completely.",
 					"label": "Advance Lyric Timing"
@@ -660,6 +662,14 @@
 		},
 		"online": {
 			"modeTag": "Online mode",
+			"platform": {
+				"all": "All platforms",
+				"tx": "QQ",
+				"kg": "Kugou",
+				"wy": "NetEase",
+				"kw": "Kuwo",
+				"mg": "Migu"
+			},
 			"placeholder": "Search online songs, press Enter to start...",
 			"search": "Search",
 			"searchHistory": "Search history",

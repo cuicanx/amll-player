@@ -172,7 +172,9 @@
 				"stable": "正式版",
 				"dev": "测试版",
 				"current": "当前通道：{channel}"
-			}
+			},
+			"androidUpdateHint": "安卓端需在浏览器中下载 APK 后安装",
+			"upToDate": "已是最新版本"
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 开发者页面",
@@ -660,6 +662,14 @@
 		},
 		"online": {
 			"modeTag": "在线模式",
+			"platform": {
+				"all": "聚合大全",
+				"tx": "QQ",
+				"kg": "酷狗",
+				"wy": "网易",
+				"kw": "酷我",
+				"mg": "咪咕"
+			},
 			"placeholder": "搜索在线歌曲，按回车开始……",
 			"search": "搜索",
 			"searchHistory": "搜索历史",

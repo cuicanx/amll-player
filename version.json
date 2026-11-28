@@ -1,5 +1,5 @@
 {
-  "version": "1.0.9",
+  "version": "1.0.10",
   "channel": "stable",
   "description": "Single source of truth for the application version. CI derives tauri.conf.json / package.json / Cargo.toml from this file. Do not edit those version fields by hand."
 }

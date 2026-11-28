@@ -172,7 +172,9 @@
 				"stable": "正式版",
 				"dev": "テスト版",
 				"current": "現在のチャンネル：{channel}"
-			}
+			},
+			"androidUpdateHint": "Android ではブラウザで APK をダウンロードしてインストールしてください",
+			"upToDate": "最新版です"
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 開発者ページ",
@@ -306,25 +308,25 @@
 					"label": "画面テーマ",
 					"light": "ライト"
 				},
-			"windowAlwaysOnTop": {
-				"description": "アプリのウィンドウを常に最前面に表示します",
-				"label": "ウィンドウの最前面表示を有効にする"
+				"windowAlwaysOnTop": {
+					"description": "アプリのウィンドウを常に最前面に表示します",
+					"label": "ウィンドウの最前面表示を有効にする"
+				},
+				"playMode": {
+					"local": "ローカルモード",
+					"online": "オンラインモード",
+					"label": "再生モード",
+					"description": "ローカルモードはパソコン内の曲のみを再生します。オンラインモードは検索ページでインターネット検索し、そのまま再生します。切り替えは次回起動時に適用されます。",
+					"pending": "保存しました。再起動後に適用されます",
+					"restart": "すぐに再起動"
+				},
+				"quality": {
+					"auto": "自動（320k 優先）",
+					"label": "オンライン曲の優先ダウンロード音質",
+					"description": "オンライン曲を再生する際にこの音質を優先して試し、音源が対応しない場合は自動的に切り替わります"
+				}
 			},
-			"playMode": {
-				"local": "ローカルモード",
-				"online": "オンラインモード",
-				"label": "再生モード",
-				"description": "ローカルモードはパソコン内の曲のみを再生します。オンラインモードは検索ページでインターネット検索し、そのまま再生します。切り替えは次回起動時に適用されます。",
-				"pending": "保存しました。再起動後に適用されます",
-				"restart": "すぐに再起動"
-			},
-			"quality": {
-				"auto": "自動（320k 優先）",
-				"label": "オンライン曲の優先ダウンロード音質",
-				"description": "オンライン曲を再生する際にこの音質を優先して試し、音源が対応しない場合は自動的に切り替わります"
-			}
-		},
-		"lyricAppearance": {
+			"lyricAppearance": {
 				"advanceLyricDynamicLyricTime": {
 					"description": "元の歌詞行の開始タイミングを早め、歌詞のスクロールが終わった直後に（単語単位の）歌詞効果が始まるようにします。Apple Music に近い挙動ですが、多くの場合、行の末尾の歌詞が再生し終わる前に次の行へ切り替わります。",
 					"label": "歌詞行のタイミングを早める"
@@ -660,6 +662,14 @@
 		},
 		"online": {
 			"modeTag": "オンラインモード",
+			"platform": {
+				"all": "すべて",
+				"tx": "QQ",
+				"kg": "クーゴウ",
+				"wy": "ネットイース",
+				"kw": "クーウォ",
+				"mg": "ミグー"
+			},
 			"placeholder": "オンライン曲を検索、Enter で決定……",
 			"search": "検索",
 			"searchHistory": "検索履歴",

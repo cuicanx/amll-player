@@ -1,6 +1,6 @@
 [package]
 name = "amll-player"
-version = "1.0.9"
+version = "1.0.10"
 description = "AMLL Player - cuicanx maintained edition"
 authors = ["cuicanx <https://github.com/cuicanx>"]
 license = ""
@@ -45,6 +45,9 @@ tauri-plugin-fs = { version = "2" }
 tauri-plugin-opener = { version = "2" }
 tauri-plugin-os = { version = "2" }
 tauri-plugin-shell = { version = "2" }
+# Only one instance may run: multiple processes each spawn an audio thread,
+# a theme watcher and a low-level mouse hook, piling up memory/CPU.
+tauri-plugin-single-instance = { version = "2" }
 
 amll-player-core = { path = "../../player-core" }
 ffmpeg_audio = { version = "0.2", features = ["tracing"] }

@@ -172,7 +172,9 @@
 				"stable": "正本",
 				"dev": "試本",
 				"current": "今之途：{channel}"
-			}
+			},
+			"androidUpdateHint": "安卓之屬，宜於瀏覽器取 APK 而納之",
+			"upToDate": "已為最新"
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 開發者之頁",
@@ -660,6 +662,14 @@
 		},
 		"online": {
 			"modeTag": "在線之式",
+			"platform": {
+				"all": "畢集",
+				"tx": "QQ",
+				"kg": "酷狗",
+				"wy": "網易",
+				"kw": "酷我",
+				"mg": "咪咕"
+			},
 			"placeholder": "搜在線曲目，按回車乃始……",
 			"search": "搜尋",
 			"searchHistory": "搜尋之史",

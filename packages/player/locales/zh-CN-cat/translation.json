@@ -172,7 +172,9 @@
 				"stable": "稳当的正式版喵",
 				"dev": "爱尝鲜的测试版喵",
 				"current": "现在走的是：{channel} 喵"
-			}
+			},
+			"androidUpdateHint": "手机上要去浏览器把安装包叼回来装喵～",
+			"upToDate": "已经是最新哒喵"
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 的喵匠调试页",
@@ -660,6 +662,14 @@
 		},
 		"online": {
 			"modeTag": "在线模式喵",
+			"platform": {
+				"all": "全都找一遍喵",
+				"tx": "QQ喵",
+				"kg": "酷狗喵",
+				"wy": "网易喵",
+				"kw": "酷我喵",
+				"mg": "咪咕喵"
+			},
 			"placeholder": "找线上的歌儿喵，按回车就开唱～",
 			"search": "找东西喵～",
 			"searchHistory": "之前找过啥喵",

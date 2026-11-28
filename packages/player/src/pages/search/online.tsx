@@ -527,7 +527,7 @@ export const OnlineSearchPage: FC = () => {
 							variant={platformFilter === "all" ? "solid" : "soft"}
 							onClick={() => setPlatformFilter("all")}
 						>
-							聚合大全
+							{t("page.online.platform.all", "聚合大全")}
 						</Button>
 						{visibleSources.map((source) => (
 							<Button
@@ -536,7 +536,7 @@ export const OnlineSearchPage: FC = () => {
 								variant={platformFilter === source ? "solid" : "soft"}
 								onClick={() => setPlatformFilter(source)}
 							>
-								{PLATFORM_LABEL[source] ?? source}
+								{t(`page.online.platform.${source}`, PLATFORM_LABEL[source] ?? source)}
 							</Button>
 						))}
 					</Flex>
@@ -617,7 +617,10 @@ export const OnlineSearchPage: FC = () => {
 														) : null}
 														{platformFilter === "all" ? (
 															<Badge size="1" variant="soft" radius="full" color="gray">
-																{PLATFORM_LABEL[song.source] ?? song.source}
+																{t(
+																	`page.online.platform.${song.source}`,
+																	PLATFORM_LABEL[song.source] ?? song.source,
+																)}
 															</Badge>
 														) : null}
 													</Flex>

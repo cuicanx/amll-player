@@ -2351,11 +2351,39 @@ const AboutSettings = () => {
 	const checkUpdate = useSetAtom(checkUpdateAtom);
 	const installUpdate = useSetAtom(installUpdateAtom);
 	const checkUpstreamUpdate = useSetAtom(checkUpstreamUpdateAtom);
+	// tauri-plugin-updater is compiled out on mobile. Use a dedicated GitHub
+	// Releases check on Android instead of calling the missing desktop command.
+	const isAndroid = platform() === "android";
+	type AndroidUpdate = {
+		version: string;
+		currentVersion: string;
+		body: string | null;
+		apkUrl: string;
+		releaseUrl: string;
+	};
+	const [androidUpdate, setAndroidUpdate] = useState<AndroidUpdate | null>(null);
+	const [androidChecking, setAndroidChecking] = useState(false);
+
+	const checkAndroidUpdate = useCallback(async () => {
+		setAndroidChecking(true);
+		try {
+			const result = await invoke<AndroidUpdate | null>("updater_check_android", {
+				channel: updateChannel,
+			});
+			setAndroidUpdate(result);
+		} catch (e) {
+			setAndroidUpdate(null);
+			toast.error(String(e));
+		} finally {
+			setAndroidChecking(false);
+		}
+	}, [updateChannel]);
 
 	// Informational only: never blocks or changes the primary update flow.
 	useEffect(() => {
 		void checkUpstreamUpdate();
-	}, [checkUpstreamUpdate]);
+		if (isAndroid) void checkAndroidUpdate();
+	}, [checkUpstreamUpdate, checkAndroidUpdate, isAndroid]);
 
 	return (
 		<>
@@ -2483,7 +2511,7 @@ const AboutSettings = () => {
 			</div>
 
 			<Suspense>
-				{updateInfo && (
+				{!isAndroid && updateInfo && (
 					<>
 						<Separator size="4" my="3" />
 						<div id="updater">
@@ -2536,7 +2564,7 @@ const AboutSettings = () => {
 						<Box mb="3" />
 					</>
 				)}
-				{updateError && (
+				{!isAndroid && updateError && (
 					<>
 						<Separator size="4" my="3" />
 						<Text as="div" color="red" size="2">
@@ -2575,6 +2603,66 @@ const AboutSettings = () => {
 								{t("page.about.updateManualDownload", "打开发布页")}
 							</Button>
 						</Flex>
+					</>
+				)}
+				{isAndroid && (
+					<>
+						<Separator size="4" my="3" />
+						{androidChecking ? (
+							<Text size="2" color="gray">
+								{t("page.about.updatePreparing", "正在连接更新源…")}
+							</Text>
+						) : androidUpdate ? (
+							<>
+								<Text weight="bold" size="3" as="div" mt="1">
+									{t(
+										"page.about.newVersion",
+										"有可用更新从 {currentVersion} 升级至 {nextVersion}",
+										{
+											currentVersion: androidUpdate.currentVersion,
+											nextVersion: androidUpdate.version,
+										},
+									)}
+								</Text>
+								<ReleaseNotes
+									body={androidUpdate.body}
+									version={androidUpdate.version}
+									currentVersion={androidUpdate.currentVersion}
+									label={t("page.about.releaseNotes", "更新内容")}
+									emptyHint={t(
+										"page.about.releaseNotesEmpty",
+										"此版本没有附带更新说明，可直接安装。",
+									)}
+								/>
+								<Flex gap="3" mt="3" wrap="wrap">
+									<Button
+										onClick={() => {
+											void openUrl(androidUpdate.apkUrl);
+										}}
+									>
+										{t("page.about.updateManualDownload", "打开发布页")}
+									</Button>
+									<Text size="1" color="gray">
+										{t(
+											"page.about.androidUpdateHint",
+											"安卓端需在浏览器中下载 APK 后安装",
+										)}
+									</Text>
+								</Flex>
+							</>
+						) : (
+							<Flex gap="3" align="center" wrap="wrap">
+								<Text size="2" color="gray">
+									{t("page.about.upToDate", "已是最新版本")}
+								</Text>
+								<Button
+									variant="soft"
+									onClick={() => void checkAndroidUpdate()}
+								>
+									{t("page.about.updateRetry", "重试")}
+								</Button>
+							</Flex>
+						)}
 					</>
 				)}
 				{upstreamRelease && (
