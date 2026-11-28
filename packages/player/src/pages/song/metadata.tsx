@@ -1,5 +1,5 @@
 import { Button, Callout, Flex, TextField } from "@radix-ui/themes";
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickFilePaths } from "../../utils/file-picker.ts";
 import {
 	type FC,
 	useCallback,
@@ -47,15 +47,8 @@ export const MetadataTabContent: FC = () => {
 
 	const uploadCoverAsImage = useCallback(async () => {
 		if (song === undefined) return;
-		const selected = await open({
-			multiple: false,
-			filters: [
-				{
-					name: t("page.playlist.cover.mediaFiles", "媒体文件"),
-					extensions: ["jpg", "jpeg", "png", "gif", "mp4", "webm"],
-				},
-				{ name: "所有文件", extensions: ["*"] },
-			],
+		const selected = await pickFilePaths({
+			extensions: ["jpg", "jpeg", "png", "gif", "mp4", "webm"],
 		});
 		if (!selected) return;
 		try {

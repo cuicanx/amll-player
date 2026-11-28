@@ -8,7 +8,7 @@ import {
 	TextField,
 } from "@radix-ui/themes";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickFolderPath } from "../../utils/file-picker.ts";
 import { type FC, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -37,11 +37,9 @@ export const NewPlaylistButton: FC = () => {
 		// Must be the very first await: call the picker in the click handler
 		// itself so Windows keeps the gesture. The dialog stays mounted until
 		// the user has picked something.
-		const folder = await open({
-			directory: true,
-			multiple: false,
-			title: t("newPlaylist.dialog.selectFolder", "选择要扫描的文件夹"),
-		});
+		const folder = await pickFolderPath(
+			t("newPlaylist.dialog.selectFolder", "选择要扫描的文件夹"),
+		);
 		setOpenDialog(false);
 		if (!folder) return;
 

@@ -21,6 +21,7 @@ use crate::server::AMLLWebSocketServerWrapper;
 
 mod db;
 mod db_events;
+mod file_dialog;
 mod log_level;
 mod online;
 mod storage;
@@ -301,6 +302,9 @@ pub fn run() {
             server::ws_broadcast_payload,
             server::ws_close_connection,
             window::open_screenshot_window,
+            file_dialog::pick_folder,
+            file_dialog::pick_files,
+            file_dialog::save_file,
             screen_capture::take_screenshot,
             player::local_player_send_msg,
             player::set_media_controls_enabled,

@@ -10,7 +10,7 @@
  */
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
+import { pickSavePath } from "../../utils/file-picker.ts";
 import {
 	Badge,
 	Box,
@@ -417,10 +417,10 @@ export const OnlineSearchPage: FC = () => {
 				// Open the native save box first: an `await` before it breaks the
 				// click gesture on Windows/WebView2 and the picker never appears.
 				const safeName = (song.name || "song").replace(/[\\/:*?"<>|]/g, "_");
-				const dest = await save({
-					defaultPath: `${safeName}.mp3`,
+				const dest = await pickSavePath({
+					fileName: `${safeName}.mp3`,
 					title: t("page.online.downloadTitle", "保存歌曲"),
-					filters: [{ name: "Audio", extensions: ["mp3", "flac", "m4a", "ogg", "wav"] }],
+					extensions: ["mp3", "flac", "m4a", "ogg", "wav"],
 				});
 				if (!dest) {
 					setMessage(t("page.online.downloadCancelled", "已取消下载"));

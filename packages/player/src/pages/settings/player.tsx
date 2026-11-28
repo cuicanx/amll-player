@@ -54,8 +54,7 @@ import {
 } from "@radix-ui/themes";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
+import { pickTextFile } from "../../utils/file-picker.ts";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { platform } from "@tauri-apps/plugin-os";
 import { atom, useAtom, useAtomValue, useSetAtom, type WritableAtom } from "jotai";
@@ -1570,12 +1569,9 @@ const OnlineSourceSettings: FC = () => {
 		setBusy("file");
 		setMessage("");
 		try {
-			const picked = await open({
-				multiple: false,
-				filters: [{ name: "洛雪音源", extensions: ["js"] }],
-			});
-			if (!picked || typeof picked !== "string") return;
-			const raw = await readTextFile(picked);
+			const picked = await pickTextFile({ accept: ".js,application/javascript" });
+			if (!picked) return;
+			const raw = picked.content;
 			const source = importSource(raw);
 			resetOnlineRuntimeCache();
 			refresh();

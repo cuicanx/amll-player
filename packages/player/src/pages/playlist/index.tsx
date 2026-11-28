@@ -25,7 +25,7 @@ import {
 } from "@radix-ui/themes";
 import { path } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import { pickFilePaths, pickFolderPath } from "../../utils/file-picker.ts";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { platform } from "@tauri-apps/plugin-os";
 import { motion, useMotionTemplate, useScroll, useTransform } from "framer-motion";
@@ -240,14 +240,8 @@ export const Component: FC = () => {
 	}, [param.id, playlist, settingsPlaylistName]);
 
 	const onUploadPlaylistCover = useCallback(async () => {
-		const selected = await open({
-			multiple: false,
-			filters: [
-				{
-					name: t("page.playlist.cover.mediaFiles", "媒体文件"),
-					extensions: ["jpg", "jpeg", "png", "gif", "webp", "mp4"],
-				},
-			],
+		const selected = await pickFilePaths({
+			extensions: ["jpg", "jpeg", "png", "gif", "webp", "mp4"],
 		});
 		if (selected) {
 			await db.playlists.saveCover(Number(param.id), selected);
@@ -278,11 +272,9 @@ export const Component: FC = () => {
 	);
 
 	const onAddFolder = useCallback(async () => {
-		const selected = await open({
-			directory: true,
-			multiple: false,
-			title: t("page.playlist.settings.selectFolder", "选择要关联的文件夹"),
-		});
+		const selected = await pickFolderPath(
+			t("page.playlist.settings.selectFolder", "选择要关联的文件夹"),
+		);
 		if (!selected) return;
 
 		const toastId = toast.loading(
@@ -422,10 +414,10 @@ export const Component: FC = () => {
 		if (platform() === "ios") {
 			filters.length = 0;
 		}
-		const results = await open({
+		const results = await pickFilePaths({
 			multiple: true,
 			title: "选择本地音乐",
-			filters,
+			extensions: filters.flatMap((f) => f.extensions),
 		});
 		if (!results) return;
 		console.log(results);
@@ -619,24 +611,8 @@ export const Component: FC = () => {
 									</ContextMenu.Item>
 									<ContextMenu.Item
 										onClick={async () => {
-											const selected = await open({
-												multiple: false,
-												filters: [
-													{
-														name: t(
-															"page.playlist.cover.mediaFiles",
-															"媒体文件",
-														),
-														extensions: [
-															"jpg",
-															"jpeg",
-															"png",
-															"gif",
-															"webp",
-															"mp4",
-														],
-													},
-												],
+											const selected = await pickFilePaths({
+												extensions: ["jpg", "jpeg", "png", "gif", "webp", "mp4"],
 											});
 											if (selected) {
 												await db.playlists.saveCover(

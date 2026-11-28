@@ -12,10 +12,9 @@ import {
 } from "@radix-ui/themes";
 import { path } from "@tauri-apps/api";
 import { BaseDirectory } from "@tauri-apps/api/path";
-import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
-import { copyFile, mkdir, remove, rename } from "@tauri-apps/plugin-fs";
+import { mkdir, remove, rename, writeTextFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { platform } from "@tauri-apps/plugin-os";
+import { pickFiles } from "../../utils/file-picker.ts";
 import { atom, useAtomValue, useStore } from "jotai";
 import type { FC } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -57,51 +56,28 @@ export const ExtensionTab: FC = () => {
 			<Flex gap="2" wrap="wrap">
 				<Button
 				onClick={async () => {
-					// Call the native picker FIRST, synchronously in this click
-					// handler. An `await` before dialogOpen() breaks the user
-					// gesture chain and Windows/WebView2 then hangs instead of
-					// showing the file box (Android is unaffected).
-					const filters = [
-							{
-								name: t("common.dialog.filter.js", "JavaScript 文件 (*.js)"),
-								extensions: ["js"],
-							},
-							{
-								name: t("common.dialog.filter.all", "全部文件 (*.*)"),
-								extensions: [],
-							},
-						];
-						if (platform() === "android") {
-							filters.length = 0;
-						}
-						if (platform() === "ios") {
-							filters.length = 0;
-						}
-					const extensionFiles = await dialogOpen({
-						title: t(
-							"settings.extension.install.title",
-							"请选择需要载入的 JavaScript 扩展程序文件",
-						),
-						filters,
+					// Browser file input: no dependency on a valid parent window HWND,
+					// so it never deadlocks the Windows borderless window.
+					const picked = await pickFiles({
+						accept: ".js,application/javascript",
 						multiple: true,
 					});
-					console.log("获取到的插件文件", extensionFiles);
-					if (extensionFiles === null) return;
-					if (extensionFiles.length === 0) return;
+					if (!picked?.length) return;
 
 					const extensionDir = await store.get(extensionDirAtom);
 					await mkdir(extensionDir, {
-							recursive: true,
-							baseDir: BaseDirectory.AppData,
-						});
-						for (const extensionFile of extensionFiles) {
-							const extensionName = await path.basename(extensionFile);
-							await copyFile(
-								extensionFile,
-								await path.join(extensionDir, extensionName),
-							);
-						}
-						store.set(extensionMetaAtom);
+						recursive: true,
+						baseDir: BaseDirectory.AppData,
+					});
+					for (const file of picked) {
+						const content = await file.text();
+						await writeTextFile(
+							await path.join(extensionDir, file.name),
+							content,
+							{ baseDir: BaseDirectory.AppData },
+						);
+					}
+					store.set(extensionMetaAtom);
 					}}
 				>
 					<Trans i18nKey="settings.extension.installPlugins">
