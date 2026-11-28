@@ -56,9 +56,12 @@ export const ExtensionTab: FC = () => {
 
 			<Flex gap="2" wrap="wrap">
 				<Button
-					onClick={async () => {
-						const extensionDir = await store.get(extensionDirAtom);
-						const filters = [
+				onClick={async () => {
+					// Call the native picker FIRST, synchronously in this click
+					// handler. An `await` before dialogOpen() breaks the user
+					// gesture chain and Windows/WebView2 then hangs instead of
+					// showing the file box (Android is unaffected).
+					const filters = [
 							{
 								name: t("common.dialog.filter.js", "JavaScript 文件 (*.js)"),
 								extensions: ["js"],
@@ -74,19 +77,20 @@ export const ExtensionTab: FC = () => {
 						if (platform() === "ios") {
 							filters.length = 0;
 						}
-						const extensionFiles = await dialogOpen({
-							title: t(
-								"settings.extension.install.title",
-								"请选择需要载入的 JavaScript 扩展程序文件",
-							),
-							filters,
-							multiple: true,
-						});
-						console.log("获取到的插件文件", extensionFiles);
-						if (extensionFiles === null) return;
-						if (extensionFiles.length === 0) return;
+					const extensionFiles = await dialogOpen({
+						title: t(
+							"settings.extension.install.title",
+							"请选择需要载入的 JavaScript 扩展程序文件",
+						),
+						filters,
+						multiple: true,
+					});
+					console.log("获取到的插件文件", extensionFiles);
+					if (extensionFiles === null) return;
+					if (extensionFiles.length === 0) return;
 
-						await mkdir(extensionDir, {
+					const extensionDir = await store.get(extensionDirAtom);
+					await mkdir(extensionDir, {
 							recursive: true,
 							baseDir: BaseDirectory.AppData,
 						});

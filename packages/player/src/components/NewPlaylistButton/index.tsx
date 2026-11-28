@@ -19,6 +19,10 @@ type CreateMode = "empty" | "folder";
 export const NewPlaylistButton: FC = () => {
 	const [name, setName] = useState("");
 	const [mode, setMode] = useState<CreateMode>("empty");
+	// Controlled so the folder picker can be opened while the dialog is still
+	// mounted. Wrapping the button in <Dialog.Close> unmounts it first, which
+	// drops the user gesture and makes Windows/WebView2 refuse to open the box.
+	const [openDialog, setOpenDialog] = useState(false);
 	const { t } = useTranslation();
 
 	const cannotCreate = useMemo(() => name.trim().length === 0, [name]);
@@ -30,11 +34,15 @@ export const NewPlaylistButton: FC = () => {
 	};
 
 	const onScanFolder = async () => {
+		// Must be the very first await: call the picker in the click handler
+		// itself so Windows keeps the gesture. The dialog stays mounted until
+		// the user has picked something.
 		const folder = await open({
 			directory: true,
 			multiple: false,
 			title: t("newPlaylist.dialog.selectFolder", "选择要扫描的文件夹"),
 		});
+		setOpenDialog(false);
 		if (!folder) return;
 
 		const playlistName = name.trim() || undefined;
@@ -82,7 +90,7 @@ export const NewPlaylistButton: FC = () => {
 	};
 
 	return (
-		<Dialog.Root>
+		<Dialog.Root open={openDialog} onOpenChange={setOpenDialog}>
 			<Dialog.Trigger>
 				<Button variant="soft">
 					<PlusIcon />
@@ -135,11 +143,9 @@ export const NewPlaylistButton: FC = () => {
 							</Button>
 						</Dialog.Close>
 					) : (
-						<Dialog.Close>
-							<Button type="button" onClick={onScanFolder}>
-								<Trans i18nKey="common.dialog.confirm">确认</Trans>
-							</Button>
-						</Dialog.Close>
+						<Button type="button" onClick={onScanFolder}>
+							<Trans i18nKey="common.dialog.confirm">确认</Trans>
+						</Button>
 					)}
 				</Flex>
 			</Dialog.Content>

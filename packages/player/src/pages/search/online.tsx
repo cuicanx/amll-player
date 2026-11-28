@@ -414,8 +414,8 @@ export const OnlineSearchPage: FC = () => {
 	const download = useCallback(
 		async (song: OnlineSong) => {
 			try {
-				setMessage(t("page.online.downloadPreparing", "正在准备下载…"));
-				const cached = await prepareOnlineSong(song);
+				// Open the native save box first: an `await` before it breaks the
+				// click gesture on Windows/WebView2 and the picker never appears.
 				const safeName = (song.name || "song").replace(/[\\/:*?"<>|]/g, "_");
 				const dest = await save({
 					defaultPath: `${safeName}.mp3`,
@@ -426,6 +426,8 @@ export const OnlineSearchPage: FC = () => {
 					setMessage(t("page.online.downloadCancelled", "已取消下载"));
 					return;
 				}
+				setMessage(t("page.online.downloadPreparing", "正在准备下载…"));
+				const cached = await prepareOnlineSong(song);
 				const saved = await invoke<string>("online_export_song", {
 					src: cached,
 					dest,

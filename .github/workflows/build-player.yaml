@@ -109,6 +109,7 @@ jobs:
           # here - they repeat on every version and add no value.
           releaseBody: |
             ### 修复
+            - Windows 上点击安装插件、下载歌曲、从文件夹新建歌单时卡死的问题。
             - 设置页存储、在线音源、常规等页面在非中文下显示中文的问题。
             - 猫娘语与文言文中 {count}、{channel} 等显示为文字的问题。
             - 显示语言列表中出现两个「本地化 ID」的问题。
@@ -280,6 +281,7 @@ jobs:
           # update panel; CHANGELOG.md is the single place for details.
           releaseBody: |
             ### 修复
+            - Windows 上点击安装插件、下载歌曲、从文件夹新建歌单时卡死的问题。
             - 设置页存储、在线音源、常规等页面在非中文下显示中文的问题。
             - 猫娘语与文言文中 {count}、{channel} 等显示为文字的问题。
             - 显示语言列表中出现两个「本地化 ID」的问题。
