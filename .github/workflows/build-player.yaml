@@ -529,8 +529,22 @@ jobs:
           gh release upload "$TAG" build-dist/* --repo "$REPO" --clobber
           echo "Android artifacts uploaded to $TAG"
 
-      - name: 正式版也附带 Android 安装包
-        if: startsWith(github.ref, 'refs/tags/v')
+  # Attach the mobile installers to the STABLE release. This is a separate
+  # job with explicit needs: doing it inside the Android job raced the desktop
+  # release job (which creates the Release much later) and timed out.
+  attach-android-to-stable:
+    name: 正式版附加 Android 安装包
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-release-desktop, build-tauri-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: AMLL Player Android Universal
+          path: android-dist
+      - name: 上传 APK 到正式版
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -538,18 +552,8 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          # The stable Release is created in parallel by build-release-desktop.
-          # Wait for it, then attach the signed APK so the formal release has
-          # both the Windows exe and the Android installer.
-          for i in $(seq 1 30); do
-            if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then break; fi
-            sleep 10
-          done
-          gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || {
-            echo "stable release not found" >&2; exit 1;
-          }
           # Only APKs - the AAB is for Play Store and useless to sideloaders.
-          find build-dist -name '*.apk' -print0 | xargs -0 -r gh release upload "$TAG" --repo "$REPO" --clobber
+          find android-dist -name '*.apk' -print0 | xargs -0 -r gh release upload "$TAG" --repo "$REPO" --clobber
           echo "Android APKs attached to stable release $TAG"
 
   build-tauri-ios:
