@@ -1,7 +1,7 @@
 {
 	"amll": {
 		"audioQuality": {
-			"channels": "音频通道数量",
+			"channels": "Audio channels",
 			"codec": "Audio codec",
 			"sampleFormat": "Sample format",
 			"sampleRate": "Sample rate",
@@ -13,14 +13,14 @@
 			"editMusicOverrideMessage": "Edit Track Override Data",
 			"exitLyricPage": "Exit Lyrics Page",
 			"forwardSong": "Next Song",
-			"openRecorder": "打开捕获面板",
-			"openScreenshotTool": "打开截图工具",
+			"openRecorder": "Open recorder panel",
+			"openScreenshotTool": "Open screenshot tool",
 			"pauseOrResume": "Pause / Resume",
-			"play": "播放",
+			"play": "Play",
 			"rewindSong": "Previous Song",
 			"toggleFullscreen": "Fullscreen / Exit fullscreen",
 			"toggleLyrics": "Lyrics",
-			"windowAlwaysOnTop": "窗口置顶",
+			"windowAlwaysOnTop": "Always on top",
 			"enterFullscreen": "Enter fullscreen",
 			"exitFullscreen": "Exit fullscreen"
 		},
@@ -38,7 +38,7 @@
 			"dontAskAgain": "Don't ask again",
 			"errorListTitle": "The following items failed to migrate:",
 			"failedDesc": "An error occurred during migration:",
-			"failedItems": "（{count} items failed）",
+			"failedItems": "({count} items failed)",
 			"failedRetryHint": "You can retry next time you launch the app.",
 			"failedTitle": "Migration Failed",
 			"keepOldData": "Keep",
@@ -62,7 +62,7 @@
 			"noResults": "No results.",
 			"openButtonLabel": "Search / Import lyrics from AMLL TTML DB",
 			"searchInput": {
-				"placeholder": "Search for songs, lyrics, artists......"
+				"placeholder": "Search songs, lyrics, artists, and more…"
 			},
 			"supportText": "AMLL TTML DB is a free and open-source lyrics' database built by the AMLL community. Want to contribute your lyrics to AMLL TTML DB? Head over to the <1>GitHub repository</1> to learn more on how to submit!",
 			"sync": {
@@ -94,11 +94,11 @@
 		"page": {
 			"back": "Back"
 		},
-		"settings": "设置"
+		"settings": "Settings"
 	},
 	"error": {
-		"backToMainPage": "回到主页",
-		"copyError": "复制错误信息",
+		"backToMainPage": "Back to home",
+		"copyError": "Copy error",
 		"desc0": "An error occurred during execution. Please try refreshing the page. If the issue persists, please contact the developer.",
 		"desc1": "If you know how to debug, you can see more precise error messages in the developer console.",
 		"errorDetail": "Error",
@@ -146,7 +146,7 @@
 			"updateManualDownload": "Open release page",
 			"upstreamAvailable": "Upstream has a newer build ({version}) - view upstream release",
 			"description": "Apple Music-like Lyrics Player",
-			"upstream": "Based on the upstream AMLL (Apple Music-like Lyrics) project",
+			"upstream": "Based on the upstream AMLL (Apple Music-like Lyrics) project, retaining its technical background and acknowledgements",
 			"maintainerLink": "Main maintainer: cuicanx (GitHub)",
 			"releaseLink": "Releases: cuicanx/amll-player",
 			"contributorsTitle": "Contributors",
@@ -162,7 +162,7 @@
 			"otherContributors": "Other contributors",
 			"noOtherContributors": "No other contributors yet",
 			"releaseNotes": "What's new",
-			"releaseNotesEmpty": "This release has no notes attached.",
+			"releaseNotesEmpty": "This release has no notes attached; you can install it directly.",
 			"updatePreparing": "Connecting to the update source…",
 			"updateChannel": {
 				"label": "Update channel",
@@ -191,8 +191,8 @@
 			},
 			"playlistMenu": {
 				"delete": "Delete",
-				"play": "播放此列表",
-				"playShuffled": "以乱序播放此列表"
+				"play": "Play this playlist",
+				"playShuffled": "Play this playlist in shuffle mode"
 			},
 			"updateAvailableTag": "Update available"
 		},
@@ -280,14 +280,14 @@
 			"noPlaylistResult": "No playlists found!",
 			"noSongResult": "No songs found!",
 			"placeholder": "Search for a song, artist, album, lyrics, playlists, or more",
-			"searchingPlaylist": "搜索播放列表中",
-			"searchPlaylistResultAmount": "搜索到 {amount} 个播放列表",
+			"searchingPlaylist": "Searching playlists…",
+			"searchPlaylistResultAmount": "Found {amount} playlists",
 			"searchSongResultAmount": "Found {amount} songs"
 		},
 		"settings": {
 			"general": {
 				"f11Fullscreen": {
-					"description": "When enabled, F11 toggles borderless fullscreen. Disabled by default.",
+					"description": "When enabled, F11 toggles borderless fullscreen; when disabled, F11 has no effect.",
 					"label": "Enable F11 borderless fullscreen"
 				},
 				"displayLanguage": {
@@ -296,15 +296,15 @@
 				},
 				"subtitle": "General",
 				"theme": {
-					"auto": "自动",
-					"dark": "深色",
-					"description": "选择应用的外观主题",
-					"label": "界面主题",
-					"light": "浅色"
+					"auto": "Auto",
+					"dark": "Dark",
+					"description": "Choose the app's appearance theme",
+					"label": "Interface theme",
+					"light": "Light"
 				},
 				"windowAlwaysOnTop": {
-					"description": "将应用窗口设置为始终置顶",
-					"label": "启用窗口置顶"
+					"description": "Keep the app window always on top",
+					"label": "Enable always on top"
 				}
 			},
 			"lyricAppearance": {
@@ -325,16 +325,16 @@
 					"label": "Enable Text Spring Animation Effect"
 				},
 				"lyricFontSize": {
-					"descriptionResponsive": "设置歌词的字体大小",
-					"label": "歌词字体大小",
+					"descriptionResponsive": "Set the font size of lyrics",
+					"label": "Lyric font size",
 					"menu": {
-						"extra_large": "极大",
-						"extra_small": "极小",
-						"huge": "超大",
-						"large": "大",
-						"medium": "中",
-						"small": "小",
-						"tiny": "超小"
+						"extra_large": "Extra large",
+						"extra_small": "Extra small",
+						"huge": "Huge",
+						"large": "Large",
+						"medium": "Medium",
+						"small": "Small",
+						"tiny": "Tiny"
 					}
 				},
 				"lyricWordFadeWidth": {
@@ -345,11 +345,11 @@
 			},
 			"lyricBackground": {
 				"backgroundRenderer": {
-					"label": "PixiJS Renderer"
+					"label": "Background renderer"
 				},
 				"lyricBackgroundColor": {
-					"description": "等同于放入 background 样式的字符串值，默认为 #111111",
-					"label": "CSS 背景属性值"
+					"description": "Equivalent to the string value placed in the background style; defaults to #111111",
+					"label": "CSS background property value"
 				},
 				"lyricBackgroundFPS": {
 					"description": "High impact on performance, but the actual cost is not significant. If you encounter performance issues, try to reduce this value. The default value is 60.",
@@ -364,7 +364,7 @@
 					"label": "Static Mode"
 				},
 				"menu": {
-					"cssBackground": "CSS 背景",
+					"cssBackground": "CSS background",
 					"meshGradientRenderer": "Mesh Gradient Renderer",
 					"pixiRenderer": "PixiJS Renderer"
 				},
@@ -414,7 +414,7 @@
 					"label": "Letter Spacing"
 				},
 				"subtitle": "Lyrics Font Settings",
-				"tip": "This option only affect LYRIC's font but other parts."
+				"tip": "This setting only affects the lyrics font, not other parts of the interface."
 			},
 			"musicInfoAppearance": {
 				"fftDataRange": {
@@ -469,8 +469,8 @@
 			},
 			"smtc": {
 				"enableMediaControls": {
-					"description": "目前只支持 Windows 的 SMTC",
-					"label": "启用内置播放器的媒体控件"
+					"description": "Currently only Windows SMTC is supported",
+					"label": "Enable media controls for the built-in player"
 				}
 			},
 			"taskbarLyric": {
@@ -582,13 +582,13 @@
 					"yrc": "YRC Lyrics"
 				},
 				"lyricFormatLabel": "Lyric format",
+				"offsetLabel": "Lyric offset (ms, positive delays)",
 				"romanLyricDataTip": "Paste LyRiC type of lyric content here, we will pair as Romanized by timestamp if they are the same or similar.",
+				"swapTranslationToMain": "Set translation as the main lyric",
 				"translationLyricData": "Translated Lyrics",
 				"translationLyricDataTip": "Paste LyRiC type of lyric content here, we will pair as translation by timestamp if they are the same or similar.",
 				"ttmlLyricTip": "TTML lyric could contain translation and Romanized translation in a single file.",
-				"swapMainTranslation": "Swap main / translation",
-				"offsetLabel": "Lyric offset (ms, positive delays)",
-				"swapTranslationToMain": "Set translation as the main lyric"
+				"swapMainTranslation": "Swap main / translation"
 			},
 			"metadata": {
 				"changeCoverToImageOrVideo": "Change cover image as image / video",
@@ -653,14 +653,14 @@
 			},
 			"installPlugins": "Install Plugin(s)",
 			"openPluginDirectory": "Open plugin directory",
-			"safetyWarning": "Any plugin will be able to access and modify all of your data, including your playlists, song metadata, etc. Please make sure that the plugin source is safe and only install plugins you trust. We are not responsible for any damage(s) caused by using of using any plugins!",
+			"safetyWarning": "Any plugin will be able to access and modify all of your data, including your playlists, song metadata, etc. Please make sure that the plugin source is safe and only install plugins you trust. We are not responsible for any damage caused by using any plugins!",
 			"tab": "Manage Extensions",
 			"wipWarning": "The plug-in interface function is still under development, so please be aware that the plug-in interface may change at any time!"
 		}
 	},
 	"ws-protocol": {
 		"toast": {
-			"ttmlParseError": "解析来自 WS 发送端的 TTML 歌词时出错：{{error}}"
+			"ttmlParseError": "Error parsing TTML lyrics received from the WS sender: {error}"
 		}
 	}
 }

@@ -2458,11 +2458,9 @@ const AboutSettings = () => {
 						}}
 					>
 						<Select.Trigger>
-							<Select.Value>
-								{updateChannel === "stable"
-									? t("page.about.updateChannel.stable", "正式版")
-									: t("page.about.updateChannel.dev", "测试版")}
-							</Select.Value>
+							{updateChannel === "stable"
+								? t("page.about.updateChannel.stable", "正式版")
+								: t("page.about.updateChannel.dev", "测试版")}
 						</Select.Trigger>
 						<Select.Content>
 							<Select.Item value="stable">

@@ -1,7 +1,7 @@
 {
 	"amll": {
 		"audioQuality": {
-			"channels": "音訊通道數量",
+			"channels": "音訊聲道數量",
 			"codec": "音訊解碼器",
 			"sampleFormat": "取樣格式",
 			"sampleRate": "取樣率",
@@ -10,36 +10,36 @@
 			"channelUnit": "聲道"
 		},
 		"contextMenu": {
-			"editMusicOverrideMessage": "編輯歌曲覆蓋訊息",
-			"exitLyricPage": "退出歌詞介面",
+			"editMusicOverrideMessage": "編輯歌曲覆蓋資訊",
+			"exitLyricPage": "退出歌詞頁面",
 			"forwardSong": "下一首",
-			"openRecorder": "打开捕获面板",
-			"openScreenshotTool": "打开截图工具",
+			"openRecorder": "開啟擷取面板",
+			"openScreenshotTool": "開啟截圖工具",
 			"pauseOrResume": "暫停 / 繼續",
 			"play": "播放",
 			"rewindSong": "上一首",
 			"toggleFullscreen": "全螢幕 / 取消全螢幕",
 			"toggleLyrics": "顯示歌詞",
-			"windowAlwaysOnTop": "窗口置顶",
+			"windowAlwaysOnTop": "視窗置頂",
 			"enterFullscreen": "進入全螢幕",
 			"exitFullscreen": "退出全螢幕"
 		},
-		"loadAudioError": "播放後端加載音頻失敗\n{error}",
+		"loadAudioError": "播放後端載入音訊失敗\n{error}",
 		"migrationDialog": {
-			"completedDesc": "成功匯入 {count} 項資料。",
+			"completedDesc": "成功匯入 {count} 筆資料。",
 			"completedDescDefault": "遷移已完成。",
-			"completedDescWithFailures": "成功匯入 {count} 項資料，{failed} 項失敗。",
+			"completedDescWithFailures": "成功匯入 {count} 筆資料，{failed} 筆失敗。",
 			"completedTitle": "遷移完成",
 			"deleteOldData": "刪除",
-			"deleteOldDataLabel": "是否刪除舊版本的資料以釋放空間？您將無法使用舊版本的資料。",
+			"deleteOldDataLabel": "是否刪除舊版本的資料以釋出空間？您將無法再使用舊版本的資料。",
 			"deleteOldDataOnSkip": "同時刪除舊版本資料",
 			"description": "偵測到舊版本 AMLL Player 的歌單資料，是否需要遷移？",
 			"doNotClose": "遷移過程中請勿關閉應用程式",
 			"dontAskAgain": "不再提示",
 			"errorListTitle": "以下項目遷移失敗：",
 			"failedDesc": "遷移過程中發生錯誤：",
-			"failedItems": "（{count} 項失敗）",
-			"failedRetryHint": "你可以在下次啟動應用時重試。",
+			"failedItems": "（{count} 筆失敗）",
+			"failedRetryHint": "您可以在下次啟動應用程式時重試。",
 			"failedTitle": "遷移失敗",
 			"keepOldData": "保留",
 			"phaseDone": "遷移完成",
@@ -50,35 +50,35 @@
 			"progressSongs": "歌曲 {current}/{total}",
 			"skip": "跳過",
 			"start": "開始遷移",
-			"summary": "將遷移 {songs} 首歌曲和 {playlists} 個播放清單。",
+			"summary": "將遷移 {songs} 首歌曲與 {playlists} 個播放清單",
 			"title": "資料遷移"
 		},
-		"openMenuViaRightClick": "請右鍵歌詞介面任意位置打開目錄哦！",
+		"openMenuViaRightClick": "請在歌詞頁面任意位置按右鍵開啟選單喔！",
 		"qualityTag": {
-			"hires": "高解析度保真壓縮",
-			"lossless": "保真壓縮"
+			"hires": "高解析度無損",
+			"lossless": "無損"
 		},
 		"ttmlImportDialog": {
 			"noResults": "無結果",
-			"openButtonLabel": "從 AMLL TTML DB 搜尋 / 導入歌詞",
+			"openButtonLabel": "從 AMLL TTML DB 搜尋 / 匯入歌詞",
 			"searchInput": {
 				"placeholder": "搜尋歌曲、歌詞內容、歌手等……"
 			},
-			"supportText": "AMLL TTML DB 是由 AMLL 社群愛好者們一同建立的開源無版權歌詞資料庫，想為 AMLL TTML DB 貢獻歌詞嗎？前往<1>GitHub 倉庫</1>即可了解提交歌詞流程！",
+			"supportText": "AMLL TTML DB 是由 AMLL 社群愛好者們一同建立的開源無版權歌詞資料庫，想為 AMLL TTML DB 貢獻歌詞嗎？前往<1>GitHub 儲存庫</1>即可了解提交歌詞流程！",
 			"sync": {
-				"empty": "歌词库为空",
-				"error": "同步出错: {error}",
-				"failed": "同步失败: {error}",
-				"skipped": "歌词库已是最新",
-				"updated": "已更新 {count} 首歌词"
+				"empty": "歌詞庫是空的",
+				"error": "同步發生錯誤：{error}",
+				"failed": "同步失敗：{error}",
+				"skipped": "歌詞庫已是最新版本",
+				"updated": "已更新 {count} 首歌詞"
 			},
-			"tip": "在上方輸入搜尋關鍵字，點選候選項即可將歌詞內容直接匯入歌詞資料。",
-			"title": "從 AMLL TTML DB 搜尋 / 導入歌詞"
+			"tip": "在上方輸入搜尋關鍵字，點選候選項即可將歌詞內容直接匯入歌詞資料中。",
+			"title": "從 AMLL TTML DB 搜尋 / 匯入歌詞"
 		}
 	},
 	"bottom_lyric": {
-		"lyricAuthor": "歌词作者：",
-		"songWriter": "创作者："
+		"lyricAuthor": "歌詞作者：",
+		"songWriter": "創作者："
 	},
 	"common": {
 		"dialog": {
@@ -86,7 +86,7 @@
 			"close": "關閉",
 			"confirm": "確認",
 			"filter": {
-				"all": "全部檔案 (*.*)",
+				"all": "所有檔案 (*.*)",
 				"js": "JavaScript 檔案 (*.js)"
 			},
 			"save": "儲存"
@@ -94,28 +94,28 @@
 		"page": {
 			"back": "返回"
 		},
-		"settings": "设置"
+		"settings": "設定"
 	},
 	"error": {
-		"backToMainPage": "回到主頁",
+		"backToMainPage": "回到首頁",
 		"copyError": "複製錯誤資訊",
 		"desc0": "程式在執行時發生了錯誤，請嘗試重新整理頁面，如果問題仍然無法解決，請聯絡開發者。",
-		"desc1": "如果您對程式除錯有一定了解，可以在開發者控制檯中看到更加準確的錯誤資訊。",
+		"desc1": "如果您對程式除錯有一定了解，可以在開發者主控台中看到更準確的錯誤資訊。",
 		"errorDetail": "錯誤資訊",
 		"reloadPage": "重新整理頁面",
 		"title": "程式發生錯誤"
 	},
 	"extension": {
 		"error": {
-			"invaildPluginFile": "無效擴充程式檔案",
-			"missingDependency": "缺失依賴項",
-			"missingMetadata": "缺失必需後設資料",
-			"pluginIdConflict": "擴充程式 ID 衝突"
+			"invaildPluginFile": "無效的擴充套件檔案",
+			"missingDependency": "缺少相依項目",
+			"missingMetadata": "缺少必要的中繼資料",
+			"pluginIdConflict": "擴充套件 ID 衝突"
 		},
 		"inject": {
 			"error": {
-				"calloutText": "擴充程式 {id} 在注入元件 / 功能到 {injectPointName} 槽位時發生錯誤：",
-				"toastText": "擴充程式 {id} 在注入元件 / 功能到 {injectPointName} 槽位時發生錯誤：\n{error}"
+				"calloutText": "擴充套件 {id} 在將元件 / 功能注入 {injectPointName} 插槽時發生錯誤：",
+				"toastText": "擴充套件 {id} 在將元件 / 功能注入 {injectPointName} 插槽時發生錯誤：\n{error}"
 			}
 		}
 	},
@@ -125,7 +125,7 @@
 		"dialog": {
 			"name": "歌單名稱",
 			"namePlaceholder": "歌單標題",
-			"scanFailed": "掃描失敗: {error}",
+			"scanFailed": "掃描失敗：{error}",
 			"scanning": "正在掃描… 已找到 0 首歌曲",
 			"scanningProgress": "正在掃描… 已找到 {count} 首歌曲",
 			"scanSuccess": "已匯入 {imported} 首歌曲，失敗 {failed} 首",
@@ -142,49 +142,49 @@
 			"updateProgress": "正在下載更新… {percent}%",
 			"updateError": "更新失敗：{error}",
 			"updateRetry": "重試",
-			"updateManualHint": "已多次失敗，可前往發佈頁手動下載安裝包",
-			"updateManualDownload": "開啟發佈頁",
-			"upstreamAvailable": "上游有新組建（{version}），查看上游發佈頁",
+			"updateManualHint": "已多次失敗，可前往發布頁面手動下載安裝檔",
+			"updateManualDownload": "開啟發布頁面",
+			"upstreamAvailable": "上游有新版本（{version}），查看上游發布頁面",
 			"description": "Apple Music-like Lyrics Player",
 			"upstream": "基於 AMLL（Apple Music-like Lyrics）上游專案，保留其技術背景與致謝",
 			"maintainerLink": "主要維護者：cuicanx (GitHub)",
 			"releaseLink": "版本與建置：cuicanx/amll-player",
+			"contributorsTitle": "貢獻者",
 			"credits": "目前版本由 cuicanx 主要維護並參與貢獻",
 			"downloading": "正在下載更新…… {progressText}",
-			"installing": "正在安裝更新，將會自動重啟，請稍後……",
-			"installUpdate": "更新并安裝",
-			"newVersion": "有可用更新从 {currentVersion} 升級至 {nextVersion}",
+			"installing": "正在安裝更新，將會自動重新啟動，請稍後……",
+			"installUpdate": "更新並安裝",
+			"loadingContributors": "正在載入貢獻者清單…",
+			"newVersion": "有可用更新，從 {currentVersion} 升級至 {nextVersion}",
 			"subtitle": "關於",
-			"updating": "正在更新，完成后將會自動重啟，請稍後……",
+			"updating": "正在更新，完成後將會自動重新啟動，請稍後……",
 			"maintainerRole": "主要維護者",
 			"otherContributors": "其他貢獻者",
-			"noOtherContributors": "尚無其他貢獻者",
+			"noOtherContributors": "暫無其他貢獻者",
 			"releaseNotes": "更新內容",
 			"releaseNotesEmpty": "此版本沒有附帶更新說明，可直接安裝。",
 			"updatePreparing": "正在連線更新來源…",
-			"contributorsTitle": "貢獻者",
-			"loadingContributors": "正在載入貢獻者清單…",
 			"updateChannel": {
-				"label": "更新通道",
+				"label": "更新頻道",
 				"description": "正式版穩定可靠；測試版更新較快但可能不穩定。切換後會立即重新檢查更新。",
 				"stable": "正式版",
 				"dev": "測試版",
-				"current": "目前通道：{channel}"
+				"current": "目前頻道：{channel}"
 			}
 		},
 		"amll-dev": {
 			"title": "Apple Music Like Lyrics 開發者頁面",
-			"warning": "這裡的東西用於開發調試用途，僅供作者方便之用，隨便使用可能有意想不到的情況出現！（頁面內容僅中文）"
+			"warning": "這裡的東西是用於開發除錯用途，僅供作者方便之用，隨意使用可能出現意想不到的情況！（頁面內容僅有中文）"
 		},
 		"main": {
 			"loadingPlaylist": "載入歌單中",
 			"menu": {
 				"asWSProtocolReceiver": "作為狀態接收者",
-				"asWSProtocolSenderWIP": "作為狀態發送者（作業中）",
+				"asWSProtocolSenderWIP": "作為狀態傳送者（施工中）",
 				"enterWSProtocolMode": "進入 WS Protocol 模式",
 				"settings": "設定"
 			},
-			"noPlaylistTip": "沒有播放清單，快去新建一個吧！",
+			"noPlaylistTip": "沒有播放清單，快去新增一個吧！",
 			"playlistCard": {
 				"createTime": "建立於 {createTime}",
 				"songCount": "{songAmount} 首歌曲"
@@ -192,7 +192,7 @@
 			"playlistMenu": {
 				"delete": "刪除",
 				"play": "播放此清單",
-				"playShuffled": "以亂序播放此清單"
+				"playShuffled": "以隨機順序播放此清單"
 			},
 			"updateAvailableTag": "有可用更新"
 		},
@@ -200,34 +200,34 @@
 			"addLocalMusic": {
 				"allFiles": "所有檔案",
 				"dialog": {
-					"failedDescription": "以下 {count, plural, other {#}} 首歌曲添加失败：",
-					"failedTitle": "部分歌曲导入失败"
+					"failedDescription": "以下 {count, plural, other {#}} 首歌曲新增失敗：",
+					"failedTitle": "部分歌曲匯入失敗"
 				},
-				"filterName": "音頻檔案",
-				"label": "添加本地歌曲",
+				"filterName": "音訊檔案",
+				"label": "新增本機歌曲",
 				"toast": {
-					"allFailed": "{errored, plural, other {#}} 首歌曲添加失敗",
-					"parsingMusicMetadata": "正在解析音樂後設資料以添加歌曲 ({current, plural, other {#}} / {total, plural, other {#}})",
-					"partiallyFailed": "已添加 {succeed, plural, other {#}} 首歌曲，其中 {errored, plural, other {#}} 首歌曲添加失敗",
-					"success": "已全部添加 {count, plural, other {#}} 首歌曲"
+					"allFailed": "{errored, plural, other {#}} 首歌曲新增失敗",
+					"parsingMusicMetadata": "正在解析音樂中繼資料以新增歌曲 ({current, plural, other {#}} / {total, plural, other {#}})",
+					"partiallyFailed": "已新增 {succeed, plural, other {#}} 首歌曲，其中 {errored, plural, other {#}} 首歌曲新增失敗",
+					"success": "已全部新增 {count, plural, other {#}} 首歌曲"
 				}
 			},
 			"cover": {
-				"changeCoverToAuto": "更換成自動封面",
+				"changeCoverToAuto": "更換為自動封面",
 				"mediaFiles": "媒體檔案",
 				"uploadCoverImage": "上傳封面圖片"
 			},
 			"music": {
 				"dropdown": {
-					"editMusicOverrideData": "編輯歌曲覆蓋訊息",
+					"editMusicOverrideData": "編輯歌曲覆蓋資訊",
 					"playMusic": "播放音樂",
-					"removeFromPlaylist": "从歌單中刪除"
+					"removeFromPlaylist": "從歌單中移除"
 				},
 				"unknownSongName": "未知歌曲 ID {id}"
 			},
 			"playAll": "播放全部",
 			"refresh": {
-				"failed": "重新整理失敗: {error}",
+				"failed": "重新整理失敗：{error}",
 				"label": "重新整理",
 				"loading": "正在重新整理歌單…",
 				"scanning": "正在掃描… {count} 個檔案",
@@ -241,12 +241,12 @@
 				"createdAt": "建立時間",
 				"label": "設定",
 				"linkedFolders": "關聯資料夾",
-				"linkFolderFailed": "關聯失敗: {error}",
+				"linkFolderFailed": "關聯失敗：{error}",
 				"linkFolderSuccess": "關聯成功：匯入 {imported} 首歌曲，失敗 {failed} 首",
 				"name": "歌單名稱",
 				"noLinkedFolders": "此歌單未關聯資料夾",
 				"openFolder": "開啟",
-				"openFolderFailed": "開啟資料夾失敗: {error}",
+				"openFolderFailed": "開啟資料夾失敗：{error}",
 				"playlistInfo": "歌單資訊",
 				"removeFolder": "移除",
 				"scanningFolder": "正在掃描資料夾…",
@@ -254,7 +254,7 @@
 				"selectFolder": "選擇要關聯的資料夾",
 				"songCount": "歌曲數量",
 				"title": "歌單設定",
-				"unlinkFolderFailed": "移除失敗: {error}",
+				"unlinkFolderFailed": "移除失敗：{error}",
 				"unlinkFolderSuccess": "已移除關聯資料夾",
 				"updatedAt": "更新時間"
 			},
@@ -263,19 +263,19 @@
 		},
 		"search": {
 			"filter": {
-				"albumName": "專輯名 : {keyword}",
-				"artistName": "歌手名 : {keyword}",
+				"albumName": "專輯名稱：{keyword}",
+				"artistName": "歌手名稱：{keyword}",
 				"candidate": {
-					"albumName": "專輯名 包含 {keyword}",
-					"artistName": "歌手名 包含 {keyword}",
+					"albumName": "專輯名稱 包含 {keyword}",
+					"artistName": "歌手名稱 包含 {keyword}",
 					"lyricContent": "歌詞內容 包含 {keyword}",
 					"playlistName": "播放清單名稱 包含 {keyword}",
-					"songName": "歌曲名 包含 {keyword}"
+					"songName": "歌曲名稱 包含 {keyword}"
 				},
-				"lyricContent": "歌詞內容 : {keyword}",
+				"lyricContent": "歌詞內容：{keyword}",
 				"placeholder": "搜尋歌單、歌名、歌手等資訊……",
-				"playlistName": "播放清單名 : {keyword}",
-				"songName": "歌曲名 : {keyword}"
+				"playlistName": "播放清單名稱：{keyword}",
+				"songName": "歌曲名稱：{keyword}"
 			},
 			"noPlaylistResult": "無播放清單結果",
 			"noSongResult": "無歌曲結果",
@@ -294,22 +294,22 @@
 					"cimode": "本地化 ID",
 					"label": "顯示語言"
 				},
-				"subtitle": "常規",
+				"subtitle": "一般",
 				"theme": {
-					"auto": "自动",
+					"auto": "自動",
 					"dark": "深色",
-					"description": "选择应用的外观主题",
-					"label": "界面主题",
-					"light": "浅色"
+					"description": "選擇應用程式的外觀主題",
+					"label": "介面主題",
+					"light": "淺色"
 				},
 				"windowAlwaysOnTop": {
-					"description": "将应用窗口设置为始终置顶",
-					"label": "启用窗口置顶"
+					"description": "將應用程式視窗設定為永遠置頂",
+					"label": "啟用視窗置頂"
 				}
 			},
 			"lyricAppearance": {
 				"advanceLyricDynamicLyricTime": {
-					"description": "即將原歌詞行的初始時間時序提前，以便在歌詞滾動結束後剛好開始播放（逐詞）歌詞效果。這個行為更接近 Apple Music 的效果，但是大部分情況下會導致歌詞行末尾的歌詞尚未播放完成便被切換到下一行。",
+					"description": "將原歌詞行的初始時間時序提前，以便在歌詞捲動結束後剛好開始播放（逐詞）歌詞效果。這個行為更接近 Apple Music 的效果，但大部分情況下會導致歌詞行末尾的歌詞尚未播放完成就被切換到下一行。",
 					"label": "提前歌詞行時序"
 				},
 				"enableLyricLineBlurEffect": {
@@ -317,7 +317,7 @@
 					"label": "啟用歌詞模糊效果"
 				},
 				"enableLyricLineScaleEffect": {
-					"description": "對效能無影響，非目前播放歌詞行會略微縮小。預設開啟",
+					"description": "對效能無影響，非目前播放的歌詞行會略微縮小。預設開啟",
 					"label": "啟用歌詞縮放效果"
 				},
 				"enableLyricLineSpringAnimation": {
@@ -325,11 +325,11 @@
 					"label": "啟用歌詞行彈簧動畫效果"
 				},
 				"lyricFontSize": {
-					"descriptionResponsive": "设置歌词的字体大小",
-					"label": "歌词字体大小",
+					"descriptionResponsive": "設定歌詞的字型大小",
+					"label": "歌詞字型大小",
 					"menu": {
-						"extra_large": "极大",
-						"extra_small": "极小",
+						"extra_large": "極大",
+						"extra_small": "極小",
 						"huge": "超大",
 						"large": "大",
 						"medium": "中",
@@ -338,8 +338,8 @@
 					}
 				},
 				"lyricWordFadeWidth": {
-					"description": "調節逐詞歌詞時單字的漸變過渡寬度，單位為全角字的寬度，預設為 0.5。\n如果要模擬 Apple Music for Android 的效果，可以設定為 1。\n如果要模擬 Apple Music for iPad 的效果，可以設定為 0.5。\n如需關閉逐詞歌詞時單字的漸變過渡效果，可設定為 0。",
-					"label": "逐漸漸變寬度"
+					"description": "調整逐詞歌詞時單字的漸變過渡寬度，單位為一個全形字的寬度，預設為 0.5。\n如果要模擬 Apple Music for Android 的效果，可以設定為 1。\n如果要模擬 Apple Music for iPad 的效果，可以設定為 0.5。\n如需關閉逐詞歌詞時單字的漸變過渡效果，可以設定為 0。",
+					"label": "逐詞漸變寬度"
 				},
 				"subtitle": "歌詞樣式"
 			},
@@ -348,46 +348,46 @@
 					"label": "背景渲染器"
 				},
 				"lyricBackgroundColor": {
-					"description": "等同于放入 background 样式的字符串值，默认为 #111111",
-					"label": "CSS 背景属性值"
+					"description": "等同於放入 background 樣式的字串值，預設為 #111111",
+					"label": "CSS 背景屬性值"
 				},
 				"lyricBackgroundFPS": {
-					"description": "對效能影響較高，但是實際開銷不大，如果遇到效能問題，可以嘗試降低此值。預設值為 60。",
+					"description": "對效能影響較高，但實際開銷不大，如果遇到效能問題，可以嘗試降低此值。預設值為 60。",
 					"label": "背景最高幀數"
 				},
 				"lyricBackgroundRenderScale": {
-					"description": "對效能影響較高，但是實際開銷不大，如果遇到效能問題，可以嘗試降低此值。預設值為 1 即每像素點渲染。",
+					"description": "對效能影響較高，但實際開銷不大，如果遇到效能問題，可以嘗試降低此值。預設值為 1，即每個像素點渲染。",
 					"label": "背景渲染倍率"
 				},
 				"lyricBackgroundStaticMode": {
-					"description": "讓背景會在除了切換歌曲變換封面的情況下保持靜止，如果遇到了效能問題，可以考慮開啟此項。\n注意：啟用此項會導致背景跳動效果失效。",
+					"description": "讓背景在除了切換歌曲變換封面的情況下保持靜止，如果遇到了效能問題，可以考慮開啟此項。\n注意：啟用此項會導致背景跳動效果失效。",
 					"label": "背景靜態模式"
 				},
 				"menu": {
 					"cssBackground": "CSS 背景",
-					"meshGradientRenderer": "網格漸變渲染器 （Mesh Gradient Renderer）",
+					"meshGradientRenderer": "網格漸變渲染器",
 					"pixiRenderer": "PixiJS 渲染器"
 				},
 				"subtitle": "歌詞背景"
 			},
 			"lyricContent": {
 				"bottomLyricMode": {
-					"description": "控制歌词底部显示的歌曲创作者及歌词作者信息",
-					"label": "底部信息",
+					"description": "控制歌詞底部顯示的歌曲創作者及歌詞作者資訊",
+					"label": "底部資訊",
 					"menu": {
-						"none": "完全不显示",
-						"onlyLyricAuthors": "只显示歌词作者",
-						"onlySongWriters": "只显示创作者",
-						"preferLyricAuthors": "优先显示歌词作者",
-						"preferSongWriters": "优先显示创作者"
+						"none": "完全不顯示",
+						"onlyLyricAuthors": "只顯示歌詞作者",
+						"onlySongWriters": "只顯示創作者",
+						"preferLyricAuthors": "優先顯示歌詞作者",
+						"preferSongWriters": "優先顯示創作者"
 					}
 				},
 				"enableLyricRomanLine": {
 					"label": "顯示音譯歌詞"
 				},
 				"enableLyricSwapTransRomanLine": {
-					"description": "僅上面二者啟用后有效",
-					"label": "啟用音譯歌詞与翻譯歌詞互換"
+					"description": "僅在上面兩者啟用後有效",
+					"label": "啟用音譯歌詞與翻譯歌詞互換"
 				},
 				"enableLyricTranslationLine": "顯示翻譯歌詞",
 				"subtitle": "歌詞內容",
@@ -398,44 +398,44 @@
 			},
 			"lyricFont": {
 				"fontFamily": {
-					"description": "以逗號分隔的字體名稱組合，等同於 CSS 的 font-family 屬性，留空為默認",
-					"label": "字體家族"
+					"description": "以逗號分隔的字型名稱組合，等同於 CSS 的 font-family 屬性，留空為預設",
+					"label": "字型家族"
 				},
 				"fontPreview": {
-					"defaultText": "字體預覽 Font Preview",
-					"label": "字體預覽"
+					"defaultText": "字型預覽 Font Preview",
+					"label": "字型預覽"
 				},
 				"fontWeight": {
 					"description": "等同於 CSS 的 font-weight 屬性，設定 0 為系統控制，建議值 600",
-					"label": "字體字重"
+					"label": "字型字重"
 				},
 				"letterSpacing": {
-					"description": "等同於 CSS 的 letter-spacing 屬性，留空為默認",
+					"description": "等同於 CSS 的 letter-spacing 屬性，留空為預設",
 					"label": "字元間距"
 				},
-				"subtitle": "歌詞字體設定",
-				"tip": "此設定僅針對歌詞字體，不包括其它套件的字體"
+				"subtitle": "歌詞字型設定",
+				"tip": "此設定僅設定歌詞字型，不包含其他元件的字型"
 			},
 			"musicInfoAppearance": {
 				"fftDataRange": {
-					"description": "單位為赫茲（hz），此項會影響音訊視覺化和背景跳動效果的展示效果",
-					"label": "音訊可視化頻域範圍"
+					"description": "單位為赫茲（Hz），此項會影響音訊視覺化和背景跳動效果的呈現",
+					"label": "音訊視覺化頻域範圍"
 				},
 				"playerControlsType": {
-					"description": "即歌曲訊息下方的組件",
-					"label": "播放控制組件類型",
+					"description": "即歌曲資訊下方的元件",
+					"label": "播放控制元件類型",
 					"menu": {
-						"controls": "播放控制組件",
+						"controls": "播放控制元件",
 						"fft": "線條音訊視覺化",
 						"none": "無"
 					}
 				},
 				"showBottomControl": {
-					"description": "在橫向佈局裡是右下角的幾個按鈕，在垂直佈局裡是播放按鈕下方的幾個按鈕",
-					"label": "顯示底部按鈕組"
+					"description": "在橫向版面配置裡是右下角的幾個按鈕，在縱向版面配置裡是播放按鈕下方的幾個按鈕",
+					"label": "顯示底部按鈕群"
 				},
 				"showMusicAlbum": {
-					"description": "如果同時啟用三個，佈局上可能不太好看，請酌情調節。",
+					"description": "如果同時啟用三個，版面配置上可能不太好看，請酌情調整。",
 					"label": "顯示歌曲專輯名稱"
 				},
 				"showMusicArtists": {
@@ -449,56 +449,56 @@
 				},
 				"subtitle": "歌曲資訊樣式",
 				"verticalCoverLayout": {
-					"description": "在隱藏歌詞的情況下專輯圖的佈局方式：\n- 自動：根據專輯圖是否為影片以使用沉浸佈局\n- 強制預設佈局：強制使用預設的專輯圖佈局\n- 強制沉浸佈局：強制使用沉浸式的專輯圖佈局",
-					"label": "垂直佈局專輯圖佈局模式",
+					"description": "在隱藏歌詞的情況下專輯圖的版面配置方式：\n- 自動：根據專輯圖是否為影片以使用沉浸版面配置\n- 強制預設版面配置：強制使用預設的專輯圖版面配置\n- 強制沉浸版面配置：強制使用沉浸式的專輯圖版面配置",
+					"label": "垂直版面配置專輯圖配置模式",
 					"menu": {
 						"auto": "自動",
-						"forceImmersive": "強制沉浸佈局",
-						"forceNormal": "強制預設佈局"
+						"forceImmersive": "強制沉浸版面配置",
+						"forceNormal": "強制預設版面配置"
 					}
 				}
 			},
 			"others": {
-				"enterAmllDevPage": "歌詞介面開發用工具",
-				"restartProgram": "重啟程序",
+				"enterAmllDevPage": "歌詞頁面開發用工具",
+				"restartProgram": "重新啟動程式",
 				"showStatJSFrame": {
-					"description": "可以看到幀率、幀生成時間、內存佔用（僅Chromium系）等訊息，對效能影響較小。",
-					"label": "顯示效能統計訊息"
+					"description": "可以看到幀率、幀時間、記憶體佔用（僅 Chromium 系）等資訊，對效能影響較小。",
+					"label": "顯示效能統計資訊"
 				},
 				"subtitle": "雜項"
 			},
 			"smtc": {
 				"enableMediaControls": {
-					"description": "目前只支持 Windows 的 SMTC",
-					"label": "启用内置播放器的媒体控件"
+					"description": "目前僅支援 Windows 的 SMTC",
+					"label": "啟用內建播放器的媒體控制項"
 				}
 			},
 			"taskbarLyric": {
 				"align": {
-					"auto": "自动",
-					"description": "任务栏歌词的对齐方向",
-					"label": "对齐方向",
-					"left": "左对齐",
-					"right": "右对齐"
+					"auto": "自動",
+					"description": "工作列歌詞的對齊方向",
+					"label": "對齊方向",
+					"left": "靠左對齊",
+					"right": "靠右對齊"
 				},
 				"enable": {
-					"description": "在 Windows 任务栏上显示当前播放的歌词",
-					"label": "启用任务栏歌词"
+					"description": "在 Windows 工作列上顯示目前播放的歌詞",
+					"label": "啟用工作列歌詞"
 				},
 				"mode": {
-					"auto": "自动",
-					"double": "双行模式",
-					"label": "歌词行数",
-					"single": "单行模式"
+					"auto": "自動",
+					"double": "雙行模式",
+					"label": "歌詞行數",
+					"single": "單行模式"
 				},
-				"openDevtools": "打开 DevTools",
-				"subtitle": "任务栏歌词",
+				"openDevtools": "開啟 DevTools",
+				"subtitle": "工作列歌詞",
 				"theme": {
-					"auto": "跟随任务栏",
+					"auto": "跟隨工作列",
 					"dark": "深色",
-					"description": "覆盖任务栏歌词的颜色主题",
-					"label": "主题设置",
-					"light": "浅色"
+					"description": "覆蓋工作列歌詞的色彩主題",
+					"label": "主題設定",
+					"light": "淺色"
 				}
 			},
 			"contextMenu": {
@@ -512,7 +512,7 @@
 				"nextSong": "下一首",
 				"nextSongDesc": "在右鍵選單中顯示「下一首」",
 				"fullscreen": "進入 / 退出全螢幕",
-				"fullscreenDesc": "在右鍵選單中顯示全螢幕項（需先在一般中啟用 F11 全螢幕）",
+				"fullscreenDesc": "在右鍵選單中顯示全螢幕項目（需先在一般設定中啟用 F11 全螢幕）",
 				"alwaysOnTop": "視窗置頂",
 				"alwaysOnTopDesc": "在右鍵選單中顯示「視窗置頂」",
 				"showLyrics": "顯示歌詞",
@@ -528,7 +528,7 @@
 			},
 			"storage": {
 				"subtitle": "儲存空間管理",
-				"tip": "顯示軟體佔用的磁碟空間。清理只會刪除可再生的快取與舊日誌，不會刪除曲庫、歌單、歌詞庫或擴充。",
+				"tip": "顯示軟體佔用的磁碟空間。清理只會刪除可再生的快取與舊日誌，不會刪除曲庫、歌單、歌詞庫或擴充套件。",
 				"total": "軟體目前佔用",
 				"cache": "快取佔用（封面）",
 				"logs": "日誌佔用",
@@ -537,23 +537,23 @@
 				"cleanCache": "清理快取",
 				"cleanLogs": "清理日誌",
 				"refresh": "重新整理",
-				"cleaned": "已清理 {count} 個檔案，釋放 {size}",
+				"cleaned": "已清理 {count} 個檔案，釋出 {size}",
 				"onlineCache": "線上歌曲快取",
 				"onlineCacheDetail": "下載的線上歌曲音訊與封面",
-				"onlineCacheCleaned": "已清理線上快取 {count} 個檔案，釋放 {size}",
+				"onlineCacheCleaned": "已清理線上快取 {count} 個檔案，釋出 {size}",
 				"autoClear": "自動清除線上歌曲快取",
 				"autoClearDetail": "超過所選時長未使用的線上歌曲快取與封面會被自動刪除",
 				"autoClearNever": "不清理",
 				"autoClearDays": "{count} 天",
-				"autoClearDone": "已自動清理 {count} 個檔案，釋放 {size}"
+				"autoClearDone": "已自動清理 {count} 個檔案，釋出 {size}"
 			},
 			"logLevel": {
 				"label": "啟動除錯 LOG 等級",
-				"description": "選擇下次啟動時記錄的詳細程度。更改後需重新啟動程式生效。",
+				"description": "選擇下次啟動時記錄的詳細程度。變更後需重新啟動程式才會生效。",
 				"debug": "除錯",
 				"normal": "正常",
 				"off": "關閉",
-				"debugHint": "記錄最詳細的資訊，用於排查問題；日誌增長較快。",
+				"debugHint": "記錄最詳細的資訊，用於排查問題；日誌成長較快。",
 				"normalHint": "預設檔位，只記錄運作狀況與重要警告。",
 				"offHint": "不寫日誌；節省磁碟佔用，出問題時無記錄可查。"
 			}
@@ -561,17 +561,17 @@
 		"song": {
 			"basic": {
 				"musicDuration": "音樂時長",
-				"musicFilePath": "音樂文件路徑",
+				"musicFilePath": "音樂檔案路徑",
 				"musicId": "音樂 ID",
 				"tabs": {
 					"basic": "基本",
 					"lyric": "歌詞",
-					"metadata": "後設資料"
+					"metadata": "中繼資料"
 				}
 			},
 			"lyric": {
-				"importFromFile": "从本地文件导入歌词",
-				"lyricData": "歌詞數據",
+				"importFromFile": "從本機檔案匯入歌詞",
+				"lyricData": "歌詞資料",
 				"lyricFormat": {
 					"eslrc": "ESLyRiC 歌詞",
 					"lrc": "LyRiC 歌詞",
@@ -581,31 +581,31 @@
 					"ttml": "TTML 歌詞",
 					"yrc": "YRC 歌詞"
 				},
-				"lyricFormatLabel": "歌詞樣式",
-				"romanLyricDataTip": "請提供 LyRiC 格式的歌詞數據，將會根據時間戳與一致或靠近的原文歌詞配對成為音譯",
-				"translationLyricData": "翻譯歌詞數據",
-				"translationLyricDataTip": "請提供 LyRiC 格式的歌詞數據，將會根據時間戳與一致或靠近的原文歌詞配對成為譯文",
-				"ttmlLyricTip": "TTML 歌詞可同時包含翻譯与音譯數據。",
+				"lyricFormatLabel": "歌詞格式",
 				"offsetLabel": "歌詞偏移（毫秒，正值延後）",
+				"romanLyricDataTip": "請提供 LyRiC 格式的歌詞資料，將會根據時間戳記與一致或接近的原文歌詞配對成為音譯",
 				"swapTranslationToMain": "一鍵將翻譯歌詞設為主歌詞",
+				"translationLyricData": "翻譯歌詞資料",
+				"translationLyricDataTip": "請提供 LyRiC 格式的歌詞資料，將會根據時間戳記與一致或接近的原文歌詞配對成為譯文",
+				"ttmlLyricTip": "TTML 歌詞可同時包含翻譯與音譯資料。",
 				"swapMainTranslation": "主譯互換"
 			},
 			"metadata": {
 				"changeCoverToImageOrVideo": "更換封面圖為圖片 / 影片",
-				"importLyricFromFile": "从本地文件导入歌词",
-				"overrideSafeTip": "本頁面的設定不會寫入到原始音樂檔案中",
-				"reloadMetadataFromFile": "重新從檔案讀取後設資料",
-				"songAlbum": "音樂專輯名",
+				"importLyricFromFile": "從本機檔案匯入歌詞",
+				"overrideSafeTip": "本頁面的設定不會寫入原始音樂檔案中",
+				"reloadMetadataFromFile": "重新從檔案讀取中繼資料",
+				"songAlbum": "音樂專輯名稱",
 				"songArtists": "音樂作者",
 				"songName": "音樂名稱"
 			}
 		},
 		"ws": {
 			"recv": {
-				"connectedClients": "已連線的客戶端",
+				"connectedClients": "已連線的用戶端",
 				"noClients": "無",
 				"openNetworkAddress": "開放網路位址",
-				"tip": "連接到客戶端後，可能需要切換一次歌曲方可同步歌曲資訊狀態。如需對外部網路開放，請將 Host 設定成 0.0.0.0。"
+				"tip": "連線到用戶端後，可能需要切換一次歌曲才能同步歌曲資訊狀態。如需對外部網路開放，請將 Host 設定為 0.0.0.0。"
 			}
 		},
 		"online": {
@@ -614,7 +614,7 @@
 			"search": "搜尋",
 			"searchHistory": "搜尋歷史",
 			"resultCount": "找到 {count} 首",
-			"empty": "沒有找到結果，換個關鍵詞試試",
+			"empty": "沒有找到結果，換個關鍵字試試",
 			"searchFailed": "搜尋失敗：{error}",
 			"via": "已透過「{via}」解析",
 			"loading": "正在準備播放…",
@@ -643,24 +643,24 @@
 	},
 	"playbar": {
 		"playlist": {
-			"title": "當前播放列表"
+			"title": "目前播放清單"
 		}
 	},
 	"settings": {
 		"extension": {
 			"install": {
-				"title": "請選擇需要載入的 JavaScript 擴充程式檔案"
+				"title": "請選擇需要載入的 JavaScript 擴充套件檔案"
 			},
-			"installPlugins": "安裝擴充程式",
-			"openPluginDirectory": "打開擴充程式資料夾",
-			"safetyWarning": "擴充程式將可以訪問並操作你的所有資料，包括你的歌單、播放資訊等資料，請務必確保擴充程式來源可靠安全，並只安裝你信任的擴充程式！作者不承擔使用任何擴充程式後產生的一切後果！",
-			"tab": "擴充程式管理",
-			"wipWarning": "擴充程式介面功能仍在開發中，其外掛介面有可能隨時變更，敬請留意！"
+			"installPlugins": "安裝擴充套件",
+			"openPluginDirectory": "開啟擴充套件資料夾",
+			"safetyWarning": "擴充套件將可以存取並操作您的所有資料，包括您的歌單、播放資訊等資料，請務必確保擴充套件來源可靠安全，並且只安裝您信任的擴充套件！作者不承擔使用任何擴充套件後產生的一切後果！",
+			"tab": "擴充套件管理",
+			"wipWarning": "擴充套件介面功能仍在開發中，其介面有可能隨時變更，敬請留意！"
 		}
 	},
 	"ws-protocol": {
 		"toast": {
-			"ttmlParseError": "解析来自 WS 发送端的 TTML 歌词时出错：{{error}}"
+			"ttmlParseError": "解析來自 WS 傳送端的 TTML 歌詞時發生錯誤：{error}"
 		}
 	}
 }

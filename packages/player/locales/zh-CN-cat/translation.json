@@ -1,666 +1,666 @@
 {
 	"amll": {
 		"audioQuality": {
-			"channels": "音频通道数量",
-			"codec": "音频解码器",
-			"sampleFormat": "采样格式",
-			"sampleRate": "采样率",
-			"title": "音频解码信息",
-			"subtitle": "当前播放喵音频的实际解码参数",
-			"channelUnit": "声道"
+			"channels": "声音分成了几条道道喵",
+			"codec": "给声音解码的小工匠喵",
+			"sampleFormat": "声音采样的格式喵",
+			"sampleRate": "采样的快慢喵",
+			"title": "声音解码的小秘密喵",
+			"subtitle": "本喵这会儿唱的音，真正解出来的参数喵",
+			"channelUnit": "条道道"
 		},
 		"contextMenu": {
-			"editMusicOverrideMessage": "编辑歌曲喵覆盖信息",
-			"exitLyricPage": "退出歌词喵页面",
-			"forwardSong": "下一首",
-			"openRecorder": "打开捕获面板",
-			"openScreenshotTool": "打开截图工具",
-			"pauseOrResume": "暂停喵 / 继续",
-			"play": "播放喵",
-			"rewindSong": "上一首",
-			"toggleFullscreen": "全屏 / 算啦喵全屏",
-			"toggleLyrics": "显示歌词喵",
-			"windowAlwaysOnTop": "窗口置顶",
-			"enterFullscreen": "进入全屏",
-			"exitFullscreen": "退出全屏"
+			"editMusicOverrideMessage": "改改这首歌的封面资料喵",
+			"exitLyricPage": "从歌词页溜走喵",
+			"forwardSong": "下一首喵",
+			"openRecorder": "把录屏小面板掏出来喵",
+			"openScreenshotTool": "把拍照小工具掏出来喵",
+			"pauseOrResume": "歇会儿 / 接着唱喵",
+			"play": "开始唱歌喵",
+			"rewindSong": "上一首喵",
+			"toggleFullscreen": "铺满屏幕 / 缩回来喵",
+			"toggleLyrics": "把歌词亮出来喵",
+			"windowAlwaysOnTop": "让窗户一直浮在最上头喵",
+			"enterFullscreen": "铺满整个屏幕喵",
+			"exitFullscreen": "从满屏里钻出来喵"
 		},
-		"loadAudioError": "播放后端加载音频失败\n{error}",
+		"loadAudioError": "呜…本喵加载声音的时候摔了一跤，唱不出来了喵\n{error}，主人别慌，再试试嘛",
 		"migrationDialog": {
-			"completedDesc": "成功导入 {count} 项数据。",
-			"completedDescDefault": "迁移已完成。",
-			"completedDescWithFailures": "成功导入 {count} 项数据，{failed} 项失败。",
-			"completedTitle": "迁移完成",
-			"deleteOldData": "删掉喵",
-			"deleteOldDataLabel": "是否删掉喵旧版本的数据以释放空间？你将无法使用旧版本的数据。",
-			"deleteOldDataOnSkip": "同时删掉喵旧版本数据",
-			"description": "检测到旧版本 AMLL Player 的歌单数据，是否需要迁移？",
-			"doNotClose": "迁移过程中请勿关闭应用",
-			"dontAskAgain": "不再提示",
-			"errorListTitle": "以下项目迁移失败：",
-			"failedDesc": "迁移过程中发生错误：",
-			"failedItems": "（{count} 项失败）",
-			"failedRetryHint": "你可以在下次启动应用时再试喵。",
-			"failedTitle": "迁移失败",
-			"keepOldData": "保留",
-			"phaseDone": "迁移完成",
-			"phasePlaylists": "正在迁移播放喵列表",
-			"phaseSongs": "正在迁移歌曲喵",
-			"preparing": "准备中",
-			"progressPlaylists": "播放列表 {current}/{total}",
-			"progressSongs": "歌曲 {current}/{total}",
-			"skip": "跳过",
-			"start": "开始迁移",
-			"summary": "将迁移 {songs} 首歌曲和 {playlists} 个播放列表",
-			"title": "数据迁移"
+			"completedDesc": "顺顺利利搬回来 {count} 件东西啦喵～",
+			"completedDescDefault": "搬家搬完啦喵～",
+			"completedDescWithFailures": "搬回来 {count} 件，还有 {failed} 件没搬动喵…",
+			"completedTitle": "搬家完成喵",
+			"deleteOldData": "扔掉喵",
+			"deleteOldDataLabel": "要不要把旧家当扔掉腾地方呀？扔了可就再也用不回来咯喵，主人想清楚哦～",
+			"deleteOldDataOnSkip": "顺便把旧家当也扔掉喵",
+			"description": "本喵闻到旧版 AMLL Player 的歌单味儿了喵，要不要搬过来呀？",
+			"doNotClose": "搬家的时候别把本喵关掉哦，会夹到尾巴的喵！",
+			"dontAskAgain": "以后别再问啦喵",
+			"errorListTitle": "这几件没搬动，主人看看喵：",
+			"failedDesc": "搬家路上出岔子了喵：",
+			"failedItems": "（{count} 件没成喵）",
+			"failedRetryHint": "下次把本喵叫醒的时候还能再试一次喵～",
+			"failedTitle": "搬家翻车了喵",
+			"keepOldData": "留着喵",
+			"phaseDone": "搬完啦喵",
+			"phasePlaylists": "正在搬歌单喵～",
+			"phaseSongs": "正在搬歌儿喵～",
+			"preparing": "伸懒腰准备中喵～",
+			"progressPlaylists": "歌单搬家 {current}/{total} 喵～",
+			"progressSongs": "歌儿搬家 {current}/{total} 喵～",
+			"skip": "溜过去喵",
+			"start": "开始搬家喵！",
+			"summary": "要把 {songs} 首歌儿和 {playlists} 个歌单搬过来喵～",
+			"title": "给数据搬家喵"
 		},
-		"openMenuViaRightClick": "请右键歌词喵页任意位置来打开菜单哦！",
+		"openMenuViaRightClick": "在歌词页随便哪儿点一下右键，菜单就冒出来啦喵～",
 		"qualityTag": {
-			"hires": "高解析度无损",
-			"lossless": "无损"
+			"hires": "超清晰无损喵",
+			"lossless": "一点不丢喵"
 		},
 		"ttmlImportDialog": {
-			"noResults": "无结果",
-			"openButtonLabel": "从 AMLL TTML DB 搜索喵 / 导入歌词喵",
+			"noResults": "啥也没捞着喵…",
+			"openButtonLabel": "去 AMLL TTML DB 里翻歌词喵",
 			"searchInput": {
-				"placeholder": "搜索喵歌曲喵、歌词喵内容、歌手等……"
+				"placeholder": "想找啥歌儿、歌词、歌手都可以喵～"
 			},
-			"supportText": "AMLL TTML DB 是由 AMLL 社区爱好者们一同建设的开源无版权歌词喵数据库，想为 AMLL TTML DB 贡献歌词喵吗？前往<1>GitHub 仓库</1>即可知晓提交歌词喵流程！",
+			"supportText": "AMLL TTML DB 是一群爱唱歌的喵友一起搭的开源歌词库喵，歌词都能免费用～你也想来添几首吗？去<1>GitHub 仓库</1>瞅瞅就知道怎么交啦喵！",
 			"sync": {
-				"empty": "歌词喵库为空",
-				"error": "同步出错: {error}",
-				"failed": "同步失败: {error}",
-				"skipped": "歌词喵库已是最新",
-				"updated": "已更新 {count} 首歌词"
+				"empty": "歌词库空空的，本喵都舔干净了喵",
+				"error": "同步的时候打了个喷嚏喵：{error}",
+				"failed": "没同步成喵…{error}，主人看看？",
+				"skipped": "歌词库已经是最新的啦，不用动喵～",
+				"updated": "新添了 {count} 首歌词喵～"
 			},
-			"tip": "在上方输入搜索喵关键词，点击候选项即可将歌词喵内容直接导入到歌词喵数据中。",
-			"title": "从 AMLL TTML DB 搜索喵 / 导入歌词喵"
+			"tip": "在上头敲关键词，点一下搜出来的那条，歌词就自个儿钻进本喵肚子里啦喵～",
+			"title": "去 AMLL TTML DB 翻歌词喵"
 		}
 	},
 	"bottom_lyric": {
-		"lyricAuthor": "歌词喵作者：",
-		"songWriter": "创作者："
+		"lyricAuthor": "写词的喵：",
+		"songWriter": "作曲的喵："
 	},
 	"common": {
 		"dialog": {
 			"cancel": "算啦喵",
-			"close": "关闭",
-			"confirm": "确认",
+			"close": "关上喵",
+			"confirm": "就这么定喵",
 			"filter": {
-				"all": "全部文件 (*.*)",
-				"js": "JavaScript 文件 (*.js)"
+				"all": "所有文件 (*.*) 喵",
+				"js": "JavaScript 文件 (*.js) 喵"
 			},
-			"save": "存好喵"
+			"save": "收好喵"
 		},
 		"page": {
-			"back": "返回"
+			"back": "往回溜喵"
 		},
-		"settings": "设置喵"
+		"settings": "本喵的设置"
 	},
 	"error": {
-		"backToMainPage": "回到主页",
-		"copyError": "复制错误信息",
-		"desc0": "程序在运行时发生了错误，请尝试刷新页面，如果问题仍然无法解决，请联系开发者。",
-		"desc1": "如果您对程序调试有一定了解，可以在开发者控制台中看到更加准确的错误信息。",
-		"errorDetail": "错误信息",
-		"reloadPage": "刷新页面",
-		"title": "程序发生错误"
+		"backToMainPage": "回本喵的小窝喵",
+		"copyError": "把错话复制下来喵",
+		"desc0": "本喵跑着跑着绊了一跤喵…主人先刷新一下试试，要是还不行，就去喊写本喵的人来瞅瞅吧～",
+		"desc1": "要是主人懂点调试，去开发者控制台能看见更详细的错话喵～",
+		"errorDetail": "错话详情喵",
+		"reloadPage": "抖一抖页面喵",
+		"title": "本喵摔跤啦喵！"
 	},
 	"extension": {
 		"error": {
-			"invaildPluginFile": "无效插件文件",
-			"missingDependency": "缺失依赖项",
-			"missingMetadata": "缺失必需元数据",
-			"pluginIdConflict": "插件 ID 冲突"
+			"invaildPluginFile": "这个插件文件是坏的喵，本喵不认",
+			"missingDependency": "少了个伴儿（依赖）喵",
+			"missingMetadata": "必要的身份证（元数据）没带喵",
+			"pluginIdConflict": "两个插件抢同一个 ID 喵，打起来了！"
 		},
 		"inject": {
 			"error": {
-				"calloutText": "扩展程序 {id} 在注入组件 / 功能到 {injectPointName} 槽位时发生错误：",
-				"toastText": "扩展程序 {id} 在注入组件 / 功能到 {injectPointName} 槽位时发生错误：\n{error}"
+				"calloutText": "扩展 {id} 往 {injectPointName} 这个窝里塞东西的时候卡住喵：",
+				"toastText": "扩展 {id} 往 {injectPointName} 这个窝里塞东西的时候卡住喵：\n{error}"
 			}
 		}
 	},
 	"name": "",
 	"newPlaylist": {
-		"buttonLabel": "新建歌单",
+		"buttonLabel": "开个新歌单喵",
 		"dialog": {
-			"name": "歌单名称",
-			"namePlaceholder": "歌单标题",
-			"scanFailed": "扫描失败: {error}",
-			"scanning": "正在扫描… 已找到 0 首歌曲喵",
-			"scanningProgress": "正在扫描… 已找到 {count} 首歌曲",
-			"scanSuccess": "已导入 {imported} 首歌曲，失败 {failed} 首",
-			"selectFolder": "选择要扫描的文件夹",
-			"title": "新建歌单"
+			"name": "歌单叫什么喵",
+			"namePlaceholder": "给歌单起个名儿喵",
+			"scanFailed": "翻找的时候出错了喵：{error}",
+			"scanning": "正在满屋子翻歌儿…找到 0 首喵",
+			"scanningProgress": "正在满屋子翻歌儿…找到 {count} 首喵！",
+			"scanSuccess": "收进来 {imported} 首，还有 {failed} 首没捞着喵",
+			"selectFolder": "挑个要翻的文件夹喵",
+			"title": "开个新歌单喵"
 		},
 		"mode": {
-			"empty": "空歌单",
-			"folder": "从文件夹添加"
+			"empty": "空空的歌单喵",
+			"folder": "从文件夹里捞歌儿喵"
 		}
 	},
 	"page": {
 		"about": {
-			"updateProgress": "正在下载更新… {percent}%",
-			"updateError": "更新失败：{error}",
-			"updateRetry": "再试喵",
-			"updateManualHint": "已多次失败，可前往发布页手动下载喵安装包",
-			"updateManualDownload": "打开发布页",
-			"upstreamAvailable": "上游有新构建（{version}），查看上游发布页",
-			"description": "Apple Music-like Lyrics Player",
-			"upstream": "基于 AMLL（Apple Music-like Lyrics）上游项目，保留其技术背景与致谢",
-			"maintainerLink": "主要维护者：cuicanx (GitHub)",
-			"releaseLink": "版本与构建：cuicanx/amll-player",
-			"contributorsTitle": "贡献者",
-			"credits": "当前版本由 cuicanx 主要维护并参与贡献",
-			"downloading": "正在下载更新…… {progressText}",
-			"installing": "正在安装更新，将会自动重启，请稍后……",
-			"installUpdate": "更新并安装",
-			"loadingContributors": "正在加载贡献者列表…",
-			"newVersion": "有可用更新从 {currentVersion} 升级至 {nextVersion}",
-			"subtitle": "关于喵",
-			"updating": "正在更新，完成后将会自动重启，请稍后……",
-			"maintainerRole": "主要维护者",
-			"otherContributors": "其他贡献者",
-			"noOtherContributors": "暂无其他贡献者",
-			"releaseNotes": "更新内容",
-			"releaseNotesEmpty": "此版本没有附带更新说明，可直接安装。",
-			"updatePreparing": "正在连接更新源…",
+			"updateProgress": "正在叼新版本回来… {percent}% 喵～",
+			"updateError": "新版本没叼回来喵…{error}",
+			"updateRetry": "再试一回喵",
+			"updateManualHint": "试了好几回都不行喵，主人可以去发布页自己下载安装包哦",
+			"updateManualDownload": "打开发布页喵",
+			"upstreamAvailable": "上游那边出了新版本（{version}）喵，去上游发布页瞧瞧？",
+			"description": "像 Apple Music 那样唱歌的播放器喵～",
+			"upstream": "本喵是从 AMLL（Apple Music-like Lyrics）上游项目来的喵，技术来路和致谢都记着呢～",
+			"maintainerLink": "主要铲屎官：cuicanx (GitHub) 喵",
+			"releaseLink": "版本和构建：cuicanx/amll-player 喵",
+			"contributorsTitle": "帮过忙的喵们",
+			"credits": "这一版主要是 cuicanx 在照顾本喵，也出了不少力喵～",
+			"downloading": "正在叼新版本回来…… {progressText} 喵～",
+			"installing": "正在换新衣裳，换完会自个儿醒一下，主人稍等喵……",
+			"installUpdate": "叼回来穿上喵",
+			"loadingContributors": "正在数帮过忙的喵…",
+			"newVersion": "有新衣裳啦喵，从 {currentVersion} 换到 {nextVersion}～",
+			"subtitle": "关于本喵",
+			"updating": "正在换装扮，弄完会自个儿醒一下，主人别急喵……",
+			"maintainerRole": "主要铲屎官喵",
+			"otherContributors": "其他帮忙的喵",
+			"noOtherContributors": "暂时没有别的喵来帮忙喵～",
+			"releaseNotes": "这回改了啥喵",
+			"releaseNotesEmpty": "这回没写小本本，主人直接穿新衣裳就行喵～",
+			"updatePreparing": "正在跟新版的老窝搭话…",
 			"updateChannel": {
-				"label": "更新通道喵",
-				"description": "正式版喵稳定可靠；测试版喵更新更快但可能不稳定。切换后会立即重新检查更新。",
-				"stable": "正式版喵",
-				"dev": "测试版喵",
-				"current": "当前通道：{channel}"
+				"label": "更新通道喵，主人要选哪个呀",
+				"description": "正式版稳当可靠喵；测试版变得快，但偶尔会闹脾气。一换就马上重新找新版本哦～",
+				"stable": "稳当的正式版喵",
+				"dev": "爱尝鲜的测试版喵",
+				"current": "现在走的是：{channel} 喵"
 			}
 		},
 		"amll-dev": {
-			"title": "Apple Music Like Lyrics 开发者页面",
-			"warning": "此处的东西用于开发调试用途，仅供作者方便之用，随便使用可能有意想不到的情况出现！（页面内容仅中文）"
+			"title": "Apple Music Like Lyrics 的喵匠调试页",
+			"warning": "这儿的东西是给喵匠们调试用的喵，本喵自己图个方便才放的，主人乱动可能会蹦出怪东西哦！（这页只有中文喵）"
 		},
 		"main": {
-			"loadingPlaylist": "加载歌单中",
+			"loadingPlaylist": "正在把歌单叼出来喵～",
 			"menu": {
-				"asWSProtocolReceiver": "作为状态接收者",
-				"asWSProtocolSenderWIP": "作为状态发送者（施工中）",
-				"enterWSProtocolMode": "进入 WS Protocol 模式",
+				"asWSProtocolReceiver": "当个听话的接收喵",
+				"asWSProtocolSenderWIP": "当个广播的发送喵（还在盖喵～）",
+				"enterWSProtocolMode": "钻进 WS Protocol 模式喵",
 				"settings": "设置喵"
 			},
-			"noPlaylistTip": "没有播放喵列表，快去新建一个吧！",
+			"noPlaylistTip": "连个歌单都没有喵！主人快去开一个嘛～",
 			"playlistCard": {
-				"createTime": "创建于 {createTime}",
-				"songCount": "{songAmount} 首歌曲"
+				"createTime": "{createTime} 搭的窝喵",
+				"songCount": "{songAmount} 首歌儿喵"
 			},
 			"playlistMenu": {
-				"delete": "删掉喵",
-				"play": "播放喵此列表",
-				"playShuffled": "以乱序播放喵此列表"
+				"delete": "扔掉喵",
+				"play": "把这一单唱起来喵",
+				"playShuffled": "打乱了随便唱喵～"
 			},
-			"updateAvailableTag": "有可用更新"
+			"updateAvailableTag": "有新衣裳可以穿喵"
 		},
 		"playlist": {
 			"addLocalMusic": {
-				"allFiles": "所有文件",
+				"allFiles": "所有的文件喵",
 				"dialog": {
-					"failedDescription": "以下 {count, plural, other {#}} 首歌曲添加失败：",
-					"failedTitle": "部分歌曲喵导入失败"
+					"failedDescription": "下面这 {count, plural, other {#}} 首没加进来喵：",
+					"failedTitle": "有几首歌没捞进来喵"
 				},
-				"filterName": "音频文件",
-				"label": "添加本地歌曲喵",
+				"filterName": "声音文件喵",
+				"label": "添点本地的歌儿喵",
 				"toast": {
-					"allFailed": "{errored, plural, other {#}} 首歌曲添加失败",
-					"parsingMusicMetadata": "正在解析音乐元数据以添加歌曲 ({current, plural, other {#}} / {total, plural, other {#}})",
-					"partiallyFailed": "已添加 {succeed, plural, other {#}} 首歌曲，其中 {errored, plural, other {#}} 首歌曲添加失败",
-					"success": "已全部添加 {count, plural, other {#}} 首歌曲"
+					"allFailed": "{errored, plural, other {#}} 首都没加进来喵…",
+					"parsingMusicMetadata": "正在读歌儿的身份证好收进来（{current, plural, other {#}} / {total, plural, other {#}}）喵～",
+					"partiallyFailed": "收进来 {succeed, plural, other {#}} 首，其中 {errored, plural, other {#}} 首没成喵",
+					"success": "全收进来啦，{count, plural, other {#}} 首一首不落喵～"
 				}
 			},
 			"cover": {
-				"changeCoverToAuto": "更换成自动封面喵",
-				"mediaFiles": "媒体文件",
-				"uploadCoverImage": "上传封面喵图片"
+				"changeCoverToAuto": "换成自个儿挑的封面喵",
+				"mediaFiles": "影音文件喵",
+				"uploadCoverImage": "递张封面图上来喵"
 			},
 			"music": {
 				"dropdown": {
-					"editMusicOverrideData": "编辑歌曲喵覆盖信息",
-					"playMusic": "播放喵音乐",
-					"removeFromPlaylist": "从歌单中删掉喵"
+					"editMusicOverrideData": "改改这首歌的封面资料喵",
+					"playMusic": "唱起来喵",
+					"removeFromPlaylist": "从歌单里划掉喵"
 				},
-				"unknownSongName": "未知歌曲 ID {id}"
+				"unknownSongName": "不认识的歌儿，ID 是 {id} 喵？"
 			},
-			"playAll": "播放喵全部",
+			"playAll": "全部唱一遍喵",
 			"refresh": {
-				"failed": "刷新失败: {error}",
-				"label": "刷新",
-				"loading": "正在刷新歌单…",
-				"scanning": "正在扫描… {count} 个文件",
-				"success": "刷新完成：新增 {added}，更新 {updated}，移除 {removed}"
+				"failed": "抖了半天没抖好喵：{error}",
+				"label": "抖一抖喵",
+				"loading": "正在抖歌单喵～",
+				"scanning": "正在翻找…摸到 {count} 个文件喵",
+				"success": "抖完啦喵：新来 {added}，换过 {updated}，扔掉 {removed}"
 			},
 			"settings": {
-				"addFolder": "添加关联文件夹",
-				"confirmRemoveFolderDescription": "好喵要移除此文件夹吗？该文件夹扫描添加的歌曲喵将从歌单中移除。手动添加的歌曲喵不受影响。",
-				"confirmRemoveFolderTitle": "移除关联文件夹",
-				"cover": "歌单封面喵",
-				"createdAt": "创建时间",
+				"addFolder": "再牵一个文件夹回来喵",
+				"confirmRemoveFolderDescription": "真要把这个文件夹丢了嘛？从它那儿捞来的歌儿也会一起从歌单里消失喵。主人自己一首首加的可不动哦～",
+				"confirmRemoveFolderTitle": "丢掉这个文件夹喵",
+				"cover": "歌单的衣裳（封面）喵",
+				"createdAt": "搭窝的时间喵",
 				"label": "设置喵",
-				"linkedFolders": "关联文件夹",
-				"linkFolderFailed": "关联失败: {error}",
-				"linkFolderSuccess": "关联成功：导入 {imported} 首歌曲，失败 {failed} 首",
-				"name": "歌单名称",
-				"noLinkedFolders": "此歌单未关联文件夹",
-				"openFolder": "打开",
-				"openFolderFailed": "打开文件夹失败: {error}",
-				"playlistInfo": "歌单信息",
-				"removeFolder": "移除",
-				"scanningFolder": "正在扫描文件夹…",
-				"scanningProgress": "正在扫描… 已找到 {count} 首歌曲",
-				"selectFolder": "选择要关联的文件夹",
-				"songCount": "歌曲喵数量",
-				"title": "歌单设置喵",
-				"unlinkFolderFailed": "移除失败: {error}",
-				"unlinkFolderSuccess": "已移除关联文件夹",
-				"updatedAt": "更新时间"
+				"linkedFolders": "牵着的文件夹喵",
+				"linkFolderFailed": "没牵成喵：{error}",
+				"linkFolderSuccess": "牵好啦喵：收了 {imported} 首，{failed} 首没牵动",
+				"name": "歌单叫什么喵",
+				"noLinkedFolders": "这个歌单还没牵着文件夹喵～",
+				"openFolder": "打开喵",
+				"openFolderFailed": "文件夹打不开喵：{error}",
+				"playlistInfo": "歌单的小档案喵",
+				"removeFolder": "丢掉喵",
+				"scanningFolder": "正在翻这个文件夹喵～",
+				"scanningProgress": "正在翻找…摸到 {count} 首歌儿喵",
+				"selectFolder": "挑个要牵的文件夹喵",
+				"songCount": "歌儿有多少首喵",
+				"title": "歌单的设置喵",
+				"unlinkFolderFailed": "没丢掉喵：{error}",
+				"unlinkFolderSuccess": "文件夹丢掉啦喵～",
+				"updatedAt": "最近动过的时间喵"
 			},
-			"shufflePlayAll": "随机播放喵",
-			"totalMusicLabel": "{count, plural, other {#}} 首歌曲"
+			"shufflePlayAll": "闭着眼睛随便唱喵～",
+			"totalMusicLabel": "{count, plural, other {#}} 首歌儿喵"
 		},
 		"search": {
 			"filter": {
-				"albumName": "专辑名 : {keyword}",
-				"artistName": "歌手名 : {keyword}",
+				"albumName": "专辑叫：{keyword} 喵",
+				"artistName": "歌手叫：{keyword} 喵",
 				"candidate": {
-					"albumName": "专辑名 包含 {keyword}",
-					"artistName": "歌手名 包含 {keyword}",
-					"lyricContent": "歌词内容 包含 {keyword}",
-					"playlistName": "播放列表名称 包含 {keyword}",
-					"songName": "歌曲名 包含 {keyword}"
+					"albumName": "专辑名里有 {keyword} 喵",
+					"artistName": "歌手名里有 {keyword} 喵",
+					"lyricContent": "歌词里有 {keyword} 喵",
+					"playlistName": "歌单名里有 {keyword} 喵",
+					"songName": "歌名里有 {keyword} 喵"
 				},
-				"lyricContent": "歌词内容 : {keyword}",
-				"placeholder": "搜索喵歌单、歌名、歌手等信息……",
-				"playlistName": "播放列表名 : {keyword}",
-				"songName": "歌曲名 : {keyword}"
+				"lyricContent": "歌词里有：{keyword} 喵",
+				"placeholder": "歌单、歌名、歌手啥的都能找喵～",
+				"playlistName": "歌单叫：{keyword} 喵",
+				"songName": "歌名叫：{keyword} 喵"
 			},
-			"noPlaylistResult": "无播放喵列表结果",
-			"noSongResult": "无歌曲喵结果",
-			"placeholder": "搜索喵歌曲喵、歌手、专辑、歌词喵、播放喵列表等信息",
-			"searchingPlaylist": "搜索喵播放喵列表中",
-			"searchPlaylistResultAmount": "搜索到 {amount} 个播放列表",
-			"searchSongResultAmount": "搜索到 {amount} 首歌曲"
+			"noPlaylistResult": "没找着歌单喵…",
+			"noSongResult": "没找着歌儿喵…",
+			"placeholder": "歌儿、歌手、专辑、歌词、歌单，想找啥就敲啥喵～",
+			"searchingPlaylist": "正在歌单里翻找喵～",
+			"searchPlaylistResultAmount": "翻着 {amount} 个歌单喵",
+			"searchSongResultAmount": "翻着 {amount} 首歌儿喵"
 		},
 		"settings": {
 			"general": {
 				"f11Fullscreen": {
-					"description": "开启后按 F11 可进入或退出无边框全屏；关闭时 F11 不生效",
-					"label": "启用 F11 无边框全屏"
+					"description": "开开以后按 F11 就能钻进或钻出无边框满屏喵；关掉的话 F11 就不听话啦",
+					"label": "让 F11 管无边框满屏喵"
 				},
 				"displayLanguage": {
-					"cimode": "本地化 ID",
-					"label": "显示语言"
+					"cimode": "本地化 ID 喵",
+					"label": "说哪种话喵"
 				},
-				"subtitle": "常规",
+				"subtitle": "平常的设置喵",
 				"theme": {
-					"auto": "自动",
-					"dark": "深色",
-					"description": "选择应用的外观主题",
-					"label": "界面主题",
-					"light": "浅色"
+					"auto": "自个儿看着办喵",
+					"dark": "黑乎乎喵",
+					"description": "挑个本喵穿什么衣裳喵",
+					"label": "界面衣裳喵",
+					"light": "亮堂堂喵"
 				},
 				"windowAlwaysOnTop": {
-					"description": "将应用窗口设置喵为始终置顶",
-					"label": "启用窗口置顶"
+					"description": "让本喵的窗户一直浮在最上面喵",
+					"label": "让窗户浮在最上头喵"
 				}
 			},
 			"lyricAppearance": {
 				"advanceLyricDynamicLyricTime": {
-					"description": "即将原歌词喵行的初始时间时序提前，以便在歌词喵滚动结束后刚好开始播放喵（逐词）歌词喵效果。这个行为更加接近 Apple Music 的效果，但是大部分情况下会导致歌词喵行末尾的歌词喵尚未播放喵完成便被切换到下一行。",
-					"label": "提前歌词喵行时序"
+					"description": "把每行歌词开场的时间往前提一提，好让逐词效果刚好接在滚动后面开唱喵。这样更像 Apple Music，不过多半会让行尾的词还没唱完就跳下一行啦，主人自己拿捏哦～",
+					"label": "把歌词行的时间往前挪喵"
 				},
 				"enableLyricLineBlurEffect": {
-					"description": "对性能影响较高，如果遇到性能问题，可以尝试关闭此项。默认开启。",
-					"label": "启用歌词喵模糊效果"
+					"description": "这个挺吃力气喵，要是本喵卡了，可以把它关掉试试。默认是开着的哦～",
+					"label": "让歌词雾蒙蒙的喵"
 				},
 				"enableLyricLineScaleEffect": {
-					"description": "对性能无影响，非当前播放喵歌词喵行会略微缩小。默认开启",
-					"label": "启用歌词喵缩放效果"
+					"description": "不吃力气喵，没在唱的那几行会稍微缩一点。默认开着～",
+					"label": "让歌词会变大变小喵"
 				},
 				"enableLyricLineSpringAnimation": {
-					"description": "对性能影响较高，如果遇到性能问题，可以尝试关闭此项。默认开启。",
-					"label": "启用歌词喵行弹簧动画效果"
+					"description": "这个也挺吃力气喵，本喵要是卡就把它关了吧。默认开着哦～",
+					"label": "让歌词像小弹簧一样蹦喵"
 				},
 				"lyricFontSize": {
-					"descriptionResponsive": "设置喵歌词喵的字体大小",
-					"label": "歌词喵字体大小",
+					"descriptionResponsive": "调调歌词字儿有多大喵",
+					"label": "歌词字儿大小喵",
 					"menu": {
-						"extra_large": "极大",
-						"extra_small": "极小",
-						"huge": "超大",
-						"large": "大",
-						"medium": "中",
-						"small": "小",
-						"tiny": "超小"
+						"extra_large": "巨无霸喵",
+						"extra_small": "迷你喵",
+						"huge": "特大号喵",
+						"large": "大喵",
+						"medium": "刚刚好喵",
+						"small": "小喵",
+						"tiny": "小不点喵"
 					}
 				},
 				"lyricWordFadeWidth": {
-					"description": "调节逐词歌词喵时单词的渐变过渡宽度，单位为一个全角字的宽度，默认为 0.5。\n如果要模拟 Apple Music for Android 的效果，可以设置喵为 1。\n如果要模拟 Apple Music for iPad 的效果，可以设置喵为 0.5。\n如需关闭逐词歌词喵时单词的渐变过渡效果，可以设置喵为 0。",
-					"label": "逐词渐变宽度"
+					"description": "调调逐词歌词里字儿渐变的范围，一个全角字那么宽算 1，默认是 0.5。\n想学安卓版 Apple Music 就设成 1 喵～\n想学 iPad 版 Apple Music 就设成 0.5 喵～\n不想要渐变就设成 0 哦。",
+					"label": "字儿渐变有多宽喵"
 				},
-				"subtitle": "歌词喵样式"
+				"subtitle": "歌词长啥样喵"
 			},
 			"lyricBackground": {
 				"backgroundRenderer": {
-					"label": "背景渲染器"
+					"label": "背景画师喵"
 				},
 				"lyricBackgroundColor": {
-					"description": "等同于放入 background 样式的字符串值，默认为 #111111",
-					"label": "CSS 背景属性值"
+					"description": "就是填进 background 样式的那串字儿喵，默认是 #111111",
+					"label": "CSS 背景的值喵"
 				},
 				"lyricBackgroundFPS": {
-					"description": "对性能影响较高，但是实际开销不大，如果遇到性能问题，可以尝试降低此值。默认值为 60。",
-					"label": "背景最高帧数"
+					"description": "看着挺吃力气，其实花销不大喵。本喵要是卡，主人可以把它调低点。默认是 60 哦～",
+					"label": "背景最多闪多少下喵"
 				},
 				"lyricBackgroundRenderScale": {
-					"description": "对性能影响较高，但是实际开销不大，如果遇到性能问题，可以尝试降低此值。默认值为 1 即每像素点渲染。",
-					"label": "背景渲染倍率"
+					"description": "看着挺吃力气，其实花销不大喵。本喵要是卡就调低点。默认是 1，也就是每个小点点都画一遍喵～",
+					"label": "背景画多大倍喵"
 				},
 				"lyricBackgroundStaticMode": {
-					"description": "让背景会在除了切换歌曲喵变换封面喵的情况下保持静止，如果遇到了性能问题，可以考虑开启此项。\n注意：启用此项会导致背景跳动效果失效。",
-					"label": "背景静态模式"
+					"description": "让背景除了换歌换封面的时候都乖乖不动，本喵卡的话可以开这个喵。\n注意哦：开了以后背景就不会跟着音乐蹦了喵～",
+					"label": "背景别乱动喵"
 				},
 				"menu": {
-					"cssBackground": "CSS 背景",
-					"meshGradientRenderer": "网格渐变渲染器",
-					"pixiRenderer": "PixiJS 渲染器"
+					"cssBackground": "CSS 背景喵",
+					"meshGradientRenderer": "网格渐变画师喵",
+					"pixiRenderer": "PixiJS 画师喵"
 				},
-				"subtitle": "歌词喵背景"
+				"subtitle": "歌词的背景喵"
 			},
 			"lyricContent": {
 				"bottomLyricMode": {
-					"description": "控制歌词喵底部显示的歌曲喵创作者及歌词喵作者信息",
-					"label": "底部信息",
+					"description": "管着歌词底下要不要写作曲的、写词的喵",
+					"label": "底下那行小字喵",
 					"menu": {
-						"none": "完全不显示",
-						"onlyLyricAuthors": "只显示歌词喵作者",
-						"onlySongWriters": "只显示创作者",
-						"preferLyricAuthors": "优先显示歌词喵作者",
-						"preferSongWriters": "优先显示创作者"
+						"none": "藏起来不给你看喵",
+						"onlyLyricAuthors": "只写写词的喵",
+						"onlySongWriters": "只写作曲的喵",
+						"preferLyricAuthors": "先写写词的喵",
+						"preferSongWriters": "先写作曲的喵"
 					}
 				},
 				"enableLyricRomanLine": {
-					"label": "显示音译歌词喵"
+					"label": "把音译歌词亮出来喵"
 				},
 				"enableLyricSwapTransRomanLine": {
-					"description": "仅上面两者启用后有效",
-					"label": "启用音译歌词喵与翻译歌词喵互换"
+					"description": "上面那俩都开了才作数喵～",
+					"label": "让音译和翻译换座位喵"
 				},
-				"enableLyricTranslationLine": "显示翻译歌词喵",
-				"subtitle": "歌词喵内容",
+				"enableLyricTranslationLine": "把翻译歌词亮出来喵",
+				"subtitle": "歌词里有什么喵",
 				"swapMainTranslationGlobal": {
-					"label": "主译互换（全局强制）",
-					"description": "开启后所有歌曲喵都显示译词为主行，优先于歌曲喵内的单独设置喵"
+					"label": "主译换座位（全都听我的喵）",
+					"description": "开了以后所有歌都把译词当主行喵，歌里自己设的不算数～"
 				}
 			},
 			"lyricFont": {
 				"fontFamily": {
-					"description": "以逗号分隔的字体名称组合，等同于 CSS 的 font-family 属性，留空为默认",
-					"label": "字体家族"
+					"description": "用逗号隔开好几个字体名喵，跟 CSS 的 font-family 一个意思，不填就用默认哒～",
+					"label": "字体一家子喵"
 				},
 				"fontPreview": {
-					"defaultText": "字体预览 Font Preview",
-					"label": "字体预览"
+					"defaultText": "瞅瞅字体长啥样 Font Preview 喵",
+					"label": "先瞅一眼字体喵"
 				},
 				"fontWeight": {
-					"description": "等同于 CSS 的 font-weight 属性，设置喵 0 为系统控制，推荐值 600",
-					"label": "字体字重"
+					"description": "跟 CSS 的 font-weight 一样喵，填 0 让系统看着办，本喵推荐 600 哦～",
+					"label": "字儿有多粗喵"
 				},
 				"letterSpacing": {
-					"description": "等同于 CSS 的 letter-spacing 属性，留空为默认",
-					"label": "字符间距"
+					"description": "跟 CSS 的 letter-spacing 一样喵，不填就用默认哒～",
+					"label": "字儿之间隔多远喵"
 				},
-				"subtitle": "歌词喵字体设置喵",
-				"tip": "此设置喵仅设置喵歌词喵字体，不包含其他组件的字体"
+				"subtitle": "给歌词挑字体喵",
+				"tip": "这儿只管歌词的字儿喵，别的组件不管哦～"
 			},
 			"musicInfoAppearance": {
 				"fftDataRange": {
-					"description": "单位为赫兹（hz），此项会影响音频可视化和背景跳动效果的展示效果",
-					"label": "音频可视化频域范围"
+					"description": "单位是赫兹（hz）喵，这个管着声波图和背景跟着蹦的样子～",
+					"label": "声波图画多宽喵"
 				},
 				"playerControlsType": {
-					"description": "即歌曲喵信息下方的组件",
-					"label": "播放喵控制组件类型",
+					"description": "就是歌儿信息底下那个小零件喵",
+					"label": "播放的小按钮长啥样喵",
 					"menu": {
-						"controls": "播放喵控制组件",
-						"fft": "线条音频可视化",
-						"none": "无"
+						"controls": "播放小按钮喵",
+						"fft": "线条跳跳乐喵",
+						"none": "啥都不要喵"
 					}
 				},
 				"showBottomControl": {
-					"description": "在横向布局里是右下角的几个按钮，在竖向布局里是播放喵按钮下方的几个按钮",
-					"label": "显示底部按钮组"
+					"description": "横着摆的时候在右下角那几个按钮喵，竖着摆的时候在播放键底下那几个～",
+					"label": "把底下那排按钮亮出来喵"
 				},
 				"showMusicAlbum": {
-					"description": "如果同时启用三个，布局上可能不太好看，请酌情调节。",
-					"label": "显示歌曲喵专辑名称"
+					"description": "要是三个一起开，摆出来可能不太好看喵，主人自己看着调哦～",
+					"label": "把专辑名亮出来喵"
 				},
 				"showMusicArtists": {
-					"label": "显示歌曲喵作者"
+					"label": "把作曲的亮出来喵"
 				},
 				"showMusicName": {
-					"label": "显示歌曲喵名称"
+					"label": "把歌名亮出来喵"
 				},
 				"showVolumeControl": {
-					"label": "显示音量控制条"
+					"label": "把音量小滑条亮出来喵"
 				},
-				"subtitle": "歌曲喵信息样式",
+				"subtitle": "歌儿信息长啥样喵",
 				"verticalCoverLayout": {
-					"description": "在隐藏歌词喵的情况下专辑图的布局方式：\n- 自动：根据专辑图是否为视频以使用沉浸布局\n- 强制默认布局：强制使用默认的专辑图布局\n- 强制沉浸布局：强制使用沉浸式的专辑图布局",
-					"label": "垂直布局专辑图布局模式",
+					"description": "歌词藏起来的时候，专辑图要怎么摆喵：\n- 自动：看专辑图是不是视频，自己挑沉浸的样子喵\n- 强制默认布局：就用老样子摆喵\n- 强制沉浸布局：一定要摆成沉浸的样子喵",
+					"label": "竖着摆时专辑图怎么放喵",
 					"menu": {
-						"auto": "自动",
-						"forceImmersive": "强制沉浸布局",
-						"forceNormal": "强制默认布局"
+						"auto": "自个儿看着办喵",
+						"forceImmersive": "非要沉浸喵",
+						"forceNormal": "非要老样子喵"
 					}
 				}
 			},
 			"others": {
-				"enterAmllDevPage": "歌词喵页面开发用工具",
-				"restartProgram": "重启程序",
+				"enterAmllDevPage": "歌词页的喵匠小工具",
+				"restartProgram": "把本喵叫醒重来喵",
 				"showStatJSFrame": {
-					"description": "可以看到帧率、帧时间、内存占用（仅 Chromuim 系）等信息，对性能影响较小。",
-					"label": "显示性能统计信息"
+					"description": "能看见帧率、帧时间、内存吃掉多少（只有 Chromium 系的）这些喵，不太吃力气～",
+					"label": "把本喵的体力账本亮出来喵"
 				},
-				"subtitle": "杂项"
+				"subtitle": "零零碎碎喵"
 			},
 			"smtc": {
 				"enableMediaControls": {
-					"description": "目前只支持 Windows 的 SMTC",
-					"label": "启用内置播放喵器的媒体控件"
+					"description": "眼下只认 Windows 的 SMTC 喵～",
+					"label": "让自带播放器长出媒体按钮喵"
 				}
 			},
 			"taskbarLyric": {
 				"align": {
-					"auto": "自动",
-					"description": "任务栏歌词喵的对齐方向",
-					"label": "对齐方向",
-					"left": "左对齐",
-					"right": "右对齐"
+					"auto": "自个儿看着办喵",
+					"description": "任务栏上歌词往哪边靠喵",
+					"label": "往哪边靠喵",
+					"left": "往左边靠喵",
+					"right": "往右边靠喵"
 				},
 				"enable": {
-					"description": "在 Windows 任务栏上显示当前播放喵的歌词喵",
-					"label": "启用任务栏歌词喵"
+					"description": "把正在唱的歌词写到 Windows 任务栏上喵",
+					"label": "让任务栏也唱起来喵"
 				},
 				"mode": {
-					"auto": "自动",
-					"double": "双行模式",
-					"label": "歌词喵行数",
-					"single": "单行模式"
+					"auto": "自个儿看着办喵",
+					"double": "两行一起唱喵",
+					"label": "一次唱几行喵",
+					"single": "一次唱一行喵"
 				},
-				"openDevtools": "打开 DevTools",
-				"subtitle": "任务栏歌词喵",
+				"openDevtools": "把 DevTools 掏出来喵",
+				"subtitle": "任务栏里的小歌词喵",
 				"theme": {
-					"auto": "跟随任务栏",
-					"dark": "深色",
-					"description": "覆盖任务栏歌词喵的颜色主题",
-					"label": "主题设置喵",
-					"light": "浅色"
+					"auto": "跟着任务栏走喵",
+					"dark": "黑乎乎喵",
+					"description": "管着任务栏歌词穿什么颜色的衣裳喵",
+					"label": "衣裳颜色喵",
+					"light": "亮堂堂喵"
 				}
 			},
 			"contextMenu": {
-				"subtitle": "右键菜单设置喵",
-				"tip": "选择歌曲喵播放喵页右键菜单中要显示的选项。关闭的选项不会出现在菜单中。",
-				"reset": "恢复默认",
-				"prevSong": "上一首",
-				"prevSongDesc": "在右键菜单中显示「上一首」",
-				"playPause": "暂停喵 / 继续",
-				"playPauseDesc": "在右键菜单中显示「暂停喵 / 继续」",
-				"nextSong": "下一首",
-				"nextSongDesc": "在右键菜单中显示「下一首」",
-				"fullscreen": "进入 / 退出全屏",
-				"fullscreenDesc": "在右键菜单中显示全屏项（需先在常规中启用 F11 全屏）",
-				"alwaysOnTop": "窗口置顶",
-				"alwaysOnTopDesc": "在右键菜单中显示「窗口置顶」",
-				"showLyrics": "显示歌词喵",
-				"showLyricsDesc": "在右键菜单中显示「显示歌词喵」",
-				"editSongInfo": "编辑歌曲喵覆盖信息",
-				"editSongInfoDesc": "在右键菜单中显示「编辑歌曲喵覆盖信息」",
-				"recordPanel": "打开捕获面板",
-				"recordPanelDesc": "在右键菜单中显示「打开捕获面板」",
-				"screenshot": "打开截图工具",
-				"screenshotDesc": "在右键菜单中显示「打开截图工具」",
-				"exitLyricPage": "退出歌词喵页面",
-				"exitLyricPageDesc": "在右键菜单中显示「退出歌词喵页面」"
+				"subtitle": "右键冒出来的菜单喵",
+				"tip": "挑挑在播放页点右键时要冒出哪些选项喵，关掉的就不会现身啦～",
+				"reset": "变回老样子喵",
+				"prevSong": "上一首喵",
+				"prevSongDesc": "让右键菜单里冒出「上一首喵」",
+				"playPause": "歇会儿 / 接着唱喵",
+				"playPauseDesc": "让右键菜单里冒出「歇会儿 / 接着唱喵」",
+				"nextSong": "下一首喵",
+				"nextSongDesc": "让右键菜单里冒出「下一首喵」",
+				"fullscreen": "铺满 / 缩回来喵",
+				"fullscreenDesc": "让右键菜单里冒出满屏的选项喵（得先在常规里开 F11 满屏哦）",
+				"alwaysOnTop": "窗户浮最上喵",
+				"alwaysOnTopDesc": "让右键菜单里冒出「窗户浮最上喵」",
+				"showLyrics": "亮出歌词喵",
+				"showLyricsDesc": "让右键菜单里冒出「亮出歌词喵」",
+				"editSongInfo": "改改这首歌的封面资料喵",
+				"editSongInfoDesc": "让右键菜单里冒出「改改这首歌的封面资料喵」",
+				"recordPanel": "掏出录屏小面板喵",
+				"recordPanelDesc": "让右键菜单里冒出「掏出录屏小面板喵」",
+				"screenshot": "掏出拍照小工具喵",
+				"screenshotDesc": "让右键菜单里冒出「掏出拍照小工具喵」",
+				"exitLyricPage": "从歌词页溜走喵",
+				"exitLyricPageDesc": "让右键菜单里冒出「从歌词页溜走喵」"
 			},
 			"storage": {
-				"subtitle": "存储空间管理",
-				"tip": "显示软件占用的磁盘空间。清理只会删掉喵可再生的缓存喵与旧日志，不会删掉喵曲库、歌单、歌词喵库或扩展。",
-				"total": "软件当前占用",
-				"cache": "缓存喵占用（封面喵）",
-				"logs": "日志占用",
-				"musicCache": "音频缓存喵占用",
-				"cleanAll": "一键清理",
-				"cleanCache": "清理缓存喵",
-				"cleanLogs": "清理日志",
-				"refresh": "刷新",
-				"cleaned": "已清理 {count} 个文件，释放 {size}",
-				"onlineCache": "在线歌曲喵缓存喵",
-				"onlineCacheDetail": "下载喵的联网歌曲喵音频与封面喵",
-				"onlineCacheCleaned": "已清理在线缓存 {count} 个文件，释放 {size}",
-				"autoClear": "自动清除在线歌曲喵缓存喵",
-				"autoClearDetail": "超过所选时长未使用的在线歌曲喵缓存喵与封面喵会被自动删掉喵",
-				"autoClearNever": "不清理",
-				"autoClearDays": "{count} 天",
-				"autoClearDone": "已自动清理 {count} 个文件，释放 {size}"
+				"subtitle": "管管本喵的小仓库喵",
+				"tip": "看看本喵占了多少地方喵。打扫只扔掉能再生的缓存和旧日记，曲库、歌单、歌词库、扩展可都给你留着呢～",
+				"total": "本喵现在占地儿喵",
+				"cache": "缓存占地儿（封面）喵",
+				"logs": "日记占地儿喵",
+				"musicCache": "声音缓存占地儿喵",
+				"cleanAll": "一爪子扫干净喵",
+				"cleanCache": "扫掉缓存喵",
+				"cleanLogs": "扫掉旧日记喵",
+				"refresh": "抖一抖喵",
+				"cleaned": "扫干净啦喵，清掉 {count} 个东西，腾出 {size} 呢～",
+				"onlineCache": "线上歌儿缓存喵",
+				"onlineCacheDetail": "从网上叼回来的歌儿声音和封面喵",
+				"onlineCacheCleaned": "线上缓存扫干净啦喵，清掉 {count} 个，腾出 {size} 呢～",
+				"autoClear": "把线上歌儿的旧缓存自个儿收走喵",
+				"autoClearDetail": "超过主人选的时间没碰过的线上歌儿缓存和封面，本喵就自个儿扔掉啦喵～",
+				"autoClearNever": "不扫喵，都留着",
+				"autoClearDays": "{count} 天喵",
+				"autoClearDone": "本喵自个儿扫掉了 {count} 个，腾出 {size} 喵～"
 			},
 			"logLevel": {
-				"label": "启动调试 LOG 等级",
-				"description": "选择下次启动时记录的详细程度。更改后需重启程序生效。",
-				"debug": "调试",
-				"normal": "正常",
-				"off": "关闭",
-				"debugHint": "记录最详细的信息，用于排查问题；日志增长较快。",
-				"normalHint": "默认档位，只记录运行状况与重要警告。",
-				"offHint": "不写日志；节省磁盘占用，出问题时无记录可查。"
+				"label": "醒来时记日记有多细喵",
+				"description": "挑挑下次醒过来要记多细喵。改完得把本喵叫醒重来才作数哦～",
+				"debug": "啥都记下来喵",
+				"normal": "平常记一记喵",
+				"off": "一个字都不写喵",
+				"debugHint": "记得最细喵，方便抓虫子；不过日记本长得飞快～",
+				"normalHint": "默认档喵，只记跑得顺不顺和要紧的提醒～",
+				"offHint": "不写日记喵，省地方；可出了问题就没账可查啦～"
 			}
 		},
 		"song": {
 			"basic": {
-				"musicDuration": "音乐时长",
-				"musicFilePath": "音乐文件路径",
-				"musicId": "音乐 ID",
+				"musicDuration": "歌儿有多长喵",
+				"musicFilePath": "歌儿藏在哪条道道喵",
+				"musicId": "歌儿的 ID 喵",
 				"tabs": {
-					"basic": "基本",
+					"basic": "基本喵",
 					"lyric": "歌词喵",
-					"metadata": "元数据"
+					"metadata": "身份证喵"
 				}
 			},
 			"lyric": {
-				"importFromFile": "从本地文件导入歌词喵",
-				"lyricData": "歌词喵数据",
+				"importFromFile": "从本地文件叼歌词进来喵",
+				"lyricData": "歌词本喵",
 				"lyricFormat": {
 					"eslrc": "ESLyRiC 歌词喵",
 					"lrc": "LyRiC 歌词喵",
-					"lys": "Lyricify Syllable 歌词喵",
-					"none": "无歌词喵",
+					"lys": "Lyricify 音节歌词喵",
+					"none": "没有歌词喵",
 					"qrc": "QRC 歌词喵",
 					"ttml": "TTML 歌词喵",
 					"yrc": "YRC 歌词喵"
 				},
-				"lyricFormatLabel": "歌词喵格式",
-				"offsetLabel": "歌词喵偏移（毫秒，正值延后）",
-				"romanLyricDataTip": "请提供 LyRiC 格式的歌词喵数据，将会根据时间戳与一致或靠近的原文歌词喵配对成为音译",
-				"swapTranslationToMain": "一键将翻译歌词喵设为主歌词喵",
-				"translationLyricData": "翻译歌词喵数据",
-				"translationLyricDataTip": "请提供 LyRiC 格式的歌词喵数据，将会根据时间戳与一致或靠近的原文歌词喵配对成为译文",
-				"ttmlLyricTip": "TTML 歌词喵可同时包含翻译与音译数据。",
-				"swapMainTranslation": "主译互换"
+				"lyricFormatLabel": "歌词是什么格式喵",
+				"offsetLabel": "歌词往前还是往后（毫秒，正数就往后挪喵）",
+				"romanLyricDataTip": "麻烦给 LyRiC 格式的歌词喵，本喵会照着时间戳，把对得上的原文配成音译～",
+				"swapTranslationToMain": "一爪子把翻译歌词顶成主歌词喵",
+				"translationLyricData": "翻译歌词本喵",
+				"translationLyricDataTip": "麻烦给 LyRiC 格式的歌词喵，本喵会照着时间戳，把对得上的原文配成译文～",
+				"ttmlLyricTip": "TTML 歌词里可以同时装翻译和音译喵～",
+				"swapMainTranslation": "主译换座位喵"
 			},
 			"metadata": {
-				"changeCoverToImageOrVideo": "更换封面喵图为图片 / 视频",
-				"importLyricFromFile": "从本地文件导入歌词喵",
-				"overrideSafeTip": "本页面的设置喵不会写入到原始音乐文件中",
-				"reloadMetadataFromFile": "重新从文件中读取元数据",
-				"songAlbum": "音乐专辑名",
-				"songArtists": "音乐作者",
-				"songName": "音乐名称"
+				"changeCoverToImageOrVideo": "把封面换成图片 / 视频喵",
+				"importLyricFromFile": "从本地文件叼歌词进来喵",
+				"overrideSafeTip": "这儿改的东西不会写进原来的歌儿文件里喵，尽管放心～",
+				"reloadMetadataFromFile": "从文件里重新读一遍身份证喵",
+				"songAlbum": "专辑叫什么喵",
+				"songArtists": "作曲的是谁喵",
+				"songName": "歌儿叫什么喵"
 			}
 		},
 		"ws": {
 			"recv": {
-				"connectedClients": "已连接的客户端",
-				"noClients": "无",
-				"openNetworkAddress": "开放网络地址",
-				"tip": "连接到客户端后，可能需要切换一次歌曲喵方可同步歌曲喵信息状态。如需对外部网络开放，请将 Host 设置喵成 0.0.0.0。"
+				"connectedClients": "已经牵上手的客户喵",
+				"noClients": "一个都没有喵",
+				"openNetworkAddress": "对外开放的网络地址喵",
+				"tip": "牵上客户以后，可能得切一次歌才能把歌儿信息对上喵。想让外面的网络也能连，就把 Host 填成 0.0.0.0 哦～"
 			}
 		},
 		"online": {
-			"modeTag": "在线模式",
-			"placeholder": "搜索喵在线歌曲喵，按回车开始……",
-			"search": "搜索喵",
-			"searchHistory": "搜索喵历史",
-			"resultCount": "找到 {count} 首",
-			"empty": "没找到喵结果，换个关键词试试",
-			"searchFailed": "搜索失败：{error}",
-			"via": "已通过「{via}」解析",
-			"loading": "正在准备播放喵…",
-			"playerNotReady": "播放喵器尚未就绪，请稍后再试",
-			"playFailed": "无法播放：{error}",
-			"saved": "已收藏喵到歌单",
-			"saveFailed": "收藏失败：{error}",
-			"downloadPreparing": "正在准备下载喵…",
-			"downloadTitle": "存好喵歌曲喵",
-			"downloadCancelled": "已算啦喵下载喵",
-			"downloaded": "已保存到 {path}",
-			"downloadFailed": "下载失败：{error}",
+			"modeTag": "在线模式喵",
+			"placeholder": "找线上的歌儿喵，按回车就开唱～",
+			"search": "找东西喵～",
+			"searchHistory": "之前找过啥喵",
+			"resultCount": "摸着 {count} 首啦喵",
+			"empty": "啥也没摸着喵…主人换个词儿再找找呗～",
+			"searchFailed": "没找到呢喵…{error}，主人换个词试试？",
+			"via": "是托「{via}」辨出来的喵",
+			"loading": "正在清嗓子准备唱喵～",
+			"playerNotReady": "本喵还没睡醒呢，主人等会儿再来喵～",
+			"playFailed": "这首唱不出来喵…{error}",
+			"saved": "收进歌单里藏好啦喵～",
+			"saveFailed": "没藏成喵…{error}",
+			"downloadPreparing": "正在收拾包袱准备叼回来喵～",
+			"downloadTitle": "把歌儿收起来喵",
+			"downloadCancelled": "不叼了喵，算啦～",
+			"downloaded": "收好啦喵，放在 {path} 呢～",
+			"downloadFailed": "没叼回来喵…{error}",
 			"column": {
-				"name": "歌曲喵名",
-				"singer": "歌手",
-				"album": "专辑",
-				"duration": "时长"
+				"name": "歌儿叫啥喵",
+				"singer": "唱歌的喵",
+				"album": "专辑喵",
+				"duration": "有多长喵"
 			},
 			"menu": {
-				"play": "播放喵",
-				"download": "下载喵",
-				"save": "收藏喵到歌单",
-				"noPlaylist": "还没有歌单，请先创建一个"
+				"play": "唱起来喵",
+				"download": "叼回来喵",
+				"save": "藏进歌单喵",
+				"noPlaylist": "还没有歌单喵，主人先开一个嘛～"
 			}
 		}
 	},
 	"playbar": {
 		"playlist": {
-			"title": "当前播放喵列表"
+			"title": "这会儿在唱的歌单喵"
 		}
 	},
 	"settings": {
 		"extension": {
 			"install": {
-				"title": "请选择需要载入的 JavaScript 插件文件"
+				"title": "挑个要装进来的 JavaScript 插件文件喵"
 			},
-			"installPlugins": "安装插件",
-			"openPluginDirectory": "打开插件文件夹",
-			"safetyWarning": "插件将可以访问并操作你的所有数据，包括你的歌单、播放喵信息等数据，请务必确保插件来源可靠安全，并只安装你信任的插件！作者不承担使用任何插件后产生的一切后果！",
-			"tab": "扩展程序管理",
-			"wipWarning": "插件接口功能仍在开发中，其插件接口有可能随时变更，敬请留意！"
+			"installPlugins": "装上插件喵",
+			"openPluginDirectory": "打开插件的小窝喵",
+			"safetyWarning": "插件能翻本喵所有的家当喵，歌单、播放记录啥的它都能动哦！主人一定得确认插件来路正、靠得住，只装信得过的才行喵！出了啥事作者可不管哦～",
+			"tab": "管管扩展喵",
+			"wipWarning": "插件的接口还在盖呢喵，说变就变，主人多留个心眼哦～"
 		}
 	},
 	"ws-protocol": {
 		"toast": {
-			"ttmlParseError": "解析来自 WS 发送端的 TTML 歌词时出错：{{error}}"
+			"ttmlParseError": "读 WS 那边发来的 TTML 歌词时卡壳喵：{error}"
 		}
 	}
 }

@@ -108,16 +108,11 @@ jobs:
           # CHANGELOG.md; never paste commit hashes or "first release" lines
           # here - they repeat on every version and add no value.
           releaseBody: |
-            ### 新增
-            - 正式版附带 Android 安装包。
-            - 设置语言新增猫娘语和文言文，移除越南语。
-
             ### 修复
-            - 更新通道显示英文代号，部分设置项缺少翻译。
-            - Android 启动即闪退（TLS 验证器未初始化）。
-            - 符号链接环导致的无限扫描与文件描述符耗尽。
-            - 沙盒路径含特殊字符时数据库打不开。
-            - Android FUSE/SAF 上歌词索引不可用。
+            - 点击关于页崩溃的问题。
+            - 英文、日文、繁中等语言大量显示中文，现已全部手写补齐。
+            - 切换语言后语言名称变成原始代号的问题。
+            - 越南语已从语言列表中移除。
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -284,16 +279,11 @@ jobs:
           # duplicated bilingual boilerplate used to show up in the in-app
           # update panel; CHANGELOG.md is the single place for details.
           releaseBody: |
-            ### 新增
-            - 正式版附带 Android 安装包。
-            - 设置语言新增猫娘语和文言文，移除越南语。
-
             ### 修复
-            - 更新通道显示英文代号，部分设置项缺少翻译。
-            - Android 启动即闪退（TLS 验证器未初始化）。
-            - 符号链接环导致的无限扫描与文件描述符耗尽。
-            - 沙盒路径含特殊字符时数据库打不开。
-            - Android FUSE/SAF 上歌词索引不可用。
+            - 点击关于页崩溃的问题。
+            - 英文、日文、繁中等语言大量显示中文，现已全部手写补齐。
+            - 切换语言后语言名称变成原始代号的问题。
+            - 越南语已从语言列表中移除。
           prerelease: true
           args: ${{ matrix.args }}
         env:

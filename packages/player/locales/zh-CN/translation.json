@@ -660,7 +660,7 @@
 	},
 	"ws-protocol": {
 		"toast": {
-			"ttmlParseError": "解析来自 WS 发送端的 TTML 歌词时出错：{{error}}"
+			"ttmlParseError": "解析来自 WS 发送端的 TTML 歌词时出错：{error}"
 		}
 	}
 }

@@ -336,38 +336,23 @@ export const languageAtom = atom(
 );
 
 export const availableLanguagesAtom = atom((get) => {
-	const currentLang = get(languageAtom);
-	const resources = i18n.options.resources ?? {};
-
-	// Custom locales are not known to Intl.DisplayNames; give them readable
-	// names so they don't show up as raw language tags in the settings list.
-	const customLanguageNames: Record<string, string> = {
+	// Keep this list explicit. Deriving names from Intl.DisplayNames broke as
+	// soon as a custom locale was active: an unknown tag made the whole call
+	// fall back to raw ids like "zh-CN-cat", so the picker showed language
+	// codes instead of names. These labels stay readable in every locale.
+	const languageLabels: Record<string, string> = {
+		"en-US": "English",
+		"ja-JP": "日本語",
+		"zh-CN": "简体中文",
+		"zh-TW": "繁體中文",
 		"zh-CN-cat": "猫娘语",
 		"zh-Hans-LIT": "文言文",
 		cimode: "本地化 ID",
 	};
 
-	const languages = Object.keys(resources)
-		.map((langId) => {
-			if (customLanguageNames[langId]) {
-				return { label: customLanguageNames[langId], value: langId };
-			}
-			try {
-				const name =
-					new Intl.DisplayNames(currentLang, { type: "language" }).of(langId) ||
-					langId;
-				const origName =
-					new Intl.DisplayNames(langId, { type: "language" }).of(langId) ||
-					langId;
-				return {
-					label: origName === name ? origName : `${origName} (${name})`,
-					value: langId,
-				};
-			} catch {
-				return { label: langId, value: langId };
-			}
-		})
-		.filter((item) => item.label);
+	const languages = Object.keys(languageLabels)
+		.filter((langId) => langId === "cimode" || langId in (i18n.options.resources ?? {}))
+		.map((langId) => ({ label: languageLabels[langId], value: langId }));
 
 	languages.push({
 		label: i18n.t("page.settings.general.displayLanguage.cimode", "本地化 ID"),
