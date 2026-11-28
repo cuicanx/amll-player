@@ -2478,7 +2478,10 @@ const AboutSettings = () => {
 							const next = value as "stable" | "dev";
 							setUpdateChannel(next);
 							setUpdateInfo(false);
-							setTimeout(() => void checkUpdate(), 50);
+							setTimeout(() => {
+								if (isAndroid) void checkAndroidUpdate();
+								else void checkUpdate();
+							}, 50);
 						}}
 					>
 						<Select.Trigger>

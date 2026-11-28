@@ -21,6 +21,7 @@ use crate::server::AMLLWebSocketServerWrapper;
 
 mod db;
 mod db_events;
+mod android_updater;
 mod file_dialog;
 mod log_level;
 mod online;
@@ -364,7 +365,7 @@ pub fn run() {
             #[cfg(not(mobile))]
             updater::updater_install,
             #[cfg(mobile)]
-            updater::updater_check_android,
+            android_updater::updater_check_android,
             db::commands::update_song,
             db::commands::get_playlist_songs,
             db::commands::save_playlist_cover,
